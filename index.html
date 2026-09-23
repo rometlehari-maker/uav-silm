@@ -193,7 +193,8 @@
   .hovercard.open .hc-wrap{ grid-template-rows:1fr; opacity:1; }
   .hovercard.open .hc-panel{ margin-top:12px; }
   .hovercard.open .hc-hint{ opacity:0; }
-  .hc-hint{ font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing:.05em; transition: opacity .3s; }
+  .hc-hint{ font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing:.05em; transition: opacity .3s; margin-top: 12px; }
+  .step-body.hovercard .hc-hint, .col.hovercard .hc-hint{ margin-top: 8px; }
 
   /* design & capabilities */
   .capgrid{ margin-top: 34px; display:grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow:hidden; }
@@ -279,6 +280,7 @@
   .step-body{ padding-bottom: 32px; border-left: 1px solid var(--line); padding-left: 20px; margin-left: -1px; }
   .step:last-child .step-body{ border-left: 1px solid transparent; padding-bottom: 0; }
   .step .status{ display:inline-block; font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 3px; margin-bottom: 10px; }
+  .step .date{ display:inline-block; font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-left: 10px; margin-bottom: 10px; }
   .step.done .status{ color: var(--cyan); border: 1px solid color-mix(in srgb, var(--cyan) 45%, transparent); }
   .step.upcoming .status{ color: var(--text-faint); border: 1px solid var(--line); }
   .step ul{ margin-top: 10px; padding-left: 20px; color: var(--text-dim); font-size: 14.5px; }
@@ -414,26 +416,28 @@
       <p class="lead">The airframe is designed around modular components rather than a single fixed configuration, so the same base platform could be reconfigured for different missions.</p>
 
       <div class="capgrid">
-        <div class="cap">
+        <div class="cap hovercard">
           <div class="cnum">A</div>
           <h3>Modular design</h3>
           <div class="sub">Swappable wings + nose cone</div>
-          <ul>
+          <div class="hc-hint">hover / tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul>
             <li>Can swap for cheaper, higher aspect-ratio wings to complete lower-paced missions or deliver explosive payloads</li>
             <li>Modular screw-on nose cone can carry either an explosive or an ISR payload</li>
             <li>Centre of gravity can be adjusted easily by changing which modules are fitted</li>
-          </ul>
+          </ul></div></div>
         </div>
-        <div class="cap">
+        <div class="cap hovercard">
           <div class="cnum">B</div>
           <h3>Versatile</h3>
           <div class="sub">One airframe, several roles</div>
-          <ul>
+          <div class="hc-hint">hover / tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul>
             <li>3D-printable airframe</li>
             <li>Affordable — target unit cost under $500</li>
             <li>Suited to military use, but equally to agricultural, urban, or forestry-related topographic survey work</li>
             <li>Lightweight and launchable by hand</li>
-          </ul>
+          </ul></div></div>
         </div>
       </div>
     </div>
@@ -446,20 +450,23 @@
       <p class="lead">Every number below comes from XFLR5 vortex-lattice analysis (VLM1/VLM2) and hand calculation over the current geometry, not from a flight test. Treat it as a design target, not a spec sheet.</p>
 
       <div class="featurerow">
-        <div class="fcell">
+        <div class="fcell hovercard">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M2 12h4l2-7 4 14 2-7h4l2-4 2 4h2"/></svg>
           <h4>Performance</h4>
-          <ul><li>Endurance target: ~100 min</li><li>Cruise L/D: low-to-mid 20s</li><li>Stall speed: ~9–10 m/s (calc.)</li></ul>
+          <div class="hc-hint">hover / tap</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Endurance target: ~100 min</li><li>Cruise L/D: low-to-mid 20s</li><li>Stall speed: ~9–10 m/s (calc.)</li></ul></div></div>
         </div>
-        <div class="fcell">
+        <div class="fcell hovercard">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
           <h4>Stability</h4>
-          <ul><li>Static margin: ~18.5% MAC</li><li>Positive Cm slope (stable)</li><li>V-tail lever arm: ~0.41 m</li></ul>
+          <div class="hc-hint">hover / tap</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Static margin: ~18.5% MAC</li><li>Positive Cm slope (stable)</li><li>V-tail lever arm: ~0.41 m</li></ul></div></div>
         </div>
-        <div class="fcell">
+        <div class="fcell hovercard">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/></svg>
           <h4>Autonomy &amp; link</h4>
-          <ul><li>ArduPilot-compatible flight control</li><li>4G LTE / WireGuard failsafe concept</li><li>GPS + airspeed sensing</li></ul>
+          <div class="hc-hint">hover / tap</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>ArduPilot-compatible autopilot</li><li>Mission trajectory planned on a map, flown as GPS waypoints</li><li>4G LTE / WireGuard failsafe concept</li></ul></div></div>
         </div>
       </div>
 
@@ -508,7 +515,7 @@
       <div class="acc">
         <button class="acc-head" type="button"><span class="tick">D</span>Communication &amp; autonomy<span class="plus"></span></button>
         <div class="acc-wrap"><div class="acc-body">
-          <p>ArduPilot-compatible flight controller with GPS and digital airspeed sensing. A 4G LTE module paired with an encrypted WireGuard link is planned as a MAVLink failsafe channel, intended to keep telemetry and control available under GPS interference or beyond normal radio-link range. The concept is borrowed from professional encrypted-link systems, adapted here to commodity hardware.</p>
+          <p>ArduPilot-compatible autopilot with GPS and digital airspeed sensing, capable of autonomous waypoint flight. Mission routes are planned on a map in ground-control software (e.g. Mission Planner or QGroundControl) and uploaded to the autopilot before launch, so the aircraft can fly a pre-set trajectory without continuous manual control. A 4G LTE module paired with an encrypted WireGuard link is planned as a MAVLink failsafe channel, intended to keep telemetry and control available under GPS interference or beyond normal radio-link range. The concept is borrowed from professional encrypted-link systems, adapted here to commodity hardware.</p>
         </div></div>
       </div>
 
@@ -588,7 +595,7 @@
   <section id="team">
     <div class="wrap" style="padding:0 28px;">
       <div class="divider"><svg class="sigil"><use href="#sigil-mark"/></svg><div class="rule"></div></div>
-      <h2>Three people, three fronts</h2>
+      <h2>Team and responsibilities</h2>
       <p class="lead">Hover or tap a card for what each person is actually working on.</p>
 
       <div class="team">
@@ -679,6 +686,12 @@
               <div class="got"><b>Took</b> — an example of a similarly-aimed open-source project, for comparing software/data-handling approaches.</div>
             </div>
           </div>
+          <div class="src-item">
+            <div>
+              <h4>Claude (Anthropic)</h4>
+              <div class="got"><b>Used</b> — assisted in organising the website's content and writing the HTML/CSS/JS for this page.</div>
+            </div>
+          </div>
         </div></div></div>
       </div>
     </div>
@@ -743,65 +756,71 @@
     <div class="wrap" style="padding:0 28px;">
       <div class="divider"><svg class="sigil"><use href="#sigil-mark"/></svg><div class="rule"></div></div>
       <h2>Five stages, design to presentation</h2>
-      <p class="lead">Exact dates are being confirmed within the team; the structure below reflects current progress.</p>
+      <p class="lead">Target dates below, working back from the presentation on 8 December 2026.</p>
 
       <div class="timeline">
         <div class="step done">
           <div class="num">01</div>
-          <div class="step-body">
-            <span class="status">Done / in progress</span>
+          <div class="step-body hovercard">
+            <span class="status">Done / in progress</span><span class="date">through 5 Oct 2026</span>
             <h3>Design &amp; analysis</h3>
-            <ul>
+            <div class="hc-hint">hover / tap for detail</div>
+            <div class="hc-wrap"><div class="hc-panel"><ul>
               <li>Airfoil selection and CFD analysis in XFLR5</li>
               <li>Full-aircraft geometry, mass and CG modelling</li>
               <li>Control-surface (aileron, ruddervator) evaluation</li>
-            </ul>
+            </ul></div></div>
           </div>
         </div>
         <div class="step upcoming">
           <div class="num">02</div>
-          <div class="step-body">
-            <span class="status">Next</span>
+          <div class="step-body hovercard">
+            <span class="status">Next</span><span class="date">6–19 Oct 2026</span>
             <h3>Procurement &amp; components</h3>
-            <ul>
+            <div class="hc-hint">hover / tap for detail</div>
+            <div class="hc-wrap"><div class="hc-panel"><ul>
               <li>Ordering electronics components</li>
               <li>Sourcing structural materials</li>
-            </ul>
+            </ul></div></div>
           </div>
         </div>
         <div class="step upcoming">
           <div class="num">03</div>
-          <div class="step-body">
-            <span class="status">Ahead</span>
+          <div class="step-body hovercard">
+            <span class="status">Ahead</span><span class="date">20 Oct – 9 Nov 2026</span>
             <h3>Build</h3>
-            <ul>
+            <div class="hc-hint">hover / tap for detail</div>
+            <div class="hc-wrap"><div class="hc-panel"><ul>
               <li>3D printing the airframe and wing</li>
               <li>Electronics installation and wiring</li>
               <li>Setting up the link / failsafe concept (4G/WireGuard)</li>
-            </ul>
+            </ul></div></div>
           </div>
         </div>
         <div class="step upcoming">
           <div class="num">04</div>
-          <div class="step-body">
-            <span class="status">Ahead</span>
+          <div class="step-body hovercard">
+            <span class="status">Ahead</span><span class="date">10–27 Nov 2026</span>
             <h3>Testing</h3>
-            <ul>
+            <div class="hc-hint">hover / tap for detail</div>
+            <div class="hc-wrap"><div class="hc-panel"><ul>
               <li>Ground tests (electronics, link)</li>
               <li>First flight tests (hand-launch, belly landing)</li>
               <li>Endurance and range validation</li>
-            </ul>
+            </ul></div></div>
           </div>
         </div>
         <div class="step upcoming">
           <div class="num">05</div>
-          <div class="step-body">
-            <span class="status">Ahead</span>
+          <div class="step-body hovercard">
+            <span class="status">Ahead</span><span class="date">28 Nov – 8 Dec 2026</span>
             <h3>Presentation &amp; documentation</h3>
-            <ul>
+            <div class="hc-hint">hover / tap for detail</div>
+            <div class="hc-wrap"><div class="hc-panel"><ul>
               <li>Results summary</li>
               <li>Finalising the project page and presentation</li>
-            </ul>
+              <li>Presentation day: 8 December 2026</li>
+            </ul></div></div>
           </div>
         </div>
       </div>
@@ -814,26 +833,28 @@
       <h2>What's done, what's next</h2>
 
       <div class="report">
-        <div class="col done">
+        <div class="col done hovercard">
           <div class="tag">Done so far</div>
-          <ul>
+          <div class="hc-hint">hover / tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul>
             <li>CFD analysis completed in XFLR5 (VLM1/VLM2); MH32 airfoil selected over RG15 and SD7037</li>
             <li>Full-aircraft geometry finalised: 1.40 m span, 0.263 m² area, AR 7.46, high-wing / V-tail layout</li>
             <li>Mass and CG modelling complete — X_CG 0.335 m, static margin 18.5% at ≈1.58–1.60 kg</li>
             <li>Aileron and ruddervator control-surface response evaluated at multiple deflections</li>
             <li>Electronics components selected and sourcing links collected</li>
             <li>Cost target set — under $500 per unit</li>
-          </ul>
+          </ul></div></div>
         </div>
-        <div class="col next">
+        <div class="col next hovercard">
           <div class="tag">Next steps</div>
-          <ul>
+          <div class="hc-hint">hover / tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul>
             <li>Finalising V-tail geometry and construction details</li>
             <li>Ordering and receiving components</li>
             <li>3D printing the airframe and wing</li>
             <li>Assembling electronics and testing the link / failsafe concept</li>
             <li>Running the first ground and flight tests</li>
-          </ul>
+          </ul></div></div>
         </div>
       </div>
     </div>
