@@ -1,0 +1,22 @@
+# Install on the Raspberry Pi 3 (Raspberry Pi OS).
+#
+#   sudo apt update
+#   sudo apt install -y python3-opencv python3-numpy python3-yaml
+#   python3 -m pip install -r requirements.txt
+#
+# Notes:
+#  * On a Pi, prefer the apt python3-opencv/python3-numpy packages (prebuilt)
+#    over pip wheels, which can be slow or fail to build. They satisfy the
+#    opencv-python / numpy requirements below.
+#  * tflite-runtime is the small inference-only package (no full TensorFlow).
+#    Get the wheel matching your Python version from the Coral/TF project if pip
+#    can't find it: https://github.com/google-coral/pycoral/releases
+#  * picamera2 is only needed if camera.source == picamera (CSI camera).
+#  * For a Coral USB accelerator also install libedgetpu1-std + pycoral.
+
+pymavlink>=2.4.37
+numpy>=1.21
+PyYAML>=5.4
+opencv-python>=4.5          # or system python3-opencv
+tflite-runtime>=2.5         # inference engine; see note above
+# picamera2                 # uncomment only for a Pi CSI camera

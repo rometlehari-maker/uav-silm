@@ -1,0 +1,99 @@
+# SILM onboard reconnaissance configuration.
+# Everything runs on the aircraft's Raspberry Pi 3. No ground link is used.
+
+# ---------------------------------------------------------------------------
+# Flight controller link (read-only telemetry from the Matek H743 / ArduPilot)
+# ---------------------------------------------------------------------------
+telemetry:
+  # Pi <-> H743 serial. Common options:
+  #   /dev/serial0            Pi GPIO UART wired to an H743 TELEM port
+  #   /dev/ttyUSB0            USB-serial adapter
+  #   /dev/ttyACM0            H743 USB port
+  # In ArduPilot set the matching SERIALx_PROTOCOL=2 (MAVLink2) and baud.
+  connection: /dev/serial0
+  baud: 115200
+  source_system: 200          # companion ID; keep != 1 (the autopilot)
+
+# ---------------------------------------------------------------------------
+# Camera. The SIYI A2 Mini is analog (AHD): feed it through an AHD->USB capture
+# dongle and it appears as a UVC device (source: usb). A Pi CSI camera would be
+# source: picamera. source: file replays an image folder for bench testing.
+# ---------------------------------------------------------------------------
+camera:
+  source: usb                 # usb | picamera | file
+  device: 0                   # /dev/video0 ; or a folder path when source: file
+  width: 1280
+  height: 720
+  fps: 10
+
+# ---------------------------------------------------------------------------
+# Object detector (TensorFlow Lite). If you drop in a *_edgetpu.tflite model and
+# a Coral USB stick is attached it is used automatically.
+# ---------------------------------------------------------------------------
+detector:
+  enabled: true
+  model: models/ssd_mobilenet_v2_coco_quant.tflite
+  labels: models/coco_labels.txt
+  score_threshold: 0.50
+
+# Classes to keep. These must match labels in your model's label file.
+#   - COCO (bundled model) already provides: car, truck, person, boat, ...
+#   - harvester / combine are NOT in COCO: train a small custom model
+#     (see tools/train_notes.md) and list its class names here.
+targets:
+  - car
+  - truck
+  - harvester     # requires a custom model; ignored by the COCO model
+  - combine       # requires a custom model; ignored by the COCO model
+  # "fire" and "smoke" come from the heuristic below, not this list.
+
+# ---------------------------------------------------------------------------
+# Forest-fire / smoke heuristic (works with no training; see fire.py)
+# ---------------------------------------------------------------------------
+fire:
+  enabled: true
+  detect_smoke: true
+  min_fire_area_frac: 0.002
+  min_smoke_area_frac: 0.03
+  fire_score: 0.60
+  smoke_score: 0.50
+
+# ---------------------------------------------------------------------------
+# Geo-referencing: pixel -> ground lat/lon
+# ---------------------------------------------------------------------------
+georef:
+  hfov_deg: 86.0              # horizontal field of view of the lens (CALIBRATE)
+  forward_tilt_deg: 90.0      # 90 = straight down (nadir); lower = look forward
+  yaw_offset_deg: 0.0
+  roll_offset_deg: 0.0
+  # ground_elevation_m: null  # reserved for future DEM support
+
+# ---------------------------------------------------------------------------
+# When is recon allowed to save? Keeps the bench and launch run-up clean.
+# ---------------------------------------------------------------------------
+activation:
+  active_modes: [AUTO, GUIDED]
+  min_alt_m: 20.0
+  require_armed: true
+  always_on: false            # true only for bench tests
+  detect_every_n_frames: 1    # raise to 2-3 if the Pi 3 can't keep up
+  max_telemetry_age_s: 2.0
+
+# ---------------------------------------------------------------------------
+# Storage (SD card or USB stick on the aircraft)
+# ---------------------------------------------------------------------------
+storage:
+  output_dir: /home/pi/silm_captures
+  jpeg_quality: 90
+  save_annotated: true
+  cooldown_s: 8.0             # don't resave the same class within this window...
+  min_separation_m: 40.0      # ...unless it's at least this far away on the ground
+
+# ---------------------------------------------------------------------------
+# Optional offline satellite/terrain basemap (pre-cached on the ground).
+# Do NOT cache Google imagery (against their terms); use a permitted source.
+# ---------------------------------------------------------------------------
+tiles:
+  enabled: false
+  path: /home/pi/basemap.mbtiles
+  zoom: 17

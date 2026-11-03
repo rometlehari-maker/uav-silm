@@ -1,0 +1,26 @@
+# Install:
+#   sudo cp onboard/systemd/silm-recon.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now silm-recon.service
+#   journalctl -u silm-recon -f        # watch its log
+#
+# Adjust User / WorkingDirectory / ExecStart paths to match your install.
+
+[Unit]
+Description=SILM onboard reconnaissance (link-free object capture)
+After=multi-user.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/uav-silm/onboard
+ExecStart=/usr/bin/python3 /home/pi/uav-silm/onboard/run.py --config /home/pi/uav-silm/onboard/config.yaml
+Restart=always
+RestartSec=3
+# Give it time to find the FC and camera after boot.
+StartLimitIntervalSec=0
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target
