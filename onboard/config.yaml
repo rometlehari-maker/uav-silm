@@ -32,20 +32,36 @@ camera:
 # ---------------------------------------------------------------------------
 detector:
   enabled: true
+  # Point this at your trained ag/forestry model once exported:
+  #   model:  models/silm_farm.tflite         (YOLO, from training/export.py)
+  #   labels: models/silm_farm_labels.txt
+  #   format: yolo
+  # The COCO SSD baseline below works out of the box for car/truck/person.
   model: models/ssd_mobilenet_v2_coco_quant.tflite
   labels: models/coco_labels.txt
-  score_threshold: 0.50
+  format: auto            # auto | ssd | yolo  (auto picks by output tensors)
+  score_threshold: 0.45
+  iou_threshold: 0.45     # NMS IoU for YOLO models
+  tiled: false            # true = tiled inference (better small-object recall,
+  tile_grid: [2, 2]       #        costs grid[0]*grid[1]x compute -> Coral only)
 
-# Classes to keep. These must match labels in your model's label file.
-#   - COCO (bundled model) already provides: car, truck, person, boat, ...
-#   - harvester / combine are NOT in COCO: train a small custom model
-#     (see tools/train_notes.md) and list its class names here.
+# Classes to keep and photograph. Must match names in the model's labels file.
+# With the trained ag/forestry model (training/classes.yaml) these all apply;
+# with the COCO baseline only car/truck/person exist and the rest are ignored.
 targets:
   - car
   - truck
-  - harvester     # requires a custom model; ignored by the COCO model
-  - combine       # requires a custom model; ignored by the COCO model
-  # "fire" and "smoke" come from the heuristic below, not this list.
+  - tractor
+  - combine
+  - harvester
+  - baler
+  - hay_bale
+  - livestock
+  - silo
+  - barn
+  - logging_truck
+  - timber_stack
+  # "fire" and "smoke" also come from the heuristic below as a no-training path.
 
 # ---------------------------------------------------------------------------
 # Forest-fire / smoke heuristic (works with no training; see fire.py)
@@ -80,6 +96,17 @@ activation:
   max_telemetry_age_s: 2.0
 
 # ---------------------------------------------------------------------------
+# GPS-loss failsafe companion aids (the real failsafe is in ArduPilot; see
+# ardupilot/gps_denied_failsafe.param). These are monitor + backup only.
+# ---------------------------------------------------------------------------
+failsafe:
+  enabled: true             # optical-flow velocity aid on/off
+  send_to_fc: false         # DO NOT enable until validated on the bench
+  max_rate_hz: 5.0
+  proc_width: 320
+  min_features: 20
+
+# ---------------------------------------------------------------------------
 # Storage (SD card or USB stick on the aircraft)
 # ---------------------------------------------------------------------------
 storage:
@@ -88,6 +115,8 @@ storage:
   save_annotated: true
   cooldown_s: 8.0             # don't resave the same class within this window...
   min_separation_m: 40.0      # ...unless it's at least this far away on the ground
+  save_all_frames: false      # true = also archive raw frames for retraining
+  frame_interval_s: 2.0       # ...one every this many seconds
 
 # ---------------------------------------------------------------------------
 # Optional offline satellite/terrain basemap (pre-cached on the ground).

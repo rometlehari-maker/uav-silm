@@ -1,11 +1,27 @@
 # SILM onboard reconnaissance
 
-Link-free, fully onboard target recognition for the UAV SILM airframe. The
-aircraft flies a pre-planned Mission Planner route on its own, recognises ground
-targets (cars, trucks, agricultural machinery, forest fires) as it goes,
-geo-references them and saves tagged pictures to its own SD card — **with no
-radio, fibre or any other link to the operator**. On return, the pilot takes
-over manually on ExpressLRS.
+Link-free, fully onboard recognition for the UAV SILM airframe, for
+agriculture / forestry / wildfire survey. The aircraft flies a pre-planned
+Mission Planner route on its own, recognises ground subjects (farm machinery,
+vehicles, livestock, forest fires…) as it goes, geo-references them and saves
+tagged pictures to its own SD card — **with no radio, fibre or any other link to
+the operator** — and has a GPS-loss **failsafe** so a jammed/lost GPS brings it
+home instead of losing it. On return, the pilot takes over manually on
+ExpressLRS.
+
+> **New here? Read [`FLIGHT_READY.md`](FLIGHT_READY.md)** — the rigorous,
+> step-by-step guide covering where every file goes, the GPS-loss failsafe, how
+> to train/test the detector, how to verify it yourself, and the flight
+> checklist. This file is the component overview; FLIGHT_READY is the procedure.
+
+Key parts added beyond basic recognition:
+- **GPS-loss failsafe** — `ardupilot/gps_denied_failsafe.param` (the real safety
+  net, in ArduPilot) + `silm_recon/failsafe.py` (companion GPS-health monitor and
+  optical-flow backup). See FLIGHT_READY section A.
+- **Trainable ag/forestry detector** — `training/` has the full
+  train → export → deploy pipeline and a synthetic bootstrap; drop your
+  `.tflite` into `models/` and set `detector.format: yolo`. See
+  `training/README.md`.
 
 This runs on the hardware already in the build. The only likely addition is a
 ~$15 analog-to-USB video capture dongle (see *Camera*), because the SIYI A2 Mini

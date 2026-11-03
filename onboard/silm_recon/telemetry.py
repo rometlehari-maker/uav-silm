@@ -99,7 +99,8 @@ class StateView:
 class TelemetryLink:
     """Background MAVLink reader."""
 
-    def __init__(self, connection: str, baud: int = 115200, source_system: int = 200):
+    def __init__(self, connection: str, baud: int = 115200, source_system: int = 200,
+                 msg_callback=None):
         if mavutil is None:
             raise RuntimeError(
                 "pymavlink is not installed. Run: pip install pymavlink"
@@ -108,9 +109,18 @@ class TelemetryLink:
         self.baud = baud
         self.source_system = source_system
         self.state = State()
+        # Optional callback(msg) invoked for every received MAVLink message,
+        # used by the GPS-health monitor. Must be fast and non-blocking.
+        self.msg_callback = msg_callback
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._master = None
+
+    @property
+    def master(self):
+        """The live mavutil connection, or None before first connect.
+        Used only to forward an optional optical-flow velocity aid."""
+        return self._master
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, name="telemetry", daemon=True)
@@ -138,8 +148,10 @@ class TelemetryLink:
         # Request POSITION (GLOBAL_POSITION_INT) and EXTRA1 (ATTITUDE).
         for stream_id in (
             mavutil.mavlink.MAV_DATA_STREAM_POSITION,
-            mavutil.mavlink.MAV_DATA_STREAM_EXTRA1,
-            mavutil.mavlink.MAV_DATA_STREAM_EXTRA2,
+            mavutil.mavlink.MAV_DATA_STREAM_EXTRA1,        # ATTITUDE
+            mavutil.mavlink.MAV_DATA_STREAM_EXTRA2,        # VFR_HUD
+            mavutil.mavlink.MAV_DATA_STREAM_EXTRA3,        # EKF_STATUS_REPORT
+            mavutil.mavlink.MAV_DATA_STREAM_EXTENDED_STATUS,  # GPS_RAW_INT
         ):
             try:
                 master.mav.request_data_stream_send(
@@ -174,6 +186,11 @@ class TelemetryLink:
                 raise TimeoutError("no MAVLink messages for 2s")
             t = msg.get_type()
             now = time.time()
+            if self.msg_callback is not None:
+                try:
+                    self.msg_callback(msg)
+                except Exception:
+                    pass
             if t == "GLOBAL_POSITION_INT":
                 with st.lock:
                     st.lat = msg.lat / 1e7

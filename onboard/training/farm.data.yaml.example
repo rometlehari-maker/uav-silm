@@ -1,0 +1,24 @@
+# Example data.yaml for a REAL labelled dataset (edit paths, then train).
+# Produced automatically by Roboflow's "YOLOv11 PyTorch" export; if you label
+# elsewhere, match this shape. Class names/order MUST match training/classes.yaml.
+
+path: /home/you/datasets/farm      # dataset root
+train: images/train                # relative to path
+val: images/val
+
+names:
+  0: person
+  1: car
+  2: truck
+  3: tractor
+  4: combine
+  5: harvester
+  6: baler
+  7: hay_bale
+  8: livestock
+  9: silo
+  10: barn
+  11: logging_truck
+  12: timber_stack
+  13: fire
+  14: smoke

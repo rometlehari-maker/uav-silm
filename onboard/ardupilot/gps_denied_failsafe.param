@@ -1,0 +1,96 @@
+# ===========================================================================
+# SILM GPS-loss / GPS-disturbance FAILSAFE parameter set  (ArduPlane 4.5+)
+# ===========================================================================
+# Load in Mission Planner: CONFIG > Full Parameter List > Load from file, then
+# "Write Params". REVIEW every line against your airframe before flight. These
+# are starting values for a 1.4 m, ~1.6 kg hand-launched pusher; tune on the
+# bench and in SITL first (see FLIGHT_READY.md step 6).
+#
+# What this does, in plain terms:
+#   * If GPS is lost or goes crazy (jammed/spoofed/glitching), the EKF switches
+#     to DEAD RECKONING using airspeed + heading + wind estimate and keeps
+#     flying a sensible path HOME instead of tumbling or flying away.
+#   * If GPS never comes back, after a set time it commits to a controlled
+#     response (continue dead-reckoning toward home, then loiter/land).
+#   * Sudden "teleport" position jumps (classic spoofing signature) are rejected
+#     by the EKF innovation checks rather than chased.
+#
+# This is a SAFETY feature: its purpose is to not lose the aircraft. It does not
+# make the aircraft navigate perfectly without GPS; dead-reckoning drifts with
+# wind error over time. It buys you a controlled recovery, not infinite blind
+# flight.
+# ---------------------------------------------------------------------------
+
+# --- Dead-reckoning on GPS loss (ArduPlane DR failsafe) --------------------
+# Enable dead reckoning when the EKF loses its position fix.
+FS_DR_ENABLE,1
+# Seconds of continuous bad GPS before DR engages.
+FS_DR_TIMEOUT,5
+# After this many seconds of dead-reckoning with no GPS recovery, take the
+# terminal action (below). 60 s of DR at ~19 m/s covers ~1.1 km toward home.
+FS_LONG_TIMEOUT,60
+
+# --- GPS failsafe actions ---------------------------------------------------
+# Long failsafe action: 1 = RTL. With DR enabled the EKF dead-reckons the RTL
+# path; if GPS recovers mid-way it seamlessly resumes normal navigation.
+FS_LONG_ACTN,1
+# Short failsafe (brief GPS/RC blips): 0 = continue mission / circle, so a 1-2 s
+# GPS stutter doesn't trigger a full RTL.
+FS_SHORT_ACTN,0
+FS_SHORT_TIMEOUT,3
+
+# --- EKF3 source + innovation gating (spoof / glitch rejection) ------------
+# Primary nav source = GPS; the EKF already blends baro + airspeed + IMU.
+EK3_SRC1_POSXY,3
+EK3_SRC1_VELXY,3
+EK3_SRC1_POSZ,1
+# Tighten GPS innovation gates so a spoofed "jump" is rejected, not trusted.
+# (Innovation = how far the GPS disagrees with the inertial prediction.)
+EK3_POS_I_GATE,300
+EK3_VEL_I_GATE,300
+# ArduPilot GPS sanity checks: require a sane fix before trusting GPS again.
+GPS_GNSS_MODE,0
+EK3_GPS_CHECK,31
+# Glitch protection: how far GPS may jump before it's flagged bad (metres).
+EKF_POS_GATE,10
+
+# --- Use airspeed aggressively for DR (you have an ASPD-4525) --------------
+ARSPD_USE,1
+ARSPD_FBW_MIN,12
+ARSPD_FBW_MAX,28
+# Trust airspeed for the EKF so dead-reckoning has a good speed reference.
+EK3_DRAG_BCOEF_X,0
+TECS_SPDWEIGHT,1.0
+
+# --- Wind estimation (critical: DR accuracy = wind-estimate accuracy) ------
+# EKF wind estimation on, so dead-reckoning compensates for the wind it learnt
+# during the GPS-good part of the flight.
+EK3_WIND_P_NSE,0.1
+EK3_WIND_PSCALE,1.0
+
+# --- Geofence: hard backstop if DR drifts too far --------------------------
+# If the (dead-reckoned) position leaves the fence, force RTL/land. This bounds
+# a worst-case drift so the aircraft can't wander beyond your operating area.
+FENCE_ENABLE,1
+FENCE_TYPE,3
+FENCE_ACTION,1
+FENCE_RADIUS,1500
+FENCE_ALT_MAX,120
+FENCE_MARGIN,30
+
+# --- RC-loss failsafe (independent of GPS; for the return/manual phase) ----
+# If the ExpressLRS link is lost, RTL. Set THR_FS per your receiver's failsafe.
+FS_SHORT_ACTN,0
+THR_FAILSAFE,1
+# RTL altitude (cm) and loiter radius (m) for the return.
+ALT_HOLD_RTL,10000
+RTL_RADIUS,60
+
+# --- Optional: accept a companion-supplied velocity aid (optical flow) -----
+# If you run the Pi optical-flow velocity aid (silm_recon/failsafe.py), it sends
+# MAVLink and ArduPilot can fuse it as a secondary velocity source. Leaving the
+# source-set switch here DISABLED by default; enable EK3_SRC2_* only after the
+# bench test in FLIGHT_READY.md step 7 confirms sane flow data. Flight-critical
+# behaviour must not depend on the Pi.
+# EK3_SRC2_VELXY,5
+# EK3_SRC_OPTIONS,0

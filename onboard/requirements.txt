@@ -8,15 +8,20 @@
 #  * On a Pi, prefer the apt python3-opencv/python3-numpy packages (prebuilt)
 #    over pip wheels, which can be slow or fail to build. They satisfy the
 #    opencv-python / numpy requirements below.
-#  * tflite-runtime is the small inference-only package (no full TensorFlow).
-#    Get the wheel matching your Python version from the Coral/TF project if pip
-#    can't find it: https://github.com/google-coral/pycoral/releases
+#  * The TFLite interpreter: the detector accepts any of three backends and
+#    picks whichever is installed -- tflite-runtime (classic), ai-edge-litert
+#    (its current renamed successor), or full tensorflow. On a modern Pi OS,
+#    `pip install ai-edge-litert` is the reliable one; older setups use
+#    tflite-runtime (wheels: https://github.com/google-coral/pycoral/releases).
 #  * picamera2 is only needed if camera.source == picamera (CSI camera).
 #  * For a Coral USB accelerator also install libedgetpu1-std + pycoral.
+#  * TRAINING/EXPORT deps (NOT needed on the Pi -- install on your training box):
+#      pip install ultralytics litert_torch
+#    See training/README.md.
 
 pymavlink>=2.4.37
 numpy>=1.21
 PyYAML>=5.4
 opencv-python>=4.5          # or system python3-opencv
-tflite-runtime>=2.5         # inference engine; see note above
+ai-edge-litert>=1.0         # inference engine (or: tflite-runtime>=2.5)
 # picamera2                 # uncomment only for a Pi CSI camera

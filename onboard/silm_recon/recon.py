@@ -19,11 +19,14 @@ Nothing here ever commands the aircraft.
 
 from __future__ import annotations
 
+import json
+import os
 import signal
 import time
 
 from .camera import Camera
 from .detector import ObjectDetector
+from .failsafe import GpsHealthMonitor, OpticalFlowAid
 from .fire import FireDetector
 from .georef import GeoReferencer
 from .store import DetectionStore
@@ -36,11 +39,16 @@ class Recon:
         self.cfg = cfg
         self._stop = False
 
+        # GPS-health monitor: logs degradation / suspected jamming. The real
+        # GPS-loss failsafe is in ArduPilot (ardupilot/gps_denied_failsafe.param).
+        self.gps_monitor = GpsHealthMonitor(log_dir=None)  # log_dir set after store
+
         tcfg = cfg["telemetry"]
         self.link = TelemetryLink(
             connection=tcfg["connection"],
             baud=int(tcfg.get("baud", 115200)),
             source_system=int(tcfg.get("source_system", 200)),
+            msg_callback=self.gps_monitor.ingest,
         )
 
         self.camera = Camera(cfg["camera"])
@@ -52,13 +60,38 @@ class Recon:
                 model_path=dcfg["model"],
                 labels_path=dcfg["labels"],
                 score_threshold=float(dcfg.get("score_threshold", 0.5)),
+                fmt=dcfg.get("format", "auto"),
+                iou_threshold=float(dcfg.get("iou_threshold", 0.45)),
             )
         self.targets = set(cfg.get("targets", []))
+        self._tiled = bool(dcfg.get("tiled", False))
+        g = dcfg.get("tile_grid", [2, 2])
+        self._tile_grid = (int(g[0]), int(g[1]))
 
         self.fire = FireDetector(cfg.get("fire", {}))
         self.geo = GeoReferencer(cfg.get("georef", {}))
         self.store = DetectionStore(cfg.get("storage", {}))
         self.basemap = OfflineBasemap(cfg.get("tiles", {}))
+
+        # Now that the mission folder exists, log GPS-health events into it.
+        self.gps_monitor._log_path = os.path.join(self.store.dir, "gps_health.ndjson")
+
+        # Optical-flow velocity aid (backup reference; logs only unless the
+        # config opts in to sending it to the flight controller).
+        self.flow = OpticalFlowAid(
+            cfg.get("failsafe", {}),
+            hfov_deg=float(cfg.get("georef", {}).get("hfov_deg", 86.0)),
+        )
+        self._flow_log = open(os.path.join(self.store.dir, "optical_flow.ndjson"), "a", buffering=1)
+
+        # Optional: periodically save raw frames for later labelling/retraining.
+        scfg = cfg.get("storage", {})
+        self._save_all = bool(scfg.get("save_all_frames", False))
+        self._frame_interval = float(scfg.get("frame_interval_s", 2.0))
+        self._frames_dir = os.path.join(self.store.dir, "frames")
+        self._last_frame_save = 0.0
+        if self._save_all:
+            os.makedirs(self._frames_dir, exist_ok=True)
 
         acfg = cfg.get("activation", {})
         self.active_modes = set(m.upper() for m in acfg.get("active_modes", ["AUTO", "GUIDED"]))
@@ -107,7 +140,8 @@ class Recon:
                     now = time.time()
                     if now - last_status > 5.0:
                         print(f"[recon] idle mode={st.mode} armed={st.armed} "
-                              f"alt={st.rel_alt:.0f}m fix={st.have_fix}")
+                              f"alt={st.rel_alt:.0f}m fix={st.have_fix} "
+                              f"gps={self.gps_monitor.state}")
                         last_status = now
                     time.sleep(0.2)
                     continue
@@ -118,13 +152,38 @@ class Recon:
                     continue
 
                 self._frame_no += 1
+
+                # Optionally archive raw frames (rate-limited) for retraining.
+                if self._save_all:
+                    import cv2
+                    now_f = time.time()
+                    if now_f - self._last_frame_save >= self._frame_interval:
+                        fp = os.path.join(
+                            self._frames_dir,
+                            f"frame_{int(now_f)}_{self._frame_no}.jpg")
+                        cv2.imwrite(fp, frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                        self._last_frame_save = now_f
+
+                # Optical-flow velocity aid runs every frame (rate-limited
+                # internally). Logs always; forwards to the FC only if opted in.
+                fe = self.flow.update(frame, st.rel_alt, st.roll, st.pitch, st.yaw)
+                if fe.valid:
+                    self.flow.send(self.link.master, fe)
+                    self._flow_log.write(json.dumps({
+                        "t": round(fe.t, 3), "vn": round(fe.vx_ned, 2),
+                        "ve": round(fe.vy_ned, 2), "q": round(fe.quality, 2),
+                        "gps": self.gps_monitor.state,
+                    }) + "\n")
+
                 if self._frame_no % self.detect_every != 0:
                     continue
 
                 events = []  # list of {label, score, box, ground}
 
                 if self.detector is not None:
-                    for d in self.detector.detect(frame):
+                    dets = (self.detector.detect_tiled(frame, grid=self._tile_grid)
+                            if self._tiled else self.detector.detect(frame))
+                    for d in dets:
                         if self.targets and d.label not in self.targets:
                             continue
                         events.append({
@@ -176,3 +235,7 @@ class Recon:
         self.camera.release()
         self.store.close()
         self.basemap.close()
+        try:
+            self._flow_log.close()
+        except Exception:
+            pass

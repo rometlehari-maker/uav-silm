@@ -40,10 +40,22 @@ def _load_interpreter(model_path: str):
     """Load a TFLite interpreter, using the Edge TPU delegate if available."""
     use_tpu = model_path.endswith("_edgetpu.tflite")
 
-    # Prefer the lightweight tflite_runtime (what you install on a Pi).
-    try:
-        from tflite_runtime.interpreter import Interpreter, load_delegate
-    except Exception:
+    # Interpreter backend, in order of preference:
+    #   1. tflite_runtime      - classic lightweight Pi package
+    #   2. ai_edge_litert      - its current/renamed successor (pip install
+    #                            ai-edge-litert); what newer systems ship
+    #   3. tensorflow.lite     - full TF fallback (heavy)
+    Interpreter = None
+    load_delegate = None
+    for mod in ("tflite_runtime.interpreter", "ai_edge_litert.interpreter"):
+        try:
+            m = __import__(mod, fromlist=["Interpreter", "load_delegate"])
+            Interpreter = m.Interpreter
+            load_delegate = getattr(m, "load_delegate", None)
+            break
+        except Exception:
+            continue
+    if Interpreter is None:
         from tensorflow.lite.python.interpreter import Interpreter  # type: ignore
         try:
             from tensorflow.lite.python.interpreter import load_delegate  # type: ignore
@@ -84,19 +96,35 @@ def load_labels(path: str) -> dict[int, str]:
 
 
 class ObjectDetector:
-    def __init__(self, model_path: str, labels_path: str, score_threshold: float = 0.5):
+    def __init__(self, model_path: str, labels_path: str, score_threshold: float = 0.5,
+                 fmt: str = "auto", iou_threshold: float = 0.45):
         self.interpreter = _load_interpreter(model_path)
         self.labels = load_labels(labels_path)
         self.score_threshold = score_threshold
+        self.iou_threshold = iou_threshold
 
         inp = self.interpreter.get_input_details()[0]
         self._in_index = inp["index"]
-        self._in_h, self._in_w = inp["shape"][1], inp["shape"][2]
+        shape = list(inp["shape"])
+        # Support both NHWC [1,H,W,3] (classic TFLite) and NCHW [1,3,H,W]
+        # (produced by some torch->LiteRT exports).
+        if len(shape) == 4 and shape[1] == 3 and shape[3] != 3:
+            self._nchw = True
+            self._in_h, self._in_w = int(shape[2]), int(shape[3])
+        else:
+            self._nchw = False
+            self._in_h, self._in_w = int(shape[1]), int(shape[2])
         self._in_dtype = inp["dtype"]
         # Quantised models carry a (scale, zero_point) for input.
         self._in_quant = inp.get("quantization", (0.0, 0))
 
         self._out = self.interpreter.get_output_details()
+
+        # Decide the output format. SSD-MobileNet produces 4 output tensors;
+        # YOLO (Ultralytics export) produces a single [1, 4+nc, N] tensor.
+        if fmt == "auto":
+            fmt = "yolo" if len(self._out) == 1 else "ssd"
+        self.fmt = fmt
 
     @property
     def input_size(self) -> tuple[int, int]:
@@ -107,17 +135,82 @@ class ObjectDetector:
 
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         resized = cv2.resize(rgb, (self._in_w, self._in_h))
-        if self._in_dtype == np.uint8:
-            tensor = resized.astype(np.uint8)
+        scale, zero = self._in_quant if self._in_quant else (0.0, 0)
+        if self._in_dtype in (np.int8, np.uint8):
+            # Full-integer model. YOLO's real input range is 0..1, so quantise
+            # the 0..1 pixels with the model's own (scale, zero_point).
+            real = resized.astype(np.float32) / 255.0
+            if scale and scale != 0.0:
+                q = np.round(real / scale + zero)
+            else:  # no quant params: assume standard int8 mapping
+                q = np.round(real * 255.0) - (128 if self._in_dtype == np.int8 else 0)
+            info = np.iinfo(self._in_dtype)
+            tensor = np.clip(q, info.min, info.max).astype(self._in_dtype)
         else:
-            tensor = (resized.astype(np.float32) - 127.5) / 127.5
-        return tensor[np.newaxis, ...]
+            tensor = resized.astype(np.float32) / 255.0  # YOLO expects 0..1
+        tensor = tensor[np.newaxis, ...]            # -> NHWC
+        if self._nchw:
+            tensor = np.transpose(tensor, (0, 3, 1, 2))  # -> NCHW
+        return tensor
 
     def detect(self, frame_bgr: np.ndarray) -> list[Detection]:
         tensor = self._preprocess(frame_bgr)
         self.interpreter.set_tensor(self._in_index, tensor)
         self.interpreter.invoke()
+        if self.fmt == "yolo":
+            return self._detect_yolo()
+        return self._detect_ssd()
 
+    def detect_tiled(self, frame_bgr: np.ndarray, grid=(2, 2),
+                     overlap: float = 0.15) -> list[Detection]:
+        """Run detection on overlapping tiles and merge, then NMS globally.
+
+        Aerial targets are small; a 256-px model on a 1280-px frame downsamples
+        a combine to a few pixels. Splitting the frame into tiles keeps targets
+        large relative to the model input and sharply improves small-object
+        recall -- at the cost of running inference grid[0]*grid[1] times, so use
+        it only with a Coral or a strong companion (document: FLIGHT_READY D/C).
+        """
+        h, w = frame_bgr.shape[:2]
+        gx, gy = grid
+        tw, th = int(w / gx), int(h / gy)
+        ox, oy = int(tw * overlap), int(th * overlap)
+        all_dets: list[Detection] = []
+        for iy in range(gy):
+            for ix in range(gx):
+                x0 = max(0, ix * tw - ox); y0 = max(0, iy * th - oy)
+                x1 = min(w, (ix + 1) * tw + ox); y1 = min(h, (iy + 1) * th + oy)
+                tile = frame_bgr[y0:y1, x0:x1]
+                if tile.size == 0:
+                    continue
+                self.interpreter.set_tensor(self._in_index, self._preprocess(tile))
+                self.interpreter.invoke()
+                dets = self._detect_yolo() if self.fmt == "yolo" else self._detect_ssd()
+                # Map tile-normalised boxes back to full-frame-normalised.
+                for d in dets:
+                    bx0 = (x0 + d.box[0] * (x1 - x0)) / w
+                    by0 = (y0 + d.box[1] * (y1 - y0)) / h
+                    bx1 = (x0 + d.box[2] * (x1 - x0)) / w
+                    by1 = (y0 + d.box[3] * (y1 - y0)) / h
+                    all_dets.append(Detection(d.label, d.score, (bx0, by0, bx1, by1)))
+        return self._merge_global(all_dets)
+
+    def _merge_global(self, dets: list[Detection]) -> list[Detection]:
+        if not dets:
+            return []
+        out: list[Detection] = []
+        by_label: dict[str, list[Detection]] = {}
+        for d in dets:
+            by_label.setdefault(d.label, []).append(d)
+        for label, group in by_label.items():
+            x0 = np.array([g.box[0] for g in group]); y0 = np.array([g.box[1] for g in group])
+            x1 = np.array([g.box[2] for g in group]); y1 = np.array([g.box[3] for g in group])
+            sc = np.array([g.score for g in group])
+            for i in self._nms(x0, y0, x1, y1, sc, self.iou_threshold):
+                out.append(group[i])
+        return out
+
+    def _detect_ssd(self) -> list[Detection]:
         boxes, classes, scores, count = self._read_outputs()
         results: list[Detection] = []
         n = int(count) if count is not None else len(scores)
@@ -134,6 +227,71 @@ class ObjectDetector:
             )
             results.append(Detection(label=label, score=score, box=box))
         return results
+
+    def _detect_yolo(self) -> list[Detection]:
+        """Decode an Ultralytics YOLO TFLite head: one tensor [1, 4+nc, N]
+        (or [1, N, 4+nc]) of xywh (input-normalised) + per-class scores."""
+        det = self._out[0]
+        raw = self.interpreter.get_tensor(det["index"])
+        scale, zero = det.get("quantization", (0.0, 0))
+        arr = raw.astype(np.float32)
+        if scale and scale != 0.0:  # int8/uint8 -> real values
+            arr = (arr - zero) * scale
+        arr = np.squeeze(arr, axis=0)  # (4+nc, N) or (N, 4+nc)
+        if arr.shape[0] < arr.shape[1]:
+            arr = arr.T  # -> (N, 4+nc)
+
+        nc = arr.shape[1] - 4
+        xywh = arr[:, :4]
+        cls_scores = arr[:, 4:4 + nc]
+        cls_ids = np.argmax(cls_scores, axis=1)
+        confs = cls_scores[np.arange(cls_scores.shape[0]), cls_ids]
+
+        keep = confs >= self.score_threshold
+        xywh, cls_ids, confs = xywh[keep], cls_ids[keep], confs[keep]
+        if len(confs) == 0:
+            return []
+
+        # xywh (cx,cy,w,h, normalised 0..1) -> xyxy normalised
+        cx, cy, w, h = xywh[:, 0], xywh[:, 1], xywh[:, 2], xywh[:, 3]
+        x0 = np.clip(cx - w / 2, 0, 1); y0 = np.clip(cy - h / 2, 0, 1)
+        x1 = np.clip(cx + w / 2, 0, 1); y1 = np.clip(cy + h / 2, 0, 1)
+
+        # Class-aware NMS.
+        results: list[Detection] = []
+        for c in np.unique(cls_ids):
+            m = cls_ids == c
+            idxs = self._nms(x0[m], y0[m], x1[m], y1[m], confs[m], self.iou_threshold)
+            bx0, by0, bx1, by1 = x0[m], y0[m], x1[m], y1[m]
+            sc = confs[m]
+            label = self.labels.get(int(c), str(int(c)))
+            for i in idxs:
+                results.append(Detection(
+                    label=label, score=float(sc[i]),
+                    box=(float(bx0[i]), float(by0[i]), float(bx1[i]), float(by1[i])),
+                ))
+        return results
+
+    @staticmethod
+    def _nms(x0, y0, x1, y1, scores, iou_thr) -> list[int]:
+        areas = (x1 - x0) * (y1 - y0)
+        order = scores.argsort()[::-1]
+        keep = []
+        while order.size > 0:
+            i = order[0]
+            keep.append(int(i))
+            if order.size == 1:
+                break
+            xx0 = np.maximum(x0[i], x0[order[1:]])
+            yy0 = np.maximum(y0[i], y0[order[1:]])
+            xx1 = np.minimum(x1[i], x1[order[1:]])
+            yy1 = np.minimum(y1[i], y1[order[1:]])
+            w = np.maximum(0.0, xx1 - xx0)
+            h = np.maximum(0.0, yy1 - yy0)
+            inter = w * h
+            iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-9)
+            order = order[1:][iou <= iou_thr]
+        return keep
 
     def _read_outputs(self):
         """Handle the common SSD output orderings robustly.

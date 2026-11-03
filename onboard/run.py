@@ -41,6 +41,8 @@ def selftest(cfg: dict) -> int:
         det = ObjectDetector(
             cfg["detector"]["model"], cfg["detector"]["labels"],
             float(cfg["detector"].get("score_threshold", 0.5)),
+            fmt=cfg["detector"].get("format", "auto"),
+            iou_threshold=float(cfg["detector"].get("iou_threshold", 0.45)),
         )
     fire = FireDetector(cfg.get("fire", {}))
     geo = GeoReferencer(cfg.get("georef", {}))

@@ -1,5 +1,14 @@
 __pycache__/
 *.pyc
+# model weights are downloaded/exported, not committed
 models/*.tflite
+# training artifacts (large / regenerable)
+training/datasets/
+training/runs/
+*.pt
+# mission captures
 captures/
 silm_captures/
+frames/
+
+models/*_labels.txt
