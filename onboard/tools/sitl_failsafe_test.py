@@ -335,8 +335,15 @@ def run(args) -> int:
     phase = "survey"
     last_log = 0.0
     flew = False
+    reconverged = False
+    last_rx = time.time()
     while True:
-        s.recv(timeout=0.2)
+        if s.recv(timeout=0.2) is not None:
+            last_rx = time.time()
+        elif time.time() - last_rx > 15:
+            print("lost the connection to SITL (nothing received for 15 s) - did SITL stop? "
+                  "Restart it and run the test again.")
+            return 1
         now = time.time() - t_start
         tp, ep = s.true_pos(), s.est_pos()
         if tp is None or ep is None:
@@ -371,10 +378,16 @@ def run(args) -> int:
             s.set_param("SIM_GPS1_ENABLE", 1)
             print(f"t={now:.0f}s  GPS restored, true distance to touchdown "
                   f"{dist_m(land[0], land[1], tp[0], tp[1]):.0f} m")
-        elif restore_t is not None and flew and not armed and now - restore_t >= 10:
+        if restore_t is not None and not reconverged:
+            reconverged = dist_m(tp[0], tp[1], ep[0], ep[1]) < 15.0
+        # After landing, keep recording until the estimate has re-converged on
+        # the returned GPS (the script waits SLM_GPS_OK_S, then the EKF runs its
+        # own GPS checks) or the 40 s grading window has passed.
+        if restore_t is not None and flew and not armed and now - restore_t >= 10 and (
+                reconverged or now - restore_t >= 45):
             print(f"t={now:.0f}s  landed and disarmed")
             break
-        elif fault_t is None and flew and not armed:
+        if fault_t is None and flew and not armed:
             print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
             break
         if now > args.timeout_s:
