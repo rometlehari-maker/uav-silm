@@ -116,9 +116,11 @@ the new model's detections. Then delete `practice/` and do it for real.
 ## 1. Can the camera actually see it?
 
 A detector needs the object to be roughly **10 pixels or more across at the
-model's input**, and under ~5 it can't learn it at all. The camera frame is
-shrunk to the model input (1280 → 320 px on the Pi 3), so small objects shrink
-with it. Check before collecting anything:
+model's input**, and under ~5 it can't learn it at all. The camera image is
+shrunk to the model input (the 1920-px A2 mini frame, or the detection region
+`detector.roi`, down to 320 px on the Pi 3), so small objects shrink with it.
+The 160° fisheye spreads the ground over few pixels, so this check matters a
+lot. Check before collecting anything:
 
 ```bash
 cd onboard
@@ -126,23 +128,25 @@ python3 tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 100 --co
 ```
 
 Pass the object's **smaller side as seen from above** (`--object-m`) and
-optionally its length (`--length-m`). Computed for this airframe's camera
-(86° lens, 1280-px frame) at the model's input:
+optionally its length (`--length-m`). With `--config` it uses the camera,
+lens and detection region from `config.yaml`. For the A2 mini (1920×1080, 160°
+fisheye) at the 320-px model input:
 
-| Object (length × width from above) | 100 m, 320 px | 60 m, 320 px, 2×2 tiles |
-|---|---|---|
-| Combine without header, ~10 × 3.5 m | 17 × 6 px, marginal | 57 × 20 px, good |
-| Car, ~4.5 × 1.8 m | 7.7 × 3.1 px, too small | 26 × 10 px, good |
-| Cow, ~2.4 × 0.8 m | 4.1 × 1.4 px, too small | 14 × 4.6 px, too small |
-| Deer, ~1.5 × 0.5 m | 2.6 × 0.9 px, too small | 8.6 × 2.9 px, too small |
+| Object (length × width from above) | Whole frame, 100 m | Central half, 2×2 tiles, 100 m | Central half, 2×2 tiles, 60 m |
+|---|---|---|---|
+| Combine without header, ~10 × 3.5 m | 11.5 × 4.0 px, too small | 46 × 16 px, good | 76 × 27 px, good |
+| Car, ~4.5 × 1.8 m | 5.2 × 2.1 px, too small | 21 × 8.3 px, marginal | 34 × 14 px, good |
+| Cow, ~2.4 × 0.8 m | 2.8 × 0.9 px, too small | 11 × 3.7 px, too small | 18 × 6.1 px, marginal |
+| Deer, ~1.5 × 0.5 m | 1.7 × 0.6 px, too small | 6.9 × 2.3 px, too small | 11.5 × 3.8 px, too small |
 
-So at 100 m on a Pi 3 without tiling, only large objects (combines with
-headers, buildings, fire and smoke plumes, timber stacks) are realistic. The
-tool also tells you what would fix it, e.g. for a deer: fly at or below ~26 m,
-~51 m with 2×2 tiled detection (`detector.tiled: true`), or ~100 m with a
-640-px model and tiles. Tiling and bigger inputs need far more computing; on a
-Pi 3 that realistically means adding a Coral USB accelerator. Decide this now:
-the altitude you will fly at is the altitude your training pictures must show.
+The central-half, 2×2-tile setup is the default in `config.yaml` for this
+reason. The tool also tells you what else would fix it, e.g. for a deer: fly
+at or below ~23 m, or ~34 m with a 640-px model (that is the camera's own limit:
+a 640-px input no longer shrinks the tiles, and enlarging adds no detail). More tiles and bigger inputs
+multiply the computing; whether the Pi 3 keeps up is measured by
+`tools/preflight.py`, and if it doesn't, a Coral USB accelerator is the fix.
+Decide this now: the altitude you will fly at is the altitude your training
+pictures must show.
 
 Also decide what exactly the class is:
 

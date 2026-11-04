@@ -12,6 +12,9 @@ the H743's USB port. Set SERIALx_PROTOCOL=2 and a matching baud in ArduPilot.
 
 from __future__ import annotations
 
+import bisect
+import collections
+import dataclasses
 import math
 import threading
 import time
@@ -109,6 +112,10 @@ class TelemetryLink:
         self.baud = baud
         self.source_system = source_system
         self.state = State()
+        # Recent (t, lat, lon, rel_alt, roll, pitch, yaw) samples, so a camera
+        # frame can be paired with the state at the moment it was captured.
+        self._hist: collections.deque = collections.deque(maxlen=400)
+        self._hist_lock = threading.Lock()
         # Optional callback(msg) invoked for every received MAVLink message,
         # used by the GPS-health monitor. Must be fast and non-blocking.
         self.msg_callback = msg_callback
@@ -199,12 +206,14 @@ class TelemetryLink:
                     st.rel_alt = msg.relative_alt / 1000.0
                     st.have_fix = not (msg.lat == 0 and msg.lon == 0)
                     st.last_pos_t = now
+                self._record(now)
             elif t == "ATTITUDE":
                 with st.lock:
                     st.roll = msg.roll
                     st.pitch = msg.pitch
                     st.yaw = msg.yaw  # radians, 0..2pi or -pi..pi depending on fw
                     st.last_att_t = now
+                self._record(now)
             elif t == "VFR_HUD":
                 with st.lock:
                     st.ground_speed = msg.groundspeed
@@ -218,6 +227,56 @@ class TelemetryLink:
                     except Exception:
                         st.mode = "UNKNOWN"
                     st.last_hb_t = now
+
+
+    # ---------------------------------------------------------------- history
+
+    def _record(self, now: float) -> None:
+        st = self.state
+        with st.lock:
+            if not st.have_fix:
+                return
+            sample = (now, st.lat, st.lon, st.rel_alt, st.roll, st.pitch, st.yaw)
+        with self._hist_lock:
+            self._hist.append(sample)
+
+    def state_at(self, t: float) -> "StateView":
+        """Aircraft state interpolated to time t (falls back to the latest)."""
+        view = self.state.snapshot()
+        with self._hist_lock:
+            hist = list(self._hist)
+        s = interpolate_state(hist, t)
+        if s is None:
+            return view
+        lat, lon, alt, roll, pitch, yaw = s
+        return dataclasses.replace(view, lat=lat, lon=lon, rel_alt=alt,
+                                   roll=roll, pitch=pitch, yaw=yaw)
+
+
+def _lerp_angle(a: float, b: float, f: float) -> float:
+    d = (b - a + math.pi) % (2 * math.pi) - math.pi
+    return a + f * d
+
+
+def interpolate_state(hist: list, t: float):
+    """hist: time-sorted (t, lat, lon, alt, roll, pitch, yaw). Returns the
+    interpolated (lat, lon, alt, roll, pitch, yaw) at t, clamped to the ends;
+    None if there is no history or t is more than 2 s outside it."""
+    if not hist:
+        return None
+    times = [h[0] for h in hist]
+    if t <= times[0]:
+        return hist[0][1:] if times[0] - t <= 2.0 else None
+    if t >= times[-1]:
+        return hist[-1][1:] if t - times[-1] <= 2.0 else None
+    i = bisect.bisect_right(times, t)
+    a, b = hist[i - 1], hist[i]
+    f = (t - a[0]) / (b[0] - a[0]) if b[0] > a[0] else 0.0
+    lat = a[1] + f * (b[1] - a[1])
+    lon = a[2] + f * (b[2] - a[2])
+    alt = a[3] + f * (b[3] - a[3])
+    return (lat, lon, alt, _lerp_angle(a[4], b[4], f), _lerp_angle(a[5], b[5], f),
+            _lerp_angle(a[6], b[6], f))
 
 
 def normalise_heading(yaw_rad: float) -> float:

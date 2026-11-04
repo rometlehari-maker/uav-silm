@@ -21,7 +21,7 @@ Run on your PC (not on the aircraft):
        cd ardupilot && Tools/environment_install/install-prereqs-ubuntu.sh -y
   2. Put the script where SITL loads scripts (a `scripts/` folder in the
      directory you start sim_vehicle.py from):
-       mkdir -p scripts && cp <repo>/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
+       mkdir -p scripts && cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
   3. Start SITL (near your field, e.g. Tallinn):
        Tools/autotest/sim_vehicle.py -v ArduPlane --console --map \
            -L 59.40,24.70,30,0      # or any lat,lon,alt,heading

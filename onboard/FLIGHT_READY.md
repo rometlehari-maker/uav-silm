@@ -13,9 +13,10 @@ Two independent subsystems, neither needing an operator link in flight:
   watches the camera, recognises farm/forestry objects and fire, saves
   geo-tagged pictures to the SD card. Never commands the aircraft.
 
-> The one hardware item the current build likely lacks: an **AHD→USB capture
-> dongle** so the Pi can see the analog SIYI A2 Mini. Everything else is parts
-> you already have. A Coral USB stick is optional (makes recognition real-time).
+> Everything here uses parts already in the build: the SIYI A2 mini sends
+> digital video over Ethernet straight into the Pi 3. Whether the Pi 3 is fast
+> enough for your altitude is measured by `tools/preflight.py` (B4); if it
+> isn't, a Coral USB accelerator is the one addition.
 
 ---
 
@@ -29,7 +30,8 @@ onboard/
   requirements.txt            Pi Python deps
   silm_recon/                 the onboard app (runs on the Pi)
     telemetry.py              read-only MAVLink from the H743
-    camera.py                 frame capture (USB dongle / CSI / file)
+    camera.py                 frame capture (RTSP over Ethernet / USB / CSI / file)
+    siyi.py                   SIYI gimbal: point down, read its angle (UDP)
     detector.py               TFLite detector (SSD or YOLO)
     fire.py                   no-training fire/smoke heuristic
     georef.py                 pixel -> ground lat/lon
@@ -53,6 +55,7 @@ onboard/
     train.py / export.py      train and export to TFLite
     README.md                 data + training guide
   tools/
+    preflight.py              does it work on THIS aircraft? PASS/WARN/FAIL per part
     check_params.py           check a .param file against the ArduPlane source
     sitl_failsafe_test.py     fly + grade a GPS-loss/jamming test in the simulator
     calibrate_camera.py       measure the lens from checkerboard photos
@@ -123,7 +126,7 @@ On your PC, with ArduPilot's simulator installed (instructions at the top of
 `tools/sitl_failsafe_test.py`):
 ```bash
 # in the folder you start SITL from:
-mkdir -p scripts && cp <repo>/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
+mkdir -p scripts && cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
 Tools/autotest/sim_vehicle.py -v ArduPlane --console --map -L 59.40,24.70,30,0
 
 # in another terminal, from onboard/:
@@ -155,53 +158,93 @@ per the comments in the param file. Flight safety must never depend on the Pi.
 ## B. The recognition + photo system (the Pi)
 
 ### B1. Hardware
-- Plug the **AHD→USB dongle** into the Pi; connect the SIYI A2 Mini's AHD output
-  to it. (Or use a Pi CSI camera and set `camera.source: picamera`.)
-- Wire the Pi to a **spare H743 UART** (e.g. TELEM2) or the H743 USB. In
-  ArduPilot set that port `SERIALx_PROTOCOL=2`, `SERIALx_BAUD=115`.
-- Optional: Coral USB accelerator.
+- **Camera video:** connect the SIYI A2 mini's Ethernet to the Pi 3's Ethernet
+  port (with the cable/adapter supplied with the camera). The gimbal control
+  uses the same cable.
+- **Camera power:** the A2 mini needs **12 V**. The 4S battery is 14.8-16.8 V,
+  so use a regulated 12 V output (check whether your power board has one; if
+  not, a small 12 V BEC).
+- **Network:** the camera is at 192.168.144.25. Give the Pi a fixed address on
+  that network, with no gateway so Wi-Fi/4G stays the default route. On
+  Raspberry Pi OS Bookworm (NetworkManager):
+  ```bash
+  sudo nmcli con add type ethernet ifname eth0 con-name siyi-camera \
+      ipv4.method manual ipv4.addresses 192.168.144.20/24 ipv6.method disabled
+  sudo nmcli con up siyi-camera
+  ping -c 3 192.168.144.25
+  ```
+- **Flight controller:** wire the Pi to a **spare H743 UART** (e.g. TELEM2) or
+  the H743 USB. In ArduPilot set that port `SERIALx_PROTOCOL=2`,
+  `SERIALx_BAUD=115`.
+- Optional: Coral USB accelerator (works on the Pi 3's USB 2.0 ports, slower
+  than on USB 3).
 
 ### B2. Install (on the Pi, with internet on the bench)
+Use **64-bit** Raspberry Pi OS.
 ```bash
-git clone <your repo> ~/uav-silm         # or copy onboard/ over
+git clone https://github.com/rometlehari-maker/uav-silm.git ~/uav-silm
 cd ~/uav-silm/onboard
-sudo apt update && sudo apt install -y python3-opencv python3-numpy python3-yaml
-python3 -m pip install -r requirements.txt
-# get a detection model (see models/README.md); start with the COCO baseline
-# or your trained models/silm_farm.tflite from section C.
+sudo apt update
+sudo apt install -y python3-opencv python3-numpy python3-yaml python3-venv \
+    gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+python3 -m venv --system-site-packages ~/silm-venv
+~/silm-venv/bin/pip install -r requirements.txt
+# get a detection model (see models/README.md): the COCO baseline, or your
+# trained models/silm_farm.tflite from section C.
 ```
+OpenCV must come from apt, not pip: apt's build has GStreamer, which the camera
+needs for the Pi's hardware video decoder (see `requirements.txt`). Run
+everything with `~/silm-venv/bin/python3`.
+
+Check the video path on its own first:
+```bash
+gst-launch-1.0 rtspsrc location=rtsp://192.168.144.25:8554/main.264 latency=0 ! \
+    rtph264depay ! h264parse ! v4l2h264dec ! fakesink sync=false -v
+```
+Frames flowing (no errors, caps printed) means the hardware decoder path works.
 
 ### B3. Configure
 Edit `config.yaml`:
 - `telemetry.connection` → your serial port (`/dev/serial0`, `/dev/ttyACM0`…).
-- `camera.device` → usually `0` (the dongle).
-- `detector.model/labels/format` → your model (COCO SSD, or `format: yolo` +
-  `silm_farm.tflite`).
-- `georef.hfov_deg` → your lens FOV (calibrate, step B5); `forward_tilt_deg` →
-  your real camera mount angle (90 = straight down).
+- `camera.url` → the RTSP address (default is the A2 mini's).
+- `gimbal` → leave enabled; `preflight.py` tells you whether it answers.
+- `detector.model/labels/format` → your model; `detector.roi`/`tiled` → the
+  detection region (defaults: central half, 2×2 tiles; see README *Performance*).
 - `storage.output_dir` → a path on the SD card / USB stick.
 
-### B4. See it work on the bench — no flight controller needed
+### B4. Preflight check, then see it work
 ```bash
-# point camera.source at a folder of test JPEGs, or leave 'usb' with the dongle:
-python3 run.py --config config.yaml --selftest
+~/silm-venv/bin/python3 tools/preflight.py --config config.yaml --alt-m 100 --speed-mps 19
 ```
-You'll see per-frame detections and a demo geo-reference printed. This proves the
-capture path + model + fire detector + geo-ref all work.
+It checks the camera stream (resolution, frame rate), the gimbal (answers,
+points down; follow its instruction to confirm the angle is stabilised), the
+flight controller (message rates, GPS, failsafe parameters, Lua script
+loaded), the model (labels, and **measured** detection speed on this Pi against
+what your altitude and speed need), storage, temperature and the clock. Fix
+every FAIL. Then:
+```bash
+~/silm-venv/bin/python3 run.py --config config.yaml --selftest
+```
+prints per-frame detections and a demo geo-reference from the live camera.
 
 ### B5. Calibrate the lens (one time)
-The A2 Mini is wide-angle, so positions near the frame edges are off unless the
-lens is measured.
-1. Print a checkerboard (9×6 inner corners, 25 mm squares), tape it flat.
-2. On the Pi, through the same dongle and resolution you fly with:
+The A2 mini's 160° fisheye bends straight lines strongly; without calibration,
+positions away from the image centre are off.
+1. Print a large checkerboard (A3, 9×6 inner corners, ~35 mm squares) and fix it
+   to something flat and rigid.
+2. On the Pi, from the live stream at the resolution you fly with (keep the
+   gimbal still):
    ```bash
-   python3 tools/calibrate_camera.py --device 0 --capture 25 --cols 9 --rows 6 --square-mm 25
+   ~/silm-venv/bin/python3 tools/calibrate_camera.py --fisheye \
+       --device rtsp://192.168.144.25:8554/main.264 --capture 30 \
+       --cols 9 --rows 6 --square-mm 35
    ```
-   Move the board so it covers the whole frame, **especially the corners**, at
-   different tilts. (Or take photos and use `--images folder/`.)
-3. RMS error under ~0.5 px is good. Paste the printed `calibration:` block under
-   `georef:` in `config.yaml`. It also prints the measured horizontal FOV.
-4. Set `georef.forward_tilt_deg` to your real camera mount (90 = straight down).
+   Move the board so it covers the whole frame, **especially the edges and
+   corners**, at different tilts. (Or take photos and use `--images folder/`.)
+3. RMS error under ~0.5 px is good. Paste the printed `calibration:` block
+   (it includes `model: fisheye`) under `georef:` in `config.yaml`.
+4. If the gimbal can't be read (`gimbal.enabled: false`), measure the camera's
+   fixed tilt and set `georef.forward_tilt_deg` (90 = straight down).
 5. First flight: compare a saved detection's `ground_lat/lon` with the object's
    real position to confirm.
 
@@ -276,7 +319,8 @@ to continue), re-export, re-fly. Each loop improves it on *your* fields.
 1. `python3 -m pytest` passes (section F). SITL failsafe tests passed (A3).
 2. Params written and `silm_gps_loss.lua` loaded on the FC (A1): Messages tab
    shows `SILM GPS-loss failsafe loaded`.
-3. Model on the Pi; `--selftest` clean (B4); lens calibrated (B5).
+3. `tools/preflight.py` shows no FAIL (B4); `--selftest` clean; lens
+   calibrated (B5).
 4. Plan the mission in Mission Planner; the geofence radius must contain it.
 5. Pre-cache an offline basemap if you want map context (`tools/download_tiles.py`).
 6. Power on; confirm the `silm-recon` service is running and sees telemetry
@@ -322,6 +366,11 @@ What they cover:
 - `test_geometry.py`: geo-referencing and the optical-flow speed estimate
   against an independent camera model, including rendered ground images.
 - `test_calibration.py`: the lens calibration recovers a known lens.
+- `test_siyi.py`, `test_camera_reader.py`, `test_fisheye.py`,
+  `test_realcam.py`: the real camera: gimbal protocol (checked byte for byte
+  against published SIYI frames), newest-frame RTSP reading, the 160° fisheye
+  model and its calibration, letterboxing, telemetry at the frame's time,
+  gimbal tilt in geo-referencing, and the preflight tool.
 - `test_training_tools.py`: the add-a-new-object tools (merging by class
   name, dataset checks, pre-labelling, per-class thresholds, size calculator).
 - `test_pipeline.py`, `test_confirm.py`, `test_health.py`,

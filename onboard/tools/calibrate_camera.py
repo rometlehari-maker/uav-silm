@@ -53,7 +53,50 @@ def find_corners(gray, cols, rows):
     return cv2.cornerSubPix(gray, corners, (half, half), (-1, -1), crit)
 
 
-def calibrate(images, cols: int, rows: int, square_m: float) -> dict:
+def calibrate_points(obj_pts, img_pts, size, fisheye: bool = False) -> dict:
+    """Calibrate from matched board corners. obj_pts: list of (N,3) arrays in
+    metres; img_pts: list of (N,1,2) pixel arrays; size: (w, h)."""
+    w, h = size
+    if fisheye:
+        # OpenCV's fisheye model (theta-polynomial), right for lenses beyond
+        # ~120 deg such as the SIYI A2 mini's 160 deg.
+        # (1, N, 3) / (1, N, 2): the shape both OpenCV 4 and 5 accept here
+        objs = [np.asarray(o, np.float64).reshape(1, -1, 3) for o in obj_pts]
+        imgs = [np.asarray(i, np.float64).reshape(1, -1, 2) for i in img_pts]
+        K = np.eye(3)
+        K[0, 0] = K[1, 1] = (w / 2) / math.radians(80)    # start: ~160 deg equidistant
+        K[0, 2], K[1, 2] = w / 2, h / 2
+        D = np.zeros((4, 1))
+        def flag(name):  # OpenCV 4: cv2.fisheye.X, OpenCV 5: cv2.X
+            return getattr(cv2.fisheye, name, None) or getattr(cv2, name)
+        flags = (flag("CALIB_RECOMPUTE_EXTRINSIC") | flag("CALIB_FIX_SKEW")
+                 | flag("CALIB_USE_INTRINSIC_GUESS"))
+        crit = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 200, 1e-9)
+        rms, K, D, _, _ = cv2.fisheye.calibrate(objs, imgs, (w, h), K, D, flags=flags, criteria=crit)
+        # horizontal FOV: angle of the left/right image edge at the centre row
+        edge = np.array([[[0.0, K[1, 2]], [w - 1.0, K[1, 2]]]], np.float64)
+        und = cv2.fisheye.undistortPoints(edge, K, D)[0]
+        hfov = math.degrees(math.atan(abs(und[0, 0])) + math.atan(abs(und[1, 0])))
+        model = "fisheye"
+    else:
+        objs = [np.asarray(o, np.float32) for o in obj_pts]
+        imgs = [np.asarray(i, np.float32) for i in img_pts]
+        rms, K, D, _, _ = cv2.calibrateCamera(objs, imgs, (w, h), None, None)
+        hfov = math.degrees(2 * math.atan(w / (2 * K[0, 0])))
+        model = "pinhole"
+    return {
+        "model": model,
+        "width": int(w),
+        "height": int(h),
+        "camera_matrix": [[round(float(v), 4) for v in row] for row in K],
+        "dist_coeffs": [round(float(v), 6) for v in np.asarray(D).reshape(-1)],
+        "rms_px": round(float(rms), 4),
+        "views_used": len(obj_pts),
+        "hfov_deg": round(hfov, 2),
+    }
+
+
+def calibrate(images, cols: int, rows: int, square_m: float, fisheye: bool = False) -> dict:
     """Calibrate from a list of BGR images. Returns a config-ready dict."""
     objp = np.zeros((cols * rows, 3), np.float32)
     objp[:, :2] = np.mgrid[0:cols, 0:rows].T.reshape(-1, 2) * square_m
@@ -70,17 +113,7 @@ def calibrate(images, cols: int, rows: int, square_m: float) -> dict:
             img_pts.append(c)
     if len(obj_pts) < 8:
         raise ValueError(f"board found in only {len(obj_pts)} images; need at least 8")
-    rms, K, D, _, _ = cv2.calibrateCamera(obj_pts, img_pts, size, None, None)
-    w, h = size
-    return {
-        "width": int(w),
-        "height": int(h),
-        "camera_matrix": [[round(float(v), 4) for v in row] for row in K],
-        "dist_coeffs": [round(float(v), 6) for v in D.reshape(-1)],
-        "rms_px": round(float(rms), 4),
-        "views_used": len(obj_pts),
-        "hfov_deg": round(math.degrees(2 * math.atan(w / (2 * K[0, 0]))), 2),
-    }
+    return calibrate_points(obj_pts, img_pts, size, fisheye)
 
 
 def load_folder(folder):
@@ -120,6 +153,8 @@ def main() -> int:
     ap.add_argument("--cols", type=int, default=9, help="inner corners per row")
     ap.add_argument("--rows", type=int, default=6, help="inner corners per column")
     ap.add_argument("--square-mm", type=float, default=25.0)
+    ap.add_argument("--fisheye", action="store_true",
+                    help="use the fisheye lens model (for very wide lenses, e.g. the A2 mini's 160 deg)")
     ap.add_argument("--out", default="calibration.yaml")
     args = ap.parse_args()
 
@@ -130,7 +165,7 @@ def main() -> int:
         imgs = capture_live(dev, args.capture, args.cols, args.rows)
     print(f"{len(imgs)} images")
     try:
-        cal = calibrate(imgs, args.cols, args.rows, args.square_mm / 1000.0)
+        cal = calibrate(imgs, args.cols, args.rows, args.square_mm / 1000.0, fisheye=args.fisheye)
     except ValueError as exc:
         print(f"calibration failed: {exc}")
         return 1
@@ -138,7 +173,7 @@ def main() -> int:
     quality = "good" if cal["rms_px"] < 0.5 else ("ok" if cal["rms_px"] < 1.0 else "POOR - retake photos")
     print(f"\nRMS reprojection error: {cal['rms_px']} px ({quality}), {cal['views_used']} views")
     print(f"Measured horizontal FOV: {cal['hfov_deg']} deg")
-    block = {"calibration": {k: cal[k] for k in ("width", "height", "camera_matrix", "dist_coeffs")}}
+    block = {"calibration": {k: cal[k] for k in ("model", "width", "height", "camera_matrix", "dist_coeffs")}}
     with open(args.out, "w") as fh:
         yaml.safe_dump(block, fh, sort_keys=False, default_flow_style=None)
     print(f"\nPaste this under `georef:` in config.yaml (also saved to {args.out}):\n")

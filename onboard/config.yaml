@@ -15,16 +15,35 @@ telemetry:
   source_system: 200          # companion ID; keep != 1 (the autopilot)
 
 # ---------------------------------------------------------------------------
-# Camera. The SIYI A2 Mini is analog (AHD): feed it through an AHD->USB capture
-# dongle and it appears as a UVC device (source: usb). A Pi CSI camera would be
-# source: picamera. source: file replays an image folder for bench testing.
+# Camera: SIYI A2 mini, 1080p video over ETHERNET (RTSP), 160 deg fisheye on a
+# single-axis pitch gimbal. Plug its Ethernet straight into the Pi and give
+# the Pi an address on 192.168.144.x (see FLIGHT_READY.md B1). No capture
+# hardware needed. Other sources: usb | picamera | file (bench testing).
 # ---------------------------------------------------------------------------
 camera:
-  source: usb                 # usb | picamera | file
-  device: 0                   # /dev/video0 ; or a folder path when source: file
-  width: 1280
-  height: 720
-  fps: 10
+  source: rtsp
+  url: rtsp://192.168.144.25:8554/main.264
+  backend: auto               # auto | gstreamer (Pi hardware decode) | ffmpeg
+  decoder: v4l2h264dec        # Pi 3/4 hardware H.264; avdec_h264 = software
+  width: 1920                 # the stream's real size (preflight.py reports it)
+  height: 1080
+  latency_ms: 150             # capture-to-arrival delay; geotags use the
+                              # aircraft state this long before arrival
+  open_timeout_s: 30
+  device: 0                   # for source: usb / file
+
+# ---------------------------------------------------------------------------
+# SIYI gimbal (UDP SDK): points the camera straight down and reports its real
+# angle for geo-referencing. If it never answers (preflight.py shows it), set
+# enabled: false and measure the camera's tilt for georef.forward_tilt_deg.
+# ---------------------------------------------------------------------------
+gimbal:
+  enabled: true
+  ip: 192.168.144.25
+  port: 37260
+  pitch_deg: -90              # -90 = straight down
+  angle_frame: earth          # earth = stabilised against aircraft pitch; body = not
+  poll_hz: 5
 
 # ---------------------------------------------------------------------------
 # Object detector (TensorFlow Lite). If you drop in a *_edgetpu.tflite model and
@@ -48,8 +67,15 @@ detector:
   #   fire: 0.30
   #   person: 0.60
   iou_threshold: 0.45     # NMS IoU for YOLO models
-  tiled: false            # true = tiled inference (better small-object recall,
-  tile_grid: [2, 2]       #        costs grid[0]*grid[1]x compute -> Coral only)
+  # Detection region (normalised x0, y0, x1, y1) and tiling. A downward
+  # fisheye has its best resolution in the centre; running the model only on a
+  # central crop, in tiles, gives it far more pixels per object. With the whole
+  # 1080p frame at 320 px even a combine at 100 m is ~11x4 px (too small); the
+  # central half in 2x2 tiles makes it ~46x16 px (tools/pixels_on_target.py).
+  # Costs grid[0]*grid[1] model runs per frame: check the speed with preflight.py.
+  roi: [0.25, 0.25, 0.75, 0.75]
+  tiled: true
+  tile_grid: [2, 2]
 
 # Classes to keep and photograph. Must match names in the model's labels file.
 # With the trained ag/forestry model (training/classes.yaml) these all apply;
@@ -84,16 +110,19 @@ fire:
 # Geo-referencing: pixel -> ground lat/lon
 # ---------------------------------------------------------------------------
 georef:
-  # Lens model. Best: run tools/calibrate_camera.py and paste its
-  # `calibration:` block here (focal length, centre, distortion). Without it,
-  # hfov_deg is used with an ideal distortion-free lens.
+  # Lens model. Best: run tools/calibrate_camera.py --fisheye and paste its
+  # `calibration:` block here. Without it, an ideal 160 deg equidistant
+  # fisheye is assumed (fine near the centre, less so at the edges).
   # calibration:
-  #   width: 1280
-  #   height: 720
+  #   model: fisheye
+  #   width: 1920
+  #   height: 1080
   #   camera_matrix: [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
-  #   dist_coeffs: [k1, k2, p1, p2, k3]
-  hfov_deg: 86.0              # horizontal field of view of the lens (CALIBRATE)
-  forward_tilt_deg: 90.0      # 90 = straight down (nadir); lower = look forward
+  #   dist_coeffs: [k1, k2, k3, k4]
+  lens: fisheye
+  hfov_deg: 160.0             # SIYI A2 mini horizontal field of view
+  forward_tilt_deg: 90.0      # fallback camera tilt when the gimbal doesn't
+                              # report (90 = straight down)
   yaw_offset_deg: 0.0
   roll_offset_deg: 0.0
   # ground_elevation_m: null  # reserved for future DEM support

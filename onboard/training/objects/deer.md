@@ -28,46 +28,52 @@
 
 ## 2. Can the camera see it? (go / no-go)
 
+Camera: SIYI A2 mini, 1920×1080, 160° fisheye, pointed straight down by its
+gimbal.
+
 | Field | Value |
 |---|---|
 | Size seen from above | 1.5 × 0.5 m (roe deer; a fawn is smaller) |
 | Planned mission altitude | first tried 100 m (the normal survey altitude), then 30 m |
-| Model input / tiling / accelerator | 320 / off / none, then 640 / 2×2 / Coral |
+| Model input / detection region / tiling | 320 / central half / 2×2 (default), then 640 / central half / 2×2 |
 | Ground speed | 19 m/s, then 16 m/s (inside the 16-20 m/s cruise range) |
-| Expected detection rate | 2 fps |
+| Expected detection rate | 2 fps (to be measured with `preflight.py`) |
 
 ```text
-$ python3 tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 100 --fps 2
-ground resolution: 14.6 cm per camera pixel at 100 m
-1.5 x 0.5 m object: 10.3 x 3.4 px in the 1280-px frame, 2.6 x 0.9 px at the 320-px model input
+$ python3 tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 100 --config config.yaml --fps 2
+camera: 1920x1080, fisheye 160 deg; ground resolution at the centre: 14.5 cm per pixel at 100 m
+1.5 x 0.5 m object: 10.3 x 3.4 px in the camera image, 6.9 x 2.3 px at the 320-px model input (from the 960x540-px region (2x2 tiles))
 verdict: TOO SMALL - unlikely to work
-in view for ~5.5 s at 19 m/s (105 m of ground along track): ~11.0 detection frames at 2 fps
+in the detection region for ~4.4 s at 19 m/s (83 m of ground along track): ~8.7 detection frames at 2 fps
 
 to reach ~10 px at the model input:
-  imgsz  320, 1x1 tiles: fly at or below     9 m
-  imgsz  320, 2x2 tiles: fly at or below    17 m
-  imgsz  640, 1x1 tiles: fly at or below    17 m
-  imgsz  640, 2x2 tiles: fly at or below    34 m
+  imgsz  320, 2x2 tiles, region 50% of the width: fly at or below    23 m
+  imgsz  640, 2x2 tiles, region 50% of the width: fly at or below    34 m
 
-$ python3 tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 30 --tiles 2 --imgsz 640 --fps 2 --speed-mps 16
-ground resolution: 4.4 cm per camera pixel at 30 m
-1.5 x 0.5 m object: 34.3 x 11.4 px in the 1280-px frame, 34.3 x 11.4 px at the 640-px model input (2x2 tiles)
+$ python3 tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 30 --roi 0.5 --tiles 2 --imgsz 640 --fps 2 --speed-mps 16
+camera: 1920x1080, fisheye 160 deg; ground resolution at the centre: 4.4 cm per pixel at 30 m
+1.5 x 0.5 m object: 34.4 x 11.5 px in the camera image, 34.4 x 11.5 px at the 640-px model input (from the 960x540-px region (2x2 tiles))
 verdict: GOOD
-in view for ~2.0 s at 16 m/s (31 m of ground along track): ~3.9 detection frames at 2 fps
+note: each 480-px tile is enlarged to 640 px, which adds no detail - the camera's own 11.5 px is the limit
+in the detection region for ~1.6 s at 16 m/s (25 m of ground along track): ~3.1 detection frames at 2 fps
 ```
 
 | Result | Value |
 |---|---|
-| Pixels at the model input | 100 m, 320 px: 2.6 × 0.9 (hopeless). 30 m, 640 px, 2×2 tiles: 34 × 11 |
-| Seconds in view / frames | 2.0 s; ~4 frames at 2 fps. `confirm.frames: 2` needs **at least ~1 fps**, so aim for 1.5+ |
+| Pixels at the model input | 100 m, default setup: 6.9 × 2.3 (hopeless). 30 m, 640 px, 2×2 tiles: 34 × 11.5 |
+| Seconds in the detection region / frames | 1.6 s; ~3 frames at 2 fps. `confirm.frames: 2` needs **at least ~1.3 fps**; aim for 2 |
 | Verdict | **GO WITH CHANGES** |
-| Changes needed | Separate **meadow missions at 30 m AGL, 16 m/s**; model trained and exported at **640** with **2×2 tiles**; needs a **Coral USB** to reach ≥1.5 fps (16× the computing of the default 320, untiled) |
+| Changes needed | Separate **meadow missions at 30 m AGL, 16 m/s**; model trained and exported at **640** with the central half in **2×2 tiles** (4 runs of a 640-px model per frame); almost certainly needs a **Coral USB** - confirm with `preflight.py --alt-m 30 --speed-mps 16` |
 
-Mission planning at 30 m: the image covers ~56 m across track, so survey lines
-≤45 m apart. A 45° bank turn at 16 m/s has a ~26 m radius (52 m across), wider
-than the line spacing: fly every other line and fill the gaps on the way back.
-Meadows are often edged by 20-30 m trees: plan the entry and exit legs above
-them. Keep within visual line of sight and the legal altitude limit.
+The camera itself is the limit here: at 30 m it records the deer's 0.5 m width
+as only 11.5 px, and above ~34 m fewer than 10, whatever the model does.
+
+Mission planning at 30 m: the detection region covers ~50 m across track, so
+survey lines ≤40 m apart. A 45° bank turn at 16 m/s has a ~26 m radius (52 m
+across), wider than the line spacing: fly every other line and fill the gaps
+on the way back. Meadows are often edged by 20-30 m trees: plan the entry and
+exit legs above them. Keep within visual line of sight and the legal altitude
+limit.
 
 Other limits: **an ordinary camera cannot see a fawn hidden in tall grass.**
 Fawn searches are normally done with thermal cameras early in the morning.
@@ -128,7 +134,7 @@ harvesters (the confusion measured in section 7).
 | deer precision | held-out test flight | ≥ 0.80 |
 | Old classes, mean mAP50 | validation set | no more than 0.03 below the previous model |
 | False "deer" on a flight without deer | `eval_model.py` on that flight | ≤ 3 per flight |
-| Detection rate on the aircraft | Pi + Coral bench test | ≥ 1.5 fps at 640 px with 2×2 tiles |
+| Detection rate on the aircraft | `preflight.py --alt-m 30 --speed-mps 16` | PASS (≥ ~1.3 fps measured, 640 px, 2×2 tiles) |
 
 ## 6. Commands
 
@@ -136,7 +142,7 @@ Run from `onboard/training/`.
 
 ```bash
 # 6.1 can the camera see it
-python3 ../tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 30 --tiles 2 --imgsz 640 --fps 2 --speed-mps 16
+python3 ../tools/pixels_on_target.py --object-m 0.5 --length-m 1.5 --alt-m 30 --roi 0.5 --tiles 2 --imgsz 640 --fps 2 --speed-mps 16
 
 # 6.2 classes.yaml, appended at the end:
 #   15: deer              # any deer or fawn, whole visible body, never the shadow
@@ -206,6 +212,7 @@ detector:
   model: models/farm_v2_edgetpu.tflite     # Coral needed (section 2)
   labels: models/farm_v2_labels.txt
   format: yolo
+  roi: [0.25, 0.25, 0.75, 0.75]            # central half of the fisheye image
   tiled: true
   tile_grid: [2, 2]
   class_thresholds:
@@ -213,7 +220,7 @@ detector:
 targets:
   - deer
 confirm:
-  frames: 2                                # 2 sightings within ~2 s in view at 30 m
+  frames: 2                                # 2 sightings within ~1.6 s in the region at 30 m
 ```
 
 Meadow missions only (30 m, 16 m/s); the normal 100 m survey keeps `farm_v1`.

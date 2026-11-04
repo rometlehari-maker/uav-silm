@@ -1,13 +1,18 @@
-# Install on the Raspberry Pi 3 (Raspberry Pi OS).
+# Install on the Raspberry Pi 3 (64-bit Raspberry Pi OS, Bookworm or later).
 #
 #   sudo apt update
-#   sudo apt install -y python3-opencv python3-numpy python3-yaml
-#   python3 -m pip install -r requirements.txt
+#   sudo apt install -y python3-opencv python3-numpy python3-yaml python3-venv \
+#       gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+#   python3 -m venv --system-site-packages ~/silm-venv
+#   ~/silm-venv/bin/pip install -r requirements.txt
 #
 # Notes:
-#  * On a Pi, prefer the apt python3-opencv/python3-numpy packages (prebuilt)
-#    over pip wheels, which can be slow or fail to build. They satisfy the
-#    opencv-python / numpy requirements below.
+#  * OpenCV comes from apt (python3-opencv), NOT pip: the apt build has
+#    GStreamer, which the camera needs for the Pi's hardware H.264 decoder; pip's
+#    opencv-python has no GStreamer and would shadow it. That's why it is not
+#    listed below, and why the venv uses --system-site-packages.
+#  * Bookworm refuses system-wide `pip install` ("externally managed
+#    environment"), hence the venv; systemd/silm-recon.service runs its python.
 #  * The TFLite interpreter: the detector accepts any of three backends and
 #    picks whichever is installed -- tflite-runtime (classic), ai-edge-litert
 #    (its current renamed successor), or full tensorflow. On a modern Pi OS,
@@ -22,6 +27,5 @@
 pymavlink>=2.4.37
 numpy>=1.21
 PyYAML>=5.4
-opencv-python>=4.5          # or system python3-opencv
 ai-edge-litert>=1.0         # inference engine (or: tflite-runtime>=2.5)
 # picamera2                 # uncomment only for a Pi CSI camera

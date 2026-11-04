@@ -15,7 +15,8 @@ Wants=network-online.target
 Type=simple
 User=pi
 WorkingDirectory=/home/pi/uav-silm/onboard
-ExecStart=/usr/bin/python3 /home/pi/uav-silm/onboard/run.py --config /home/pi/uav-silm/onboard/config.yaml
+# the venv from requirements.txt (sees apt's OpenCV via --system-site-packages)
+ExecStart=/home/pi/silm-venv/bin/python3 /home/pi/uav-silm/onboard/run.py --config /home/pi/uav-silm/onboard/config.yaml
 Restart=always
 RestartSec=3
 # Give it time to find the FC and camera after boot.

@@ -57,7 +57,10 @@ def selftest(cfg: dict) -> int:
             continue
         hits = []
         if det is not None:
-            hits += [(d.label, d.score, d.box) for d in det.detect(frame)
+            dcfg = cfg["detector"]
+            roi = tuple(dcfg["roi"]) if dcfg.get("roi") else None
+            grid = tuple(dcfg.get("tile_grid", [2, 2])) if dcfg.get("tiled") else (1, 1)
+            hits += [(d.label, d.score, d.box) for d in det.detect_roi(frame, roi, grid)
                      if not targets or d.label in targets]
         hits += [(f.label, f.score, f.box) for f in fire.detect(frame)]
         if hits:

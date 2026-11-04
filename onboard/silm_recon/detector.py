@@ -153,7 +153,22 @@ class ObjectDetector:
         import cv2
 
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        resized = cv2.resize(rgb, (self._in_w, self._in_h))
+        if getattr(self, "fmt", "yolo") == "yolo":
+            # YOLO is trained on LETTERBOXED images: scaled to fit with the
+            # aspect ratio kept, padded with grey (114). Squashing a 16:9 frame
+            # into a square instead would make every object look ~1.8x taller
+            # than anything the model saw in training.
+            h0, w0 = rgb.shape[:2]
+            r = min(self._in_w / w0, self._in_h / h0)
+            nw, nh = max(1, round(w0 * r)), max(1, round(h0 * r))
+            px, py = (self._in_w - nw) // 2, (self._in_h - nh) // 2
+            resized = np.full((self._in_h, self._in_w, 3), 114, np.uint8)
+            resized[py:py + nh, px:px + nw] = cv2.resize(rgb, (nw, nh), interpolation=cv2.INTER_LINEAR)
+            self._lb = (r, px, py, w0, h0)
+        else:
+            # SSD-MobileNet models are trained on plainly resized images.
+            resized = cv2.resize(rgb, (self._in_w, self._in_h))
+            self._lb = None
         scale, zero = self._in_quant if self._in_quant else (0.0, 0)
         if self._in_dtype in (np.int8, np.uint8):
             # Full-integer model. YOLO's real input range is 0..1, so quantise
@@ -165,6 +180,8 @@ class ObjectDetector:
                 q = np.round(real * 255.0) - (128 if self._in_dtype == np.int8 else 0)
             info = np.iinfo(self._in_dtype)
             tensor = np.clip(q, info.min, info.max).astype(self._in_dtype)
+        elif getattr(self, "fmt", "yolo") == "ssd":
+            tensor = (resized.astype(np.float32) - 127.5) / 127.5   # float SSD: -1..1
         else:
             tensor = resized.astype(np.float32) / 255.0  # YOLO expects 0..1
         tensor = tensor[np.newaxis, ...]            # -> NHWC
@@ -213,6 +230,31 @@ class ObjectDetector:
                     by1 = (y0 + d.box[3] * (y1 - y0)) / h
                     all_dets.append(Detection(d.label, d.score, (bx0, by0, bx1, by1)))
         return self._merge_global(all_dets)
+
+    def detect_roi(self, frame_bgr: np.ndarray, roi=None, grid=(1, 1)) -> list[Detection]:
+        """Detect inside a region of interest (normalised x0, y0, x1, y1),
+        optionally tiled, and return boxes in FULL-frame normalised coords.
+
+        For a downward fisheye, the centre of the image has the best ground
+        resolution and the edges show distant, squashed ground; running the
+        model only on a central crop (and tiling it) gives it far more pixels
+        per object for the same computing."""
+        h, w = frame_bgr.shape[:2]
+        if roi is None:
+            x0, y0, x1, y1 = 0, 0, w, h
+        else:
+            x0, y0 = int(roi[0] * w), int(roi[1] * h)
+            x1, y1 = int(roi[2] * w), int(roi[3] * h)
+        crop = frame_bgr[y0:y1, x0:x1]
+        if crop.size == 0:
+            return []
+        dets = (self.detect_tiled(crop, grid=grid) if tuple(grid) != (1, 1)
+                else self.detect(crop))
+        cw, ch = x1 - x0, y1 - y0
+        return [Detection(d.label, d.score,
+                          ((x0 + d.box[0] * cw) / w, (y0 + d.box[1] * ch) / h,
+                           (x0 + d.box[2] * cw) / w, (y0 + d.box[3] * ch) / h))
+                for d in dets]
 
     def _merge_global(self, dets: list[Detection]) -> list[Detection]:
         if not dets:
@@ -275,8 +317,17 @@ class ObjectDetector:
 
         # xywh (cx,cy,w,h, normalised 0..1) -> xyxy normalised
         cx, cy, w, h = xywh[:, 0], xywh[:, 1], xywh[:, 2], xywh[:, 3]
-        x0 = np.clip(cx - w / 2, 0, 1); y0 = np.clip(cy - h / 2, 0, 1)
-        x1 = np.clip(cx + w / 2, 0, 1); y1 = np.clip(cy + h / 2, 0, 1)
+        x0, y0, x1, y1 = cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2
+        lb = getattr(self, "_lb", None)
+        if lb is not None:
+            # undo the letterbox: model-input coords -> original image coords
+            r, px, py, w0, h0 = lb
+            x0 = (x0 * self._in_w - px) / r / w0
+            x1 = (x1 * self._in_w - px) / r / w0
+            y0 = (y0 * self._in_h - py) / r / h0
+            y1 = (y1 * self._in_h - py) / r / h0
+        x0, y0 = np.clip(x0, 0, 1), np.clip(y0, 0, 1)
+        x1, y1 = np.clip(x1, 0, 1), np.clip(y1, 0, 1)
 
         # Class-aware NMS.
         results: list[Detection] = []

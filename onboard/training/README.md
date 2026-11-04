@@ -72,7 +72,7 @@ python3 tools/eval_model.py --model models/silm_synth.tflite \
 ## Option B — A real model (your data, GPU machine)
 
 1. **Collect** aerial images of the targets from a similar altitude/angle to
-   your camera (ideally footage from your own AHD camera). Variety matters:
+   your camera (ideally footage from your own SIYI A2 mini). Variety matters:
    seasons, lighting, crop types, angles.
 2. **Label** them in YOLO format. Easiest routes:
    - **Roboflow** (web): upload, draw boxes, "Export → YOLOv11 / YOLOv8 PyTorch",

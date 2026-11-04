@@ -31,6 +31,7 @@ from .failsafe import GpsHealthMonitor, OpticalFlowAid
 from .fire import FireDetector
 from .georef import GeoReferencer
 from .health import HealthMonitor
+from .siyi import SiyiGimbal
 from .store import DetectionStore
 from .telemetry import TelemetryLink
 from .tiles import OfflineBasemap
@@ -74,6 +75,20 @@ class Recon:
         self._tiled = bool(dcfg.get("tiled", False))
         g = dcfg.get("tile_grid", [2, 2])
         self._tile_grid = (int(g[0]), int(g[1]))
+        roi = dcfg.get("roi")
+        self._roi = tuple(float(v) for v in roi) if roi else None
+
+        # Camera latency: the frame was captured this long before it arrived,
+        # so the aircraft state is looked up for (arrival - latency).
+        self._latency_s = float(cfg.get("camera", {}).get("latency_ms", 150)) / 1000.0
+
+        # SIYI pitch gimbal: point it down and use its reported angle.
+        gcfg = cfg.get("gimbal", {}) or {}
+        self.gimbal = SiyiGimbal(gcfg) if gcfg.get("enabled", False) else None
+        # "earth": the gimbal holds its angle relative to the horizon (it
+        # cancels the aircraft's pitch); "body": relative to the airframe.
+        self._gimbal_earth = gcfg.get("angle_frame", "earth") == "earth"
+        self._gimbal_warned = False
 
         self.fire = FireDetector(cfg.get("fire", {}))
         self.geo = GeoReferencer(cfg.get("georef", {}),
@@ -118,6 +133,7 @@ class Recon:
         self.max_telemetry_age = float(acfg.get("max_telemetry_age_s", 2.0))
 
         self._frame_no = 0
+        self._started = time.time()
 
     # ------------------------------------------------------------------ #
 
@@ -132,18 +148,35 @@ class Recon:
             return False
         return st.telemetry_ok(self.max_telemetry_age)
 
-    def _georef_box(self, box, st):
+    def _georef_box(self, box, st, cam_tilt_deg=None):
         cx = 0.5 * (box[0] + box[2])
         cy = 0.5 * (box[1] + box[3])
-        return self.geo.project(
-            cx, cy, st.lat, st.lon, st.rel_alt, st.roll, st.pitch, st.yaw
-        )
+        pitch = 0.0 if (cam_tilt_deg is not None and self._gimbal_earth) else st.pitch
+        return self.geo.project(cx, cy, st.lat, st.lon, st.rel_alt, st.roll, pitch, st.yaw,
+                                cam_tilt_deg=cam_tilt_deg)
+
+    def camera_tilt(self, now: float | None = None):
+        """Camera tilt from the gimbal (90 = straight down), or None to use
+        the fixed georef.forward_tilt_deg."""
+        if self.gimbal is None:
+            return None
+        att = self.gimbal.attitude()
+        if att is None:
+            now = time.time() if now is None else now
+            if not self._gimbal_warned and now - self._started > 10:
+                print("[recon] WARNING: gimbal not answering - using the fixed "
+                      "georef.forward_tilt_deg for geo-referencing")
+                self._gimbal_warned = True
+            return None
+        return -att.pitch
 
     def run(self) -> None:
         signal.signal(signal.SIGINT, self._on_signal)
         signal.signal(signal.SIGTERM, self._on_signal)
 
         self.link.start()
+        if self.gimbal is not None:
+            self.gimbal.start()
         print("[recon] started; waiting for telemetry + active flight state")
         last_status = 0.0
 
@@ -164,12 +197,14 @@ class Recon:
                     time.sleep(0.2)
                     continue
 
-                frame = self.camera.read()
+                frame, t_arrived = self.camera.read_with_time()
                 if frame is None:
-                    time.sleep(0.02)
+                    time.sleep(0.01)
                     continue
-
-                self.process_frame(frame, st)
+                # aircraft state at the moment the frame was captured
+                st_frame = (self.link.state_at(t_arrived - self._latency_s)
+                            if hasattr(self.link, "state_at") else st)
+                self.process_frame(frame, st_frame, cam_tilt_deg=self.camera_tilt())
                 self.health.maybe_sample()
         finally:
             self._shutdown()
@@ -185,7 +220,8 @@ class Recon:
             "gps": self.gps_monitor.state,
         }) + "\n")
 
-    def process_frame(self, frame, st, now: float | None = None) -> list:
+    def process_frame(self, frame, st, now: float | None = None,
+                      cam_tilt_deg: float | None = None) -> list:
         """Everything done with one camera frame while active. Returns the
         records saved for this frame (empty list if nothing was saved)."""
         now = time.time() if now is None else now
@@ -203,7 +239,8 @@ class Recon:
 
         # Optical-flow velocity aid (rate-limited internally). Logs always;
         # forwards to the FC only if opted in.
-        fe = self.flow.update(frame, st.rel_alt, st.roll, st.pitch, st.yaw, now=now)
+        flow_pitch = 0.0 if (cam_tilt_deg is not None and self._gimbal_earth) else st.pitch
+        fe = self.flow.update(frame, st.rel_alt, st.roll, flow_pitch, st.yaw, now=now)
         if fe.valid:
             self.flow.send(getattr(self.link, "master", None), fe)
             self._flow_log.write(json.dumps({
@@ -217,16 +254,16 @@ class Recon:
 
         events = []  # list of {label, score, box, ground}
         if self.detector is not None:
-            dets = (self.detector.detect_tiled(frame, grid=self._tile_grid)
-                    if self._tiled else self.detector.detect(frame))
+            dets = self.detector.detect_roi(frame, self._roi,
+                                            self._tile_grid if self._tiled else (1, 1))
             for d in dets:
                 if self.targets and d.label not in self.targets:
                     continue
                 events.append({"label": d.label, "score": d.score, "box": d.box,
-                               "ground": self._georef_box(d.box, st)})
+                               "ground": self._georef_box(d.box, st, cam_tilt_deg)})
         for fh in self.fire.detect(frame):
             events.append({"label": fh.label, "score": fh.score, "box": fh.box,
-                           "ground": self._georef_box(fh.box, st)})
+                           "ground": self._georef_box(fh.box, st, cam_tilt_deg)})
 
         # Only objects seen in several frames at the same place go further.
         events = self.confirm.update(events, now=now)
@@ -262,6 +299,8 @@ class Recon:
         print("[recon] shutting down")
         if self.link is not None:
             self.link.stop()
+        if self.gimbal is not None:
+            self.gimbal.stop()
         self.camera.release()
         self.store.close()
         self.basemap.close()

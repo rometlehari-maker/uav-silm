@@ -69,6 +69,10 @@ class GeoReferencer:
         # pixels and a centred principal point.
         self.dist = None
         calib = cfg.get("calibration")
+        # Lens model: "pinhole" (normal lenses, OpenCV k1..k3 distortion) or
+        # "fisheye" (wide lenses such as the SIYI A2 mini's 160 deg; OpenCV
+        # fisheye model when calibrated, else an ideal equidistant fisheye).
+        self.lens = (calib or {}).get("model") or cfg.get("lens", "pinhole")
         if calib:
             sx = self.W / float(calib["width"])
             sy = self.H / float(calib["height"])
@@ -78,6 +82,10 @@ class GeoReferencer:
             d = calib.get("dist_coeffs")
             if d is not None:
                 self.dist = np.array(d, dtype=np.float64).reshape(-1)
+        elif self.lens == "fisheye":
+            # equidistant: image radius = f * angle from the axis (radians)
+            self.fx = self.fy = (self.W / 2.0) / (self.hfov / 2.0)
+            self.cx, self.cy = self.W / 2.0, self.H / 2.0
         else:
             self.fx = self.fy = (self.W / 2.0) / math.tan(self.hfov / 2.0)
             self.cx, self.cy = self.W / 2.0, self.H / 2.0
@@ -93,7 +101,7 @@ class GeoReferencer:
 
     # ------------------------------------------------------------------ #
 
-    def _R_body_from_cam(self) -> np.ndarray:
+    def _R_body_from_cam(self, tilt: float | None = None) -> np.ndarray:
         """Rotation taking a camera-optical vector into the body (FRD) frame.
 
         Optical frame: x=right, y=down-in-image, z=forward along the lens.
@@ -107,7 +115,7 @@ class GeoReferencer:
             [0.0, 0.0, 1.0],
         ])
         # Tilt about body y-axis so the lens looks forward-down.
-        a = (math.pi / 2.0) - self.forward_tilt  # 0 at nadir
+        a = (math.pi / 2.0) - (self.forward_tilt if tilt is None else tilt)  # 0 at nadir
         ca, sa = math.cos(a), math.sin(a)
         R_tilt = np.array([
             [ca, 0.0, sa],
@@ -137,7 +145,19 @@ class GeoReferencer:
         """Unit ray in the camera-optical frame for a normalised pixel [0,1]
         (u across the width, v down the height)."""
         px, py = u_norm * self.W, v_norm * self.H
-        if self.dist is not None and np.any(self.dist):
+        if self.lens == "fisheye":
+            if self.dist is not None:
+                import cv2
+                pt = np.array([[[px, py]]], dtype=np.float64)
+                x, y = cv2.fisheye.undistortPoints(pt, self.K, self.dist.reshape(4, 1))[0, 0]
+            else:
+                dx, dy = (px - self.cx) / self.fx, (py - self.cy) / self.fy
+                theta = math.hypot(dx, dy)          # angle from the optical axis
+                if theta < 1e-12:
+                    return np.array([0.0, 0.0, 1.0])
+                s = math.sin(theta) / theta
+                return np.array([dx * s, dy * s, math.cos(theta)])
+        elif self.dist is not None and np.any(self.dist):
             pt = np.array([[[px, py]]], dtype=np.float64)
             x, y = undistort_points(pt, self.K, self.dist)[0, 0]
         else:
@@ -147,16 +167,29 @@ class GeoReferencer:
         return v / np.linalg.norm(v)
 
     def ground_to_pixel(self, north: float, east: float, rel_alt: float,
-                        roll: float, pitch: float, yaw: float):
+                        roll: float, pitch: float, yaw: float, cam_tilt_deg: float | None = None):
         """Inverse projection: where does a flat-ground point, `north`/`east`
         metres from the point below the aircraft, appear in the image?
         Returns normalised (u, v) or None if it's behind the camera.
-        (Ignores lens distortion; used for tests and overlays.)"""
+        (Pinhole: ignores k1..k3 distortion; used for tests and overlays.)"""
         d_ned = np.array([north, east, rel_alt])
-        R = self._R_ned_from_body(roll, pitch, yaw) @ self._R_body_from_cam()
+        tilt = None if cam_tilt_deg is None else math.radians(cam_tilt_deg)
+        R = self._R_ned_from_body(roll, pitch, yaw) @ self._R_body_from_cam(tilt)
         d_cam = R.T @ d_ned
         if d_cam[2] <= 1e-6:
             return None
+        if self.lens == "fisheye":
+            if self.dist is not None:
+                import cv2
+                xy = np.array([[[d_cam[0] / d_cam[2], d_cam[1] / d_cam[2]]]], dtype=np.float64)
+                px, py = cv2.fisheye.distortPoints(xy, self.K, self.dist.reshape(4, 1))[0, 0]
+            else:
+                rxy = math.hypot(d_cam[0], d_cam[1])
+                theta = math.atan2(rxy, d_cam[2])
+                k = theta / rxy if rxy > 1e-12 else 0.0
+                px = self.cx + self.fx * d_cam[0] * k
+                py = self.cy + self.fy * d_cam[1] * k
+            return px / self.W, py / self.H
         px = self.cx + self.fx * d_cam[0] / d_cam[2]
         py = self.cy + self.fy * d_cam[1] / d_cam[2]
         return px / self.W, py / self.H
@@ -171,12 +204,17 @@ class GeoReferencer:
         roll: float,
         pitch: float,
         yaw: float,
+        cam_tilt_deg: float | None = None,
     ) -> GroundPoint:
+        """cam_tilt_deg: this frame's camera tilt (90 = straight down), e.g.
+        from the gimbal; None = the fixed georef.forward_tilt_deg. With a
+        horizon-stabilised gimbal pass pitch=0, since the gimbal cancels the
+        aircraft's pitch."""
         if rel_alt <= 1.0:
             return GroundPoint(lat, lon, 0.0, False)
 
         ray_cam = self.pixel_ray_cam(u_norm, v_norm)
-        R_bc = self._R_body_from_cam()
+        R_bc = self._R_body_from_cam(None if cam_tilt_deg is None else math.radians(cam_tilt_deg))
         R_nb = self._R_ned_from_body(roll, pitch, yaw)
         ray_ned = R_nb @ (R_bc @ ray_cam)  # north, east, down
 

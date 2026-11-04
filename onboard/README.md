@@ -30,9 +30,10 @@ Key parts added beyond basic recognition:
   `.tflite` into `models/` and set `detector.format: yolo`. See
   `training/README.md`.
 
-This runs on the hardware already in the build. The only likely addition is a
-~$15 analog-to-USB video capture dongle (see *Camera*), because the SIYI A2 Mini
-is an analog camera and a Raspberry Pi can't ingest analog over USB without it.
+This runs on the hardware already in the build. The SIYI A2 mini sends digital
+video over Ethernet, which plugs straight into the Pi 3. Whether the Pi 3 alone
+is fast enough is the open question: `tools/preflight.py` measures it on the
+aircraft (see *Performance*).
 
 ---
 
@@ -65,34 +66,55 @@ Everything maps onto parts already on your component list:
 - **Matek H743 (ArduPilot)** — flies the mission; this code reads telemetry from
   a spare UART (set `SERIALx_PROTOCOL=2`, MAVLink2) or the H743 USB port.
 - **Raspberry Pi 3** — the onboard "brain" that runs recognition. Passive.
-- **SIYI A2 Mini camera** — the eye. See the one caveat below.
+- **SIYI A2 mini camera** — the eye: 1080p over Ethernet, 160° fisheye, pitch
+  gimbal. See *Camera* below.
 - **M10Q GPS / compass, airspeed, battery** — unchanged; the Pi just reads the
   resulting position/attitude estimate over MAVLink.
 - **ExpressLRS** — unchanged; your manual-control path on return.
 
-### Camera — the one honest caveat
+### Camera — SIYI A2 mini
 
-The SIYI A2 Mini outputs **analog AHD** video. A Raspberry Pi has no analog
-video input, so to get frames into the Pi for computer vision you need a small
-**AHD→USB capture dongle** (~$10–15, ~15 g). With it, the camera appears as a
-normal `/dev/video0` device and `camera.source: usb` just works. This is the
-only part the current build probably lacks. (Alternatively, a Pi CSI camera
-would plug straight in — set `camera.source: picamera` — but that changes the
-camera, which you asked to avoid.)
+Per retailer specifications (SIYI's own site could not be checked from the
+build environment), the A2 mini is a 2 MP camera with a **160° fisheye** lens on
+a **single-axis pitch gimbal** (−90° to +25°), with **Ethernet** video output,
+powered from **12 V**. Defaults used here: video at
+`rtsp://192.168.144.25:8554/main.264`, gimbal control on UDP port 37260.
+
+- **Video:** plug the camera's Ethernet into the Pi's Ethernet port and give the
+  Pi a fixed address on the camera's network (FLIGHT_READY.md B1). The app
+  reads the RTSP stream, decoding with the Pi's hardware H.264 decoder through
+  GStreamer (`camera.backend`).
+- **Gimbal:** the app points the camera straight down and reads back its real
+  angle over UDP (`silm_recon/siyi.py`), so geo-referencing uses the angle the
+  camera actually has. SIYI's v1.1 manual says the SDK section was removed;
+  community projects report it works on the A2 mini. `preflight.py` tests it.
+  If it doesn't answer, set `gimbal.enabled: false` and use a fixed tilt.
+- **Lens:** a 160° fisheye needs the fisheye lens model; calibrate it with
+  `tools/calibrate_camera.py --fisheye` (FLIGHT_READY.md B5).
 
 ### Performance — honest numbers
 
-A **Raspberry Pi 3 does ~1–3 FPS** on a quantised 320×320 detector. Speed is
-fine (a target stays in view ~5 s at 100 m), but **object size is the real
-limit**: the 1280-px frame is shrunk to 320 px for the model, so at 100 m a
-car is only ~8×3 px and a cow ~4×1 px, too small to detect. At 100 m without
-tiling, expect only large objects: combines with headers, buildings, fire and
-smoke plumes, timber stacks. Cars become detectable at ~60 m with 2×2 tiled
-detection; livestock, people and deer need lower flights or a larger model
-input. Tiling and larger inputs multiply the computing needed, so in practice
-they need a **$60 Coral USB accelerator** (detected and used automatically).
-Check any object with `tools/pixels_on_target.py` (see
-`training/ADDING_OBJECTS.md`, step 1).
+**Object size in pixels is the hard limit**, and the fisheye makes it worse:
+the whole 1920-px frame shrunk to the model's 320 px leaves a 10 × 3.5 m combine
+at 100 m only ~11×4 px. So by default the model runs on the **central half of
+the frame in 2×2 tiles** (`detector.roi`, `tiled`), where the fisheye's
+resolution is best:
+
+| At the model input (320 px), central half, 2×2 tiles | 100 m | 60 m |
+|---|---|---|
+| Combine, 10 × 3.5 m | 46 × 16 px, good | 76 × 27 px, good |
+| Car, 4.5 × 1.8 m | 21 × 8 px, marginal | 34 × 14 px, good |
+| Cow, 2.4 × 0.8 m | 11 × 4 px, too small | 18 × 6 px, marginal |
+
+(`tools/pixels_on_target.py`; rule of thumb ≥10 px on the smaller side.)
+
+That's **4 model runs per frame**, and an object crosses the detection region
+in ~4.4 s at 100 m (2.6 s at 60 m), so to see it twice the Pi needs about
+0.5-0.8 detection frames per second. **How fast a Pi 3 runs this has not been
+measured** — run `python3 tools/preflight.py` on the aircraft: it measures
+the speed on that Pi and says PASS or FAIL for your altitude and speed. If it
+fails, a Coral USB accelerator (used automatically with an `_edgetpu.tflite`
+model) is the fix that keeps the rest of the hardware.
 
 ---
 
@@ -116,23 +138,27 @@ full aircraft state, **geo-referenced ground lat/lon**), and appends to
 
 ## Install (on the Pi, on the bench with internet)
 
+64-bit Raspberry Pi OS; full steps in FLIGHT_READY.md B2.
+
 ```bash
 sudo apt update
-sudo apt install -y python3-opencv python3-numpy python3-yaml
+sudo apt install -y python3-opencv python3-numpy python3-yaml python3-venv \
+    gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+python3 -m venv --system-site-packages ~/silm-venv
 cd ~/uav-silm/onboard
-python3 -m pip install -r requirements.txt     # pymavlink, tflite-runtime, ...
-# download a detection model:
-#   see models/README.md
+~/silm-venv/bin/pip install -r requirements.txt     # pymavlink, ai-edge-litert, ...
+# download a detection model: see models/README.md
 ```
 
-Wire the Pi to the H743 (UART or USB) and plug in the AHD→USB dongle, then edit
-`config.yaml` (`telemetry.connection`, `camera.device`, `georef.hfov_deg`,
-`georef.forward_tilt_deg`, `storage.output_dir`).
+Wire the Pi to the H743 (UART or USB) and the camera's Ethernet to the Pi (see
+FLIGHT_READY.md B1 for the network address), then edit `config.yaml`
+(`telemetry.connection`, `camera.url`, `storage.output_dir`) and run
+`python3 tools/preflight.py`.
 
 ### Bench test (no flight controller needed)
 
 ```bash
-# point camera.source at a folder of test JPEGs, or leave as usb with the dongle:
+# camera.source: rtsp with the camera connected, or file + a folder of test JPEGs:
 python3 run.py --config config.yaml --selftest
 ```
 This runs the camera + detector + fire + geo-ref and prints what it sees, so you
@@ -173,7 +199,8 @@ journalctl -u silm-recon -f
 Everything lives in `config.yaml`:
 
 - `telemetry` — how the Pi reaches the H743.
-- `camera` — frame source (`usb` dongle / `picamera` / `file`).
+- `camera` — frame source (`rtsp` over Ethernet / `usb` / `picamera` / `file`).
+- `gimbal` — SIYI gimbal pointing and angle read-back.
 - `detector` — model + labels + confidence threshold.
 - `targets` — which classes to keep and photograph.
 - `fire` — the no-training fire/smoke heuristic.
