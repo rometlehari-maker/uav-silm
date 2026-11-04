@@ -154,7 +154,8 @@ class OpticalFlowAid:
     used as a backup reference; see the safety note at the top of this file.
     """
 
-    def __init__(self, cfg: dict, hfov_deg: float):
+    def __init__(self, cfg: dict, hfov_deg: float = 86.0,
+                 fx_over_width: float | None = None):
         self.enabled = bool(cfg.get("enabled", True))
         self.send_to_fc = bool(cfg.get("send_to_fc", False))
         self.max_rate_hz = float(cfg.get("max_rate_hz", 5.0))
@@ -164,11 +165,14 @@ class OpticalFlowAid:
         # bad frame) so a garbage velocity can never reach the flight controller.
         self.max_speed_mps = float(cfg.get("max_speed_mps", 60.0))
         self.min_dt = float(cfg.get("min_dt", 0.03))
-        self.hfov = math.radians(hfov_deg)
+        # Focal length as a fraction of image width (resolution independent).
+        # From the geo-referencer's intrinsics when available, else from HFOV.
+        self.fx_over_width = (fx_over_width if fx_over_width
+                              else 0.5 / math.tan(math.radians(hfov_deg) / 2.0))
         self._prev_gray = None
         self._prev_pts = None
         self._prev_t = 0.0
-        self._prev_yaw = None
+        self._prev_att = None      # (roll, pitch, yaw) at the previous frame
         self._last_emit = 0.0
         self._lk = dict(winSize=(21, 21), maxLevel=3,
                         criteria=(3, 30, 0.01))  # (TERM_COUNT|EPS, iters, eps)
@@ -176,18 +180,18 @@ class OpticalFlowAid:
                           minDistance=8, blockSize=7)
 
     def update(self, frame_bgr, rel_alt: float, roll: float, pitch: float,
-               yaw: float) -> FlowEstimate:
+               yaw: float, now: float | None = None) -> FlowEstimate:
         if not self.enabled:
             return FlowEstimate()
         import cv2
 
-        now = time.time()
+        now = time.time() if now is None else now
         if now - self._last_emit < 1.0 / self.max_rate_hz:
             return FlowEstimate(valid=False)
 
         h0, w0 = frame_bgr.shape[:2]
         scale = self.proc_width / float(w0)
-        small = cv2.resize(frame_bgr, (self.proc_width, int(h0 * scale)))
+        small = cv2.resize(frame_bgr, (self.proc_width, int(round(h0 * scale))))
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
 
         est = FlowEstimate(valid=False, t=now)
@@ -198,59 +202,33 @@ class OpticalFlowAid:
                 good_new = nxt[status.flatten() == 1]
                 good_old = self._prev_pts[status.flatten() == 1]
                 n = len(good_new)
-                if n >= self.min_features and rel_alt > 2.0:
+                dt = now - self._prev_t
+                proll, ppitch, pyaw = self._prev_att
+                if (n >= self.min_features and rel_alt > 2.0 and dt >= self.min_dt
+                        and abs(_wrap(yaw - pyaw)) <= math.radians(15)):
                     flow = (good_new - good_old).reshape(-1, 2)
-                    med = np.median(flow, axis=0)  # robust px/frame (dx, dy)
-                    dt = now - self._prev_t
-                    if dt < self.min_dt:
-                        # Too little time elapsed to trust the estimate.
-                        self._reseed(gray, now, yaw)
-                        self._last_emit = now
-                        return FlowEstimate(valid=False, t=now)
-
-                    # Focal length in pixels for the downscaled frame.
-                    f_px = (self.proc_width / 2.0) / math.tan(self.hfov / 2.0)
-
-                    # De-rotate: remove the pixel shift caused by yaw change
-                    # (dominant for a nadir cam). Pitch/roll rates are left as a
-                    # documented approximation.
-                    if self._prev_yaw is not None:
-                        dyaw = _wrap(yaw - self._prev_yaw)
-                        # yaw rotates the image about its centre; for small dyaw
-                        # the net translational bias is ~0 at the centroid, so we
-                        # mainly guard against large spins.
-                        if abs(dyaw) > math.radians(15):
-                            self._reseed(gray, now, yaw)
-                            return est
-
-                    # Pixel velocity -> angular rate -> ground velocity (nadir).
-                    # v_ground = (flow_px / f_px) * height / dt
-                    v_right = (med[0] / f_px) * rel_alt / dt   # body +y (right)
-                    v_fwd = -(med[1] / f_px) * rel_alt / dt    # image up = fwd
-
-                    # Rotate body (fwd,right) into NED using heading.
-                    cy, sy = math.cos(yaw), math.sin(yaw)
-                    vn = v_fwd * cy - v_right * sy
-                    ve = v_fwd * sy + v_right * cy
-
-                    speed = math.hypot(vn, ve)
-                    if speed <= self.max_speed_mps:
+                    med = np.median(flow, axis=0)  # robust px shift (dx, dy)
+                    f_px = self.fx_over_width * self.proc_width
+                    vn, ve = flow_to_velocity(
+                        float(med[0]), float(med[1]), f_px, rel_alt, dt,
+                        droll=roll - proll, dpitch=pitch - ppitch, yaw=yaw)
+                    if math.hypot(vn, ve) <= self.max_speed_mps:
                         est = FlowEstimate(vx_ned=vn, vy_ned=ve,
                                            quality=min(1.0, n / 120.0),
                                            valid=True, t=now)
 
         # Re-seed features each cycle (cheap, robust for a moving scene).
-        self._reseed(gray, now, yaw)
+        self._reseed(gray, now, roll, pitch, yaw)
         self._last_emit = now
         return est
 
-    def _reseed(self, gray, now, yaw) -> None:
+    def _reseed(self, gray, now, roll, pitch, yaw) -> None:
         import cv2
         pts = cv2.goodFeaturesToTrack(gray, mask=None, **self._feat)
         self._prev_gray = gray
         self._prev_pts = pts
         self._prev_t = now
-        self._prev_yaw = yaw
+        self._prev_att = (roll, pitch, yaw)
 
     def send(self, master, est: FlowEstimate) -> None:
         """Optionally forward the estimate to ArduPilot as a vision velocity.
@@ -264,6 +242,31 @@ class OpticalFlowAid:
                 usec, est.vx_ned, est.vy_ned, 0.0)
         except Exception:
             pass
+
+
+def flow_to_velocity(dx_px: float, dy_px: float, f_px: float, height_m: float,
+                     dt: float, droll: float = 0.0, dpitch: float = 0.0,
+                     yaw: float = 0.0) -> tuple[float, float]:
+    """Convert a median image shift into ground velocity (north, east) in m/s.
+
+    Camera: near-nadir, image top towards the nose, image right towards the
+    right wing. Conventions (ArduPilot): roll + = right wing down, pitch + =
+    nose up, yaw = heading from north.
+
+      * Moving forward makes the ground slide DOWN the image (+dy); moving right
+        makes it slide LEFT (-dx).
+      * Rotating also shifts the image even with no movement: nose-up pitch
+        points the lens forward, so the ground slides down (+dy = f*tan(dpitch));
+        right roll points the lens left, so the ground slides right
+        (+dx = f*tan(droll)). That part is removed first, otherwise every gust
+        would look like a change in speed.
+    """
+    dx = dx_px - f_px * math.tan(droll)
+    dy = dy_px - f_px * math.tan(dpitch)
+    v_right = -(dx / f_px) * height_m / dt
+    v_fwd = (dy / f_px) * height_m / dt
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    return v_fwd * cy - v_right * sy, v_fwd * sy + v_right * cy
 
 
 def _wrap(a: float) -> float:

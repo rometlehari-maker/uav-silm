@@ -45,7 +45,7 @@ def selftest(cfg: dict) -> int:
             iou_threshold=float(cfg["detector"].get("iou_threshold", 0.45)),
         )
     fire = FireDetector(cfg.get("fire", {}))
-    geo = GeoReferencer(cfg.get("georef", {}))
+    geo = GeoReferencer(cfg.get("georef", {}), image_size=cam.frame_size)
     targets = set(cfg.get("targets", []))
 
     print("[selftest] reading 30 frames...")
@@ -61,7 +61,8 @@ def selftest(cfg: dict) -> int:
         hits += [(f.label, f.score, f.box) for f in fire.detect(frame)]
         if hits:
             # Demonstrate geo-ref with a dummy nadir pose at 100 m AGL.
-            gp = geo.project(hits[0][2][0], hits[0][2][1],
+            bx = hits[0][2]
+            gp = geo.project(0.5 * (bx[0] + bx[2]), 0.5 * (bx[1] + bx[3]),
                              58.3780, 24.5000, 100.0, 0.0, 0.0, math.radians(90))
             extra = f" georef~({gp.lat:.5f},{gp.lon:.5f})" if gp.valid else ""
             print(f"  frame {i}: " + ", ".join(f"{l}:{s:.2f}" for l, s, _ in hits) + extra)

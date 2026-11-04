@@ -6,9 +6,9 @@ flight checklist.** Follow it top to bottom the first time.
 
 Two independent subsystems, neither needing an operator link in flight:
 
-- **A. GPS-loss failsafe** — lives in **ArduPilot on the Matek H743**. Keeps the
-  aircraft safe (dead-reckon home / loiter / land) if GPS is lost, jammed or
-  spoofed. Works even if the Pi is off.
+- **A. GPS-loss failsafe** — lives in **ArduPilot on the Matek H743** (parameters
+  + a small Lua script). Dead-reckons, turns for home and stays inside a
+  geofence if GPS is lost, jammed or spoofed. Works even if the Pi is off.
 - **B. Recognition + photo** — lives on the **Raspberry Pi 3**. Reads telemetry,
   watches the camera, recognises farm/forestry objects and fire, saves
   geo-tagged pictures to the SD card. Never commands the aircraft.
@@ -34,20 +34,28 @@ onboard/
     fire.py                   no-training fire/smoke heuristic
     georef.py                 pixel -> ground lat/lon
     failsafe.py               GPS-health monitor + optical-flow aid
+    confirm.py                multi-frame confirmation (fewer false alarms)
+    health.py                 Pi temperature / throttling / storage monitor
     store.py                  save photos + metadata + de-dup
     recon.py                  main loop
     tiles.py                  optional offline basemap
   ardupilot/
     gps_denied_failsafe.param ArduPilot failsafe params  <-- load in Mission Planner
+    scripts/silm_gps_loss.lua GPS-loss -> RTL script     <-- copy to the H743 SD card
   training/
     classes.yaml              the class list
     make_synthetic.py         synthetic bootstrap dataset
     train.py / export.py      train and export to TFLite
     README.md                 data + training guide
   tools/
+    check_params.py           check a .param file against the ArduPlane source
+    sitl_failsafe_test.py     fly + grade a GPS-loss/jamming test in the simulator
+    calibrate_camera.py       measure the lens from checkerboard photos
+    make_review.py            post-flight map page with every detection + photo
     eval_model.py             run a model over images (onboard code path)
     make_geojson.py           turn a flight log into a map layer
     download_tiles.py         pre-cache an offline basemap
+  tests/                      automated tests (python3 -m pytest)
   models/                     .tflite models live here (not committed)
   systemd/silm-recon.service  auto-start on the Pi
 ```
@@ -55,42 +63,73 @@ onboard/
 On the **aircraft Raspberry Pi 3**: a clone of `onboard/` at
 `/home/pi/uav-silm/onboard`, plus your `models/*.tflite`.
 
-On the **H743**: just the parameters from `ardupilot/gps_denied_failsafe.param`.
+On the **H743**: the parameters from `ardupilot/gps_denied_failsafe.param`, and
+`silm_gps_loss.lua` in `APM/scripts/` on its SD card.
 
 ---
 
 ## A. The GPS-loss failsafe (do this first — it's the safety net)
 
-### A1. Load the parameters
-1. Connect the H743 to Mission Planner (USB or your normal telemetry).
-2. **CONFIG → Full Parameter List → Load from file** →
-   `onboard/ardupilot/gps_denied_failsafe.param`.
+### A1. Load the parameters and the script
+1. Optional but recommended: check the file against **your** firmware version
+   first (it is verified against ArduPlane 4.7.2):
+   ```bash
+   git clone --depth 1 --branch ArduPlane-stable https://github.com/ArduPilot/ardupilot
+   python3 tools/check_params.py --src ardupilot ardupilot/gps_denied_failsafe.param
+   ```
+   It reports unknown names (typos, renamed or Copter-only parameters),
+   duplicates and out-of-range values.
+2. Connect the H743 to Mission Planner. **CONFIG → Full Parameter List → Load
+   from file** → `onboard/ardupilot/gps_denied_failsafe.param`.
 3. **Read every changed line** against the comments in that file. Adjust
-   `FENCE_RADIUS`, `FENCE_ALT_MAX`, `ALT_HOLD_RTL`, airspeed limits for your site.
-4. **Write Params**, then reboot the FC.
+   `FENCE_RADIUS` (must contain the whole mission), `FENCE_ALT_MAX`,
+   `RTL_ALTITUDE` and the `AIRSPEED_*` limits for your site and airframe.
+4. **Write Params**, then reboot.
+5. Copy `onboard/ardupilot/scripts/silm_gps_loss.lua` to the flight
+   controller's SD card at `APM/scripts/` (Mission Planner: CONFIG → MAVFtp, or
+   take the card out). Reboot. The Messages tab shows
+   `SILM GPS-loss failsafe loaded`. Reboot once more and the `SLM_` parameters
+   appear (`SLM_GPS_LOSS_S` etc.).
 
 ### A2. What each piece does
-- `FS_DR_ENABLE=1` + `FS_LONG_ACTN=1`: on GPS loss the EKF **dead-reckons**
-  (airspeed + heading + learnt wind) and flies an RTL path home instead of
-  flying away. If GPS returns, it resumes normal nav automatically.
-- `EK3_POS_I_GATE` / `EK3_GPS_CHECK`: a spoofed "teleport" is rejected by the
-  EKF innovation checks rather than believed.
-- `FENCE_*`: hard geofence backstop so a worst-case dead-reckoning drift still
-  can't leave your operating area — it forces RTL/land at the boundary.
-- `THR_FAILSAFE=1`: independent RC-loss failsafe for the manual return phase.
+- **Dead reckoning** (`ARSPD_USE=1`): ArduPlane keeps navigating on airspeed,
+  heading and the wind it learnt while GPS was good. This is automatic in
+  ArduPlane; it needs a working, calibrated airspeed sensor.
+- **`silm_gps_loss.lua`**: after `SLM_GPS_LOSS_S` (5) seconds of bad GPS in AUTO
+  it switches to RTL, so the aircraft heads home instead of carrying on outward.
+  GPS counts as bad without a 3D fix, below `SLM_MIN_SATS` (6) satellites or
+  above `SLM_MAX_HDOP` (2.5). An episode only ends after `SLM_GPS_OK_S` (10)
+  seconds of good GPS, so a jammer's flickering lock can't reset the timer. It
+  never overrides a pilot flying in a manual mode.
+- **`EK3_OPTIONS=1` (JammingExpected)**: after a GPS loss the EKF re-checks GPS
+  quality before trusting it again, so a bad or faked signal can't snap the
+  position to the wrong place.
+- **`FENCE_*`**: a geofence around home forces RTL if the (dead-reckoned)
+  position leaves it, bounding the worst case.
+- **`FS_SHORT_ACTN=0`, `FS_LONG_ACTN=0`**: losing the ExpressLRS link **in AUTO
+  continues the mission** (that is the point of a link-free mission); in manual
+  modes it still circles, then RTLs. Do **not** set `FS_LONG_ACTN=1`: the
+  aircraft would turn home the moment it left radio range.
 
-### A3. Prove it without flying (SITL — strongly recommended)
-Install ArduPilot SITL once on your PC, then:
+### A3. Prove it without flying (SITL — do this before the first flight)
+On your PC, with ArduPilot's simulator installed (instructions at the top of
+`tools/sitl_failsafe_test.py`):
 ```bash
-sim_vehicle.py -v ArduPlane --console --map
-# load your params, plan a small AUTO mission, arm, takeoff, then simulate
-# GPS loss mid-mission:
-param set SIM_GPS1_ENABLE 0        # kill GPS in the sim
-# watch: the plane should switch to dead-reckoning and track home, not fly away.
-param set SIM_GPS1_ENABLE 1        # restore; it should re-acquire and resume
+# in the folder you start SITL from:
+mkdir -p scripts && cp <repo>/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
+Tools/autotest/sim_vehicle.py -v ArduPlane --console --map -L 59.40,24.70,30,0
+
+# in another terminal, from onboard/:
+python3 tools/sitl_failsafe_test.py --fault jam --wind 6 --out sitl_jam
+python3 tools/sitl_failsafe_test.py --fault disable --fault-s 120 --out sitl_off
 ```
-Also simulate a spoof-like jump (`SIM_GPS1_POS` offsets) and confirm the EKF
-rejects it. **Do not fly the real aircraft until SITL behaves correctly.**
+The tool loads the parameters, uploads a mission 1.2 km out, arms, and at 700 m
+from home turns on SITL's **GPS jamming simulation** (or switches GPS off). It
+grades the run (PASS/FAIL): RTL in time, headed home while blind, stayed inside
+the fence, estimate re-converged after GPS returned, ended near home. It also
+saves `track.png` (true track vs the autopilot's estimate), `track.csv` and
+`result.json`. Try stronger wind and longer outages to see how far dead
+reckoning drifts. **Do not fly the real aircraft until these pass.**
 
 ### A4. Honest limits
 Dead-reckoning drifts with wind-estimate error — it's a controlled recovery,
@@ -101,8 +140,8 @@ not GPS-denied precision navigation.
 ### A5. (Optional) companion optical-flow backup
 The Pi can send the FC a backup ground-velocity estimate from the camera
 (`failsafe.send_to_fc`). **Leave it off until** you've done the bench check in
-step B6 and confirmed sane values, then enable `EK3_SRC2_VELXY` per the comments
-in the param file. Flight safety must never depend on the Pi.
+step B6 and confirmed sane values, then set `EK3_SRC2_VELXY=6` (ExternalNav)
+per the comments in the param file. Flight safety must never depend on the Pi.
 
 ---
 
@@ -143,12 +182,21 @@ python3 run.py --config config.yaml --selftest
 You'll see per-frame detections and a demo geo-reference printed. This proves the
 capture path + model + fire detector + geo-ref all work.
 
-### B5. Calibrate the geo-reference (one time)
-1. Put a known object in frame at a known distance, or fly a quick test and
-   compare a saved detection's `ground_lat/lon` against the object's real GPS.
-2. Adjust `georef.hfov_deg` until the projected position matches. (Too-small
-   HFOV → positions too close to the aircraft; too-large → too far.)
-3. Set `forward_tilt_deg` to your mount (measure it; 90° = nadir).
+### B5. Calibrate the lens (one time)
+The A2 Mini is wide-angle, so positions near the frame edges are off unless the
+lens is measured.
+1. Print a checkerboard (9×6 inner corners, 25 mm squares), tape it flat.
+2. On the Pi, through the same dongle and resolution you fly with:
+   ```bash
+   python3 tools/calibrate_camera.py --device 0 --capture 25 --cols 9 --rows 6 --square-mm 25
+   ```
+   Move the board so it covers the whole frame, **especially the corners**, at
+   different tilts. (Or take photos and use `--images folder/`.)
+3. RMS error under ~0.5 px is good. Paste the printed `calibration:` block under
+   `georef:` in `config.yaml`. It also prints the measured horizontal FOV.
+4. Set `georef.forward_tilt_deg` to your real camera mount (90 = straight down).
+5. First flight: compare a saved detection's `ground_lat/lon` with the object's
+   real position to confirm.
 
 ### B6. Verify the failsafe companion aids on the bench
 ```bash
@@ -159,6 +207,10 @@ python3 run.py --config config.yaml    # with the FC connected and GPS indoors
 - Wave the camera over a textured surface: `optical_flow.ndjson` fills with
   velocity estimates. Only once these look sane should you consider
   `failsafe.send_to_fc: true` + the EKF source param.
+- `health.ndjson` records CPU temperature, throttling/under-voltage and free
+  storage every 10 s; warnings also appear in `journalctl -u silm-recon`. Run it
+  with the fuselage closed and the motor running on the bench to see whether the
+  Pi gets too hot.
 
 ### B7. Auto-start on boot
 ```bash
@@ -208,19 +260,23 @@ to continue), re-export, re-fly. Each loop improves it on *your* fields.
 ---
 
 ## D. Flight-day checklist
-1. SITL failsafe test passed (A3). Params written to the FC (A1).
-2. Model on the Pi; `--selftest` clean (B4); geo-ref calibrated (B5).
-3. Plan the mission in Mission Planner; set a sensible RTL point and geofence.
-4. Pre-cache an offline basemap if you want map context (`tools/download_tiles.py`).
-5. Power on; confirm the `silm-recon` service is running and sees telemetry
+1. `python3 -m pytest` passes (section F). SITL failsafe tests passed (A3).
+2. Params written and `silm_gps_loss.lua` loaded on the FC (A1): Messages tab
+   shows `SILM GPS-loss failsafe loaded`.
+3. Model on the Pi; `--selftest` clean (B4); lens calibrated (B5).
+4. Plan the mission in Mission Planner; the geofence radius must contain it.
+5. Pre-cache an offline basemap if you want map context (`tools/download_tiles.py`).
+6. Power on; confirm the `silm-recon` service is running and sees telemetry
    (`journalctl -u silm-recon -f` shows `idle ... gps=OK`).
-6. Arm, hand-launch, AUTO. The Pi starts saving once airborne above `min_alt_m`.
-7. On return, switch out of AUTO on ExpressLRS and land manually.
-8. Pull the SD card. `python3 tools/make_geojson.py <mission>/detections.ndjson`
-   → drop the GeoJSON on a map to review every target + photo. Check
-   `gps_health.ndjson` for any GPS events during the flight.
-
----
+7. Arm, hand-launch, AUTO. The Pi starts saving once airborne above `min_alt_m`.
+8. On return, switch out of AUTO on ExpressLRS and land manually.
+9. Pull the SD card and build the review page:
+   ```bash
+   python3 tools/make_review.py <mission folder>     # -> <mission folder>/review.html
+   ```
+   It shows the flight track (red where GPS was degraded), every detection with
+   its photo, and the GPS and Pi-health events. `tools/make_geojson.py` exports
+   the detections for QGIS or other map tools.
 
 ## E. Legal / safety
 - GPS-denied **failsafe** is a safety feature (anti-flyaway); it is not a licence
@@ -230,3 +286,31 @@ to continue), re-export, re-fly. Each loop improves it on *your* fields.
 - Don't pre-cache Google imagery (against their terms) — use a permitted
   satellite/terrain source for the offline basemap.
 - Review privacy rules before photographing people or private property.
+
+---
+
+## F. Automated tests
+
+From `onboard/` on your PC (or the Pi):
+```bash
+python3 -m pip install pytest lupa opencv-python-headless pymavlink pyyaml numpy
+python3 -m pytest -q
+# include the parameter check against an ArduPilot checkout:
+ARDUPILOT_SRC=../ardupilot python3 -m pytest -q
+```
+What they cover:
+- `test_gps_loss_lua.py`: runs the real Lua script with mocked ArduPilot
+  bindings: GPS loss in AUTO, manual modes left alone, short dropouts, flickering
+  lock (jamming), too few satellites, bad HDOP, parameter changes.
+- `test_check_params.py`: the parameter checker, and guards on the settings
+  that make link-free missions work (`FS_LONG_ACTN=0`, airspeed, scripting).
+- `test_geometry.py`: geo-referencing and the optical-flow speed estimate
+  against an independent camera model, including rendered ground images.
+- `test_calibration.py`: the lens calibration recovers a known lens.
+- `test_pipeline.py`, `test_confirm.py`, `test_health.py`,
+  `test_store_fire.py`, `test_review.py`, `test_sitl_analysis.py`: the
+  onboard pipeline end to end and each part on its own.
+
+GitHub runs the same tests (with the parameter check against the current
+ArduPlane stable source) on every push that touches `onboard/`
+(`.github/workflows/onboard-tests.yml`).

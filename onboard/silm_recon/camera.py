@@ -54,6 +54,9 @@ class Camera:
                 )
                 if not self._files:
                     raise CameraError(f"no images in folder {self.device}")
+                first = cv2.imread(self._files[0])
+                if first is not None:
+                    self.height, self.width = first.shape[:2]
                 return
 
             cap = cv2.VideoCapture(self.device)
@@ -68,6 +71,15 @@ class Camera:
                     pass
             if not cap.isOpened():
                 raise CameraError(f"could not open video source {self.device!r}")
+            # Capture devices may not honour the requested size (AHD dongles
+            # often deliver 720x576 or 1920x1080). Use what was negotiated, so
+            # geo-referencing matches the real frames.
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            if w > 0 and h > 0:
+                if (w, h) != (self.width, self.height):
+                    print(f"[camera] requested {self.width}x{self.height}, device gives {w}x{h}")
+                self.width, self.height = w, h
             self._impl = cap
 
         elif self.source == "picamera":

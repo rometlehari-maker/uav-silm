@@ -40,7 +40,7 @@
       "url": "https://www.uavsilm.eu/",
       "alternateName": ["SILM UAV", "UAV Silm", "Strategic Intelligence and Land Monitoring"],
       "inLanguage": "en",
-      "dateModified": "2026-11-03"
+      "dateModified": "2026-11-04"
     },
     {
       "@type": "ResearchProject",
@@ -569,6 +569,7 @@
       <a href="#project">Project</a>
       <a href="#design">Design</a>
       <a href="#inside">Inside</a>
+      <a href="#onboard">Onboard</a>
       <a href="#cfd">CFD</a>
       <a href="#learnt">Lessons</a>
       <a href="#progress">Progress</a>
@@ -590,6 +591,7 @@
     <li><a class="mi" href="#project"><b>Project</b><span>What UAV SILM is and who it is for</span></a></li>
     <li><a class="mi" href="#design"><b>Design</b><span>Geometry, calculated performance and modules</span></a></li>
     <li><a class="mi" href="#inside"><b>Inside the airframe</b><span>Interactive 3D layout and balance calculator</span></a></li>
+    <li><a class="mi" href="#onboard"><b>Onboard system</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
     <li><a class="mi" href="#cfd"><b>CFD</b><span>Airflow and pressure from OpenFOAM, in 3D</span></a></li>
     <li><a class="mi" href="#learnt"><b>Lessons</b><span>What went wrong and what we learnt</span></a></li>
     <li><a class="mi" href="#progress"><b>Progress</b><span>Interim report and next steps</span></a></li>
@@ -604,6 +606,7 @@
   <a href="#project" tabindex="-1"><span>Project</span><i></i></a>
   <a href="#design" tabindex="-1"><span>Design</span><i></i></a>
   <a href="#inside" tabindex="-1"><span>Inside</span><i></i></a>
+  <a href="#onboard" tabindex="-1"><span>Onboard</span><i></i></a>
   <a href="#cfd" tabindex="-1"><span>CFD</span><i></i></a>
   <a href="#learnt" tabindex="-1"><span>Lessons</span><i></i></a>
   <a href="#progress" tabindex="-1"><span>Progress</span><i></i></a>
@@ -628,7 +631,7 @@
           <div class="pills">
             <span class="pill warn"><span class="dot"></span>In development, not yet flown</span>
             <span class="pill">Presentation 8 Dec 2026</span>
-            <span class="pill">Updated 3 Nov 2026</span>
+            <span class="pill">Updated 4 Nov 2026</span>
           </div>
           <div class="cta">
             <a class="btn primary" href="#inside">Look inside the airframe <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -1014,6 +1017,67 @@
           </div>
         </div>
       </div>
+      <div class="next"><a href="#onboard">Next: <b>Onboard system</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- ============ ONBOARD ============ -->
+  <section class="s" id="onboard">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Onboard</span></div>
+      <h2 class="rv">Flying and seeing without a link</h2>
+      <p class="lead rv">The aircraft is meant to fly its planned route, recognise what it sees and save geo-tagged photos with no radio link to the ground, and to come home safely if GPS is lost or jammed. None of this has flown yet: so far it has been tested in software and simulation.</p>
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Onboard system">
+          <button class="tab" role="tab">How it works</button>
+          <button class="tab" role="tab">GPS loss</button>
+          <button class="tab" role="tab">Recognition</button>
+          <button class="tab" role="tab">Testing</button>
+          <span class="tab-ind"></span>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="lessons">
+            <div class="lesson"><svg viewBox="0 0 24 24"><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7 18c6 0 3-11 10-12"/></svg><h3>The autopilot flies the route</h3><p>We draw the route in Mission Planner and upload it before launch. ArduPilot on the Matek H743 flies it in AUTO mode and needs no link while doing so.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3"/></svg><h3>The Raspberry Pi watches the camera</h3><p>It reads position and attitude from the flight controller, looks for objects in each frame and saves a boxed photo with its ground coordinates to the SD card. It never steers the aircraft.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M18 3v4h-4M6 21v-4h4"/></svg><h3>Only repeated sightings count</h3><p>An object is saved only after it has been seen in at least two frames at the same spot on the ground, which removes most one-frame false alarms. At 100 m a target stays in view for about five seconds.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M12 20v-8M8.5 8.5a5 5 0 0 1 7 0M5.5 5.5a9 9 0 0 1 13 0"/></svg><h3>The pilot takes over at the end</h3><p>Back within ExpressLRS range, the pilot switches out of AUTO and lands by hand. Losing the radio link while in AUTO does not abort the mission.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><h3>We review the flight on a map</h3><p>After landing, one command turns the SD card log into a map page with the flight track, every detection and its photo.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/></svg><h3>The Pi watches its own health</h3><p>It logs its temperature, power supply and free storage, and stops archiving raw frames before the card fills up.</p></div>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="trouble">
+            <div class="row"><div class="what"><h4>GPS drops out or is jammed</h4><p>Without GPS the aircraft no longer knows exactly where it is.</p></div><div class="fix"><b>What the aircraft does</b>ArduPilot keeps flying by dead reckoning, from airspeed, heading and the wind it measured while GPS was still good.</div></div>
+            <div class="row"><div class="what"><h4>GPS stays bad for 5 seconds</h4><p>Carrying on outward would only add to the drift.</p></div><div class="fix"><b>What the aircraft does</b>A small script on the flight controller switches to Return to Launch. Lock that flickers on and off during jamming does not reset its timer.</div></div>
+            <div class="row"><div class="what"><h4>A jammer switches off, or sends a false signal</h4><p>A weak or faked signal can look like a valid fix.</p></div><div class="fix"><b>What the aircraft does</b>The navigation filter re-checks GPS quality before trusting it again, so a bad signal cannot snap the position to the wrong place.</div></div>
+            <div class="row"><div class="what"><h4>The estimate drifts too far</h4><p>Dead-reckoning error grows with time and wind.</p></div><div class="fix"><b>What the aircraft does</b>A geofence 1.5 km around home forces a return if the estimated position leaves it.</div></div>
+          </div>
+          <p class="summary-box">This is a controlled recovery, not navigation without GPS: the longer GPS is gone, the less precise the return. The settings are checked against the ArduPlane 4.7.2 source and will be tested in simulation before any flight.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <p>The detector runs on the Raspberry Pi 3 at about one to three frames per second, which is enough when each target stays in view for several seconds. It is set up for 15 classes for farm, forestry and wildfire survey:</p>
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Group</th><th>Classes</th></tr></thead><tbody>
+            <tr><td>Farm machinery</td><td>Tractor, combine, harvester, baler</td></tr>
+            <tr><td>Vehicles</td><td>Car, truck, logging truck</td></tr>
+            <tr><td>Farm and forest</td><td>Hay bale, livestock, silo, barn, timber stack</td></tr>
+            <tr><td>Hazards</td><td>Fire, smoke</td></tr>
+            <tr><td>People</td><td>Person</td></tr>
+          </tbody></table></div>
+          <p class="summary-box">Honest status: our current model is trained on synthetic images, to prove the training and deployment chain end to end. It will not recognise real machines until we train it on labelled aerial photos, ideally taken with our own camera. The plan is to fly, label what the model got wrong, retrain and repeat.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>
+            <tr><td>Failsafe parameters against the ArduPlane 4.7.2 source</td><td>Every name and range valid</td></tr>
+            <tr><td>GPS-loss script, 14 scenarios including simulated jamming</td><td>All pass</td></tr>
+            <tr><td>Geo-referencing and camera speed estimate against an independent camera model</td><td>Speed within 1 m/s in 67 cases</td></tr>
+            <tr><td>Lens calibration on synthetic checkerboard photos</td><td>Ray error under 0.3°</td></tr>
+            <tr><td>Whole onboard pipeline, from camera frame to saved, geo-tagged photo</td><td>Passes</td></tr>
+            <tr><td>Full simulated mission with GPS jamming (ArduPilot SITL)</td><td>Next step</td></tr>
+            <tr><td>Flight tests</td><td>After the airframe is built</td></tr>
+          </tbody></table></div>
+          <p class="summary-box">More than 120 automated tests run on every change. They tell us the software does what we intended; only flight tests will tell us whether that holds up in the air.</p>
+        </div>
+      </div>
       <div class="next"><a href="#cfd">Next: <b>CFD</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
   </section>
@@ -1177,6 +1241,8 @@
             <div class="row"><div class="what"><h4>The CAD would not mesh directly for CFD</h4><p>Some curved surfaces in the STEP export failed in the first meshing tool.</p></div><div class="fix"><b>What we did</b>Fused the parts and triangulated them another way before snappyHexMesh could use the geometry.</div></div>
             <div class="row"><div class="what"><h4>Parallel CFD runs failed at first</h4><p>Running the solver on two cores clashed with the installed MPI library.</p></div><div class="fix"><b>What we did</b>A library workaround, after which each case ran in parallel to convergence.</div></div>
             <div class="row"><div class="what"><h4>CFD drag disagreed with XFLR5</h4><p>0.0367 against 0.0227 at 3°.</p></div><div class="fix"><b>What we did</b>Traced it to the fuselage and the fully turbulent boundary layer in CFD. We treat the CFD drag as an upper estimate until flight tests.</div></div>
+            <div class="row"><div class="what"><h4>Our first failsafe settings would have aborted every mission</h4><p>With the radio-loss action set to Return to Launch, the aircraft would have turned home the moment it left ExpressLRS range, which is exactly what a link-free mission does. Several other parameter names did not exist in ArduPlane at all.</p></div><div class="fix"><b>What we did</b>Wrote a script that checks every parameter against the ArduPlane source, set radio loss to continue in AUTO, and moved GPS-loss handling into its own tested script on the flight controller.</div></div>
+            <div class="row"><div class="what"><h4>The camera speed estimate had its sign reversed</h4><p>A test against an independent camera model showed forward flight reading as flying backwards. The estimate was switched off by default, so it never reached the autopilot.</p></div><div class="fix"><b>What we did</b>Fixed the signs, added correction for pitch and roll, and now test it on rendered images of the ground.</div></div>
             <div class="row"><div class="what"><h4>The build started late</h4><p>Airframe printing has not started; the print settings for the foaming LW-PLA still need tuning.</p></div><div class="fix"><b>What we did</b>Planned test prints first (LW-PLA from 5 November, PETG from 13 November) and replaced the stage plan with dated tasks. See the <a href="#progress">progress report</a>.</div></div>
             <div class="row"><div class="what"><h4>The second parts order slipped</h4><p>Carbon tube sizes, wire gauge and the arming connector had to come from the CAD first.</p></div><div class="fix"><b>What we did</b>Finished the sizes and set the order for 4 November.</div></div>
           </div>
@@ -1629,6 +1695,7 @@
         <a href="#project">About UAV SILM</a>
         <a href="#design">Design and capability</a>
         <a href="#inside">Inside the airframe</a>
+        <a href="#onboard">Onboard system</a>
         <a href="#cfd">CFD results</a>
         <a href="#learnt">What we learnt</a>
         <a href="#progress">Progress report</a>
@@ -1753,8 +1820,8 @@
 
   // scroll progress, active section in nav, menu and rail
   var bar = d.getElementById('scrollbar'), hdr = d.querySelector('header.top');
-  var ids = ['project','design','inside','cfd','learnt','progress','build','timeline','team','resources'];
-  var names = {project:'Project', design:'Design', inside:'Inside', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources'};
+  var ids = ['project','design','inside','onboard','cfd','learnt','progress','build','timeline','team','resources'];
+  var names = {project:'Project', design:'Design', inside:'Inside', onboard:'Onboard', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources'};
   var secs = ids.map(function(i){ return d.getElementById(i); });
   var navLinks = [].slice.call(d.querySelectorAll('[data-nav] a[href^="#"]'));
   var ticking = false, lastCur = null;

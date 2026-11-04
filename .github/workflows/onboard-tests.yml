@@ -1,0 +1,42 @@
+name: onboard tests
+
+on:
+  push:
+    paths: ["onboard/**", ".github/workflows/onboard-tests.yml"]
+  pull_request:
+    paths: ["onboard/**", ".github/workflows/onboard-tests.yml"]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: onboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy opencv-python-headless pyyaml pytest pymavlink lupa
+
+      # Parameter names/ranges are checked against the current ArduPlane stable
+      # source (read as text only; only ArduPlane/ and libraries/ are fetched).
+      - name: Fetch ArduPlane stable source (for the parameter check)
+        working-directory: ${{ runner.temp }}
+        run: |
+          git clone --depth 1 --branch ArduPlane-stable --filter=blob:none --sparse \
+            https://github.com/ArduPilot/ardupilot.git ardupilot
+          cd ardupilot
+          git sparse-checkout set ArduPlane libraries
+          grep -m1 'define THISFIRMWARE' ArduPlane/version.h
+
+      - name: Run tests
+        env:
+          ARDUPILOT_SRC: ${{ runner.temp }}/ardupilot
+        run: python -m pytest -q

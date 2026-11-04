@@ -12,3 +12,4 @@ silm_captures/
 frames/
 
 models/*_labels.txt
+.pytest_cache/

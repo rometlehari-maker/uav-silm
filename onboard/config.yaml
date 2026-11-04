@@ -78,6 +78,14 @@ fire:
 # Geo-referencing: pixel -> ground lat/lon
 # ---------------------------------------------------------------------------
 georef:
+  # Lens model. Best: run tools/calibrate_camera.py and paste its
+  # `calibration:` block here (focal length, centre, distortion). Without it,
+  # hfov_deg is used with an ideal distortion-free lens.
+  # calibration:
+  #   width: 1280
+  #   height: 720
+  #   camera_matrix: [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
+  #   dist_coeffs: [k1, k2, p1, p2, k3]
   hfov_deg: 86.0              # horizontal field of view of the lens (CALIBRATE)
   forward_tilt_deg: 90.0      # 90 = straight down (nadir); lower = look forward
   yaw_offset_deg: 0.0
@@ -96,12 +104,34 @@ activation:
   max_telemetry_age_s: 2.0
 
 # ---------------------------------------------------------------------------
+# Multi-frame confirmation: only save an object after it has been seen in
+# `frames` frames within `window_s` at the same place (within radius_m on the
+# ground). Removes most one-frame false alarms. frames: 1 disables it.
+# ---------------------------------------------------------------------------
+confirm:
+  frames: 2
+  window_s: 3.0
+  radius_m: 30.0
+
+# ---------------------------------------------------------------------------
+# Companion health: CPU temperature, throttling / under-voltage, free storage,
+# processing rate -> health.ndjson. Low storage sheds load automatically.
+# ---------------------------------------------------------------------------
+health:
+  interval_s: 10
+  warn_temp_c: 70
+  low_disk_mb: 500          # below this: stop archiving raw frames
+  critical_disk_mb: 100     # below this: stop saving detections
+
+# ---------------------------------------------------------------------------
 # GPS-loss failsafe companion aids (the real failsafe is in ArduPilot; see
 # ardupilot/gps_denied_failsafe.param). These are monitor + backup only.
 # ---------------------------------------------------------------------------
 failsafe:
   enabled: true             # optical-flow velocity aid on/off
   send_to_fc: false         # DO NOT enable until validated on the bench
+                            # (then also EK3_SRC2_VELXY=6 on the FC)
+  max_speed_mps: 60         # estimates above this are discarded as implausible
   max_rate_hz: 5.0
   proc_width: 320
   min_features: 20

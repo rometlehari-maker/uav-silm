@@ -30,6 +30,20 @@ import numpy as np
 _EARTH_R = 6378137.0  # m, WGS-84 equatorial radius (local-tangent use)
 
 
+def undistort_points(pts, K, D, P=None):
+    """cv2.undistortPoints with enough iterations for strong wide-angle lenses
+    (the default 5 leaves ~0.2 px error in the corners). Works on OpenCV 4
+    (undistortPointsIter) and OpenCV 5 (criteria argument)."""
+    import cv2
+    crit = (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 100, 1e-9)
+    if hasattr(cv2, "undistortPointsIter"):
+        return cv2.undistortPointsIter(pts, K, D, None, P, crit)
+    try:
+        return cv2.undistortPoints(pts, K, D, None, None, P, crit)
+    except TypeError:
+        return cv2.undistortPoints(pts, K, D, None, P)
+
+
 @dataclass
 class GroundPoint:
     lat: float
@@ -39,9 +53,35 @@ class GroundPoint:
 
 
 class GeoReferencer:
-    def __init__(self, cfg: dict):
-        # Horizontal field of view of the lens, degrees.
+    def __init__(self, cfg: dict, image_size: tuple[int, int] | None = None):
+        # Horizontal field of view of the lens, degrees (used when no
+        # calibration is given).
         self.hfov = math.radians(float(cfg.get("hfov_deg", 86.0)))
+
+        # Image size in pixels. Needed so vertical angles are right for
+        # non-square (e.g. 16:9) frames.
+        if image_size is None:
+            image_size = (int(cfg.get("image_width", 1280)), int(cfg.get("image_height", 720)))
+        self.W, self.H = int(image_size[0]), int(image_size[1])
+
+        # Intrinsics. Either from a calibration (tools/calibrate_camera.py),
+        # scaled to the current resolution, or derived from hfov with square
+        # pixels and a centred principal point.
+        self.dist = None
+        calib = cfg.get("calibration")
+        if calib:
+            sx = self.W / float(calib["width"])
+            sy = self.H / float(calib["height"])
+            K = np.array(calib["camera_matrix"], dtype=np.float64)
+            self.fx, self.fy = K[0, 0] * sx, K[1, 1] * sy
+            self.cx, self.cy = K[0, 2] * sx, K[1, 2] * sy
+            d = calib.get("dist_coeffs")
+            if d is not None:
+                self.dist = np.array(d, dtype=np.float64).reshape(-1)
+        else:
+            self.fx = self.fy = (self.W / 2.0) / math.tan(self.hfov / 2.0)
+            self.cx, self.cy = self.W / 2.0, self.H / 2.0
+        self.K = np.array([[self.fx, 0, self.cx], [0, self.fy, self.cy], [0, 0, 1.0]])
         # Camera mounting relative to the airframe body (FRD) frame.
         #   forward_tilt_deg = angle the optical axis is tilted down from the
         #   nose-forward direction. 90 = straight down (nadir), 0 = horizon.
@@ -94,13 +134,32 @@ class GeoReferencer:
         ])
 
     def pixel_ray_cam(self, u_norm: float, v_norm: float) -> np.ndarray:
-        """Unit ray in the camera-optical frame for a normalised pixel [0,1]."""
-        fx = 0.5 / math.tan(self.hfov / 2.0)  # focal length in normalised units
-        # Keep the vertical consistent with the horizontal (square pixels).
-        x = (u_norm - 0.5) / fx
-        y = (v_norm - 0.5) / fx
+        """Unit ray in the camera-optical frame for a normalised pixel [0,1]
+        (u across the width, v down the height)."""
+        px, py = u_norm * self.W, v_norm * self.H
+        if self.dist is not None and np.any(self.dist):
+            pt = np.array([[[px, py]]], dtype=np.float64)
+            x, y = undistort_points(pt, self.K, self.dist)[0, 0]
+        else:
+            x = (px - self.cx) / self.fx
+            y = (py - self.cy) / self.fy
         v = np.array([x, y, 1.0])
         return v / np.linalg.norm(v)
+
+    def ground_to_pixel(self, north: float, east: float, rel_alt: float,
+                        roll: float, pitch: float, yaw: float):
+        """Inverse projection: where does a flat-ground point, `north`/`east`
+        metres from the point below the aircraft, appear in the image?
+        Returns normalised (u, v) or None if it's behind the camera.
+        (Ignores lens distortion; used for tests and overlays.)"""
+        d_ned = np.array([north, east, rel_alt])
+        R = self._R_ned_from_body(roll, pitch, yaw) @ self._R_body_from_cam()
+        d_cam = R.T @ d_ned
+        if d_cam[2] <= 1e-6:
+            return None
+        px = self.cx + self.fx * d_cam[0] / d_cam[2]
+        py = self.cy + self.fy * d_cam[1] / d_cam[2]
+        return px / self.W, py / self.H
 
     def project(
         self,

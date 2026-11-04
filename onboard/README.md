@@ -15,9 +15,16 @@ ExpressLRS.
 > checklist. This file is the component overview; FLIGHT_READY is the procedure.
 
 Key parts added beyond basic recognition:
-- **GPS-loss failsafe** — `ardupilot/gps_denied_failsafe.param` (the real safety
-  net, in ArduPilot) + `silm_recon/failsafe.py` (companion GPS-health monitor and
-  optical-flow backup). See FLIGHT_READY section A.
+- **GPS-loss failsafe** — `ardupilot/gps_denied_failsafe.param` (verified
+  against ArduPlane 4.7.2) + `ardupilot/scripts/silm_gps_loss.lua` (turns for
+  home after GPS loss, jamming-proof), both on the flight controller, plus
+  `silm_recon/failsafe.py` (companion GPS-health monitor and optical-flow
+  backup). Desk-test it with `tools/sitl_failsafe_test.py`. See FLIGHT_READY
+  section A.
+- **Reliability** — multi-frame confirmation (`confirm.py`), Pi health and
+  storage monitoring (`health.py`), lens calibration
+  (`tools/calibrate_camera.py`), a post-flight review page
+  (`tools/make_review.py`) and an automated test suite (`tests/`, section F).
 - **Trainable ag/forestry detector** — `training/` has the full
   train → export → deploy pipeline and a synthetic bootstrap; drop your
   `.tflite` into `models/` and set `detector.format: yolo`. See
