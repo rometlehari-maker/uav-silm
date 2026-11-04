@@ -97,11 +97,18 @@ def load_labels(path: str) -> dict[int, str]:
 
 class ObjectDetector:
     def __init__(self, model_path: str, labels_path: str, score_threshold: float = 0.5,
-                 fmt: str = "auto", iou_threshold: float = 0.45):
+                 fmt: str = "auto", iou_threshold: float = 0.45,
+                 class_thresholds: dict | None = None):
         self.interpreter = _load_interpreter(model_path)
         self.labels = load_labels(labels_path)
         self.score_threshold = score_threshold
         self.iou_threshold = iou_threshold
+        # Optional per-class confidence thresholds, e.g. {"fire": 0.3,
+        # "person": 0.6}; classes not listed use score_threshold.
+        self.class_thresholds = {str(k): float(v) for k, v in (class_thresholds or {}).items()}
+        unknown = set(self.class_thresholds) - set(self.labels.values())
+        if unknown:
+            print(f"[detector] WARNING: class_thresholds for unknown classes {sorted(unknown)}")
 
         inp = self.interpreter.get_input_details()[0]
         self._in_index = inp["index"]
@@ -125,6 +132,18 @@ class ObjectDetector:
         if fmt == "auto":
             fmt = "yolo" if len(self._out) == 1 else "ssd"
         self.fmt = fmt
+
+        # A YOLO head is [1, 4+nc, N] or [1, N, 4+nc]: check the labels file has
+        # exactly nc names, so a model/labels mix-up is caught at start-up
+        # instead of silently mislabelling detections.
+        self.num_classes = None
+        if self.fmt == "yolo":
+            shp = list(self._out[0]["shape"])
+            if len(shp) == 3:
+                self.num_classes = int(min(shp[1], shp[2])) - 4
+                if self.num_classes != len(self.labels):
+                    print(f"[detector] WARNING: model has {self.num_classes} classes but "
+                          f"{labels_path} has {len(self.labels)} names - wrong labels file?")
 
     @property
     def input_size(self) -> tuple[int, int]:
@@ -216,10 +235,12 @@ class ObjectDetector:
         n = int(count) if count is not None else len(scores)
         for i in range(min(n, len(scores))):
             score = float(scores[i])
-            if score < self.score_threshold:
+            if score < self._min_threshold():
                 continue
             cls = int(classes[i])
             label = self.labels.get(cls, str(cls))
+            if score < self._threshold(label):
+                continue
             ymin, xmin, ymax, xmax = (float(v) for v in boxes[i])
             box = (
                 max(0.0, xmin), max(0.0, ymin),
@@ -247,7 +268,7 @@ class ObjectDetector:
         cls_ids = np.argmax(cls_scores, axis=1)
         confs = cls_scores[np.arange(cls_scores.shape[0]), cls_ids]
 
-        keep = confs >= self.score_threshold
+        keep = confs >= self._min_threshold()
         xywh, cls_ids, confs = xywh[keep], cls_ids[keep], confs[keep]
         if len(confs) == 0:
             return []
@@ -265,12 +286,22 @@ class ObjectDetector:
             bx0, by0, bx1, by1 = x0[m], y0[m], x1[m], y1[m]
             sc = confs[m]
             label = self.labels.get(int(c), str(int(c)))
+            thr = self._threshold(label)
             for i in idxs:
+                if sc[i] < thr:
+                    continue
                 results.append(Detection(
                     label=label, score=float(sc[i]),
                     box=(float(bx0[i]), float(by0[i]), float(bx1[i]), float(by1[i])),
                 ))
         return results
+
+    def _threshold(self, label: str) -> float:
+        return getattr(self, "class_thresholds", {}).get(label, self.score_threshold)
+
+    def _min_threshold(self) -> float:
+        ct = getattr(self, "class_thresholds", {})
+        return min([self.score_threshold] + list(ct.values()))
 
     @staticmethod
     def _nms(x0, y0, x1, y1, scores, iou_thr) -> list[int]:

@@ -43,14 +43,19 @@ onboard/
     gps_denied_failsafe.param ArduPilot failsafe params  <-- load in Mission Planner
     scripts/silm_gps_loss.lua GPS-loss -> RTL script     <-- copy to the H743 SD card
   training/
+    ADDING_OBJECTS.md         tutorial: add a new object and train on it
     classes.yaml              the class list
-    make_synthetic.py         synthetic bootstrap dataset
+    make_synthetic.py         synthetic bootstrap / practice dataset
+    prelabel.py               draft labels with the current model
+    merge_datasets.py         merge datasets, remapping classes by name
+    check_dataset.py          find label problems, preview boxes
     train.py / export.py      train and export to TFLite
     README.md                 data + training guide
   tools/
     check_params.py           check a .param file against the ArduPlane source
     sitl_failsafe_test.py     fly + grade a GPS-loss/jamming test in the simulator
     calibrate_camera.py       measure the lens from checkerboard photos
+    pixels_on_target.py       is an object big enough to detect at an altitude?
     make_review.py            post-flight map page with every detection + photo
     eval_model.py             run a model over images (onboard code path)
     make_geojson.py           turn a flight log into a map layer
@@ -252,7 +257,13 @@ field-ready.)
 4. `python3 export.py --weights runs/detect/farm_v1/weights/best.pt --imgsz 320 --model-name silm_farm` (add `--edgetpu` for Coral).
 5. Copy `models/silm_farm.tflite` + `_labels.txt` to the Pi; set `config.yaml`.
 
-### C3. Iterate (the loop that actually makes it good)
+### C3. Adding a new object
+Follow `training/ADDING_OBJECTS.md`: check it's big enough to see at your
+altitude, add the class, collect and label (with `prelabel.py` drafting),
+merge with the old data (`merge_datasets.py`), check (`check_dataset.py`),
+retrain from your current model, compare, export, deploy.
+
+### C4. Iterate (the loop that actually makes it good)
 Set `storage.save_all_frames: true`, fly, pull the card, label the frames the
 model got wrong, add them to the dataset, retrain (`--model <previous best.pt>`
 to continue), re-export, re-fly. Each loop improves it on *your* fields.
@@ -272,7 +283,9 @@ to continue), re-export, re-fly. Each loop improves it on *your* fields.
 8. On return, switch out of AUTO on ExpressLRS and land manually.
 9. Pull the SD card and build the review page:
    ```bash
-   python3 tools/make_review.py <mission folder>     # -> <mission folder>/review.html
+   # replace with your mission folder from the SD card:
+   python3 tools/make_review.py /media/sd/silm_captures/mission_20261110_101500
+   # -> writes review.html inside that folder
    ```
    It shows the flight track (red where GPS was degraded), every detection with
    its photo, and the GPS and Pi-health events. `tools/make_geojson.py` exports
@@ -307,6 +320,8 @@ What they cover:
 - `test_geometry.py`: geo-referencing and the optical-flow speed estimate
   against an independent camera model, including rendered ground images.
 - `test_calibration.py`: the lens calibration recovers a known lens.
+- `test_training_tools.py`: the add-a-new-object tools (merging by class
+  name, dataset checks, pre-labelling, per-class thresholds, size calculator).
 - `test_pipeline.py`, `test_confirm.py`, `test_health.py`,
   `test_store_fire.py`, `test_review.py`, `test_sitl_analysis.py`: the
   onboard pipeline end to end and each part on its own.

@@ -69,7 +69,7 @@ def main() -> int:
                 cv2.rectangle(img, (int(x0 * w), int(y0 * h)),
                               (int(x1 * w), int(y1 * h)), (0, 255, 255), 2)
                 cv2.putText(img, f"{d.label} {d.score:.2f}",
-                            (int(x0 * w), max(0, int(y0 * h) - 5)),
+                            (int(x0 * w), max(12, int(y0 * h) - 5)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
             cv2.imwrite(os.path.join(args.out, os.path.basename(f)), img)
 

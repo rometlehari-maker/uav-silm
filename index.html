@@ -1055,7 +1055,7 @@
           <p class="summary-box">This is a controlled recovery, not navigation without GPS: the longer GPS is gone, the less precise the return. The settings are checked against the ArduPlane 4.7.2 source and will be tested in simulation before any flight.</p>
         </div>
         <div class="panel" role="tabpanel">
-          <p>The detector runs on the Raspberry Pi 3 at about one to three frames per second, which is enough when each target stays in view for several seconds. It is set up for 15 classes for farm, forestry and wildfire survey:</p>
+          <p>The detector runs on the Raspberry Pi 3 at about one to three frames per second, which is enough when each target stays in view for several seconds. The harder limit is size: the camera image is shrunk for the detector, so from 100 m only large objects such as combines, buildings and fires are big enough. Cars need flights nearer 60 m, and livestock or people lower still or a faster add-on board. It is set up for 15 classes for farm, forestry and wildfire survey:</p>
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Group</th><th>Classes</th></tr></thead><tbody>
             <tr><td>Farm machinery</td><td>Tractor, combine, harvester, baler</td></tr>
             <tr><td>Vehicles</td><td>Car, truck, logging truck</td></tr>

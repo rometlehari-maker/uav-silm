@@ -25,12 +25,32 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def write_labels(path: str) -> None:
-    with open(os.path.join(HERE, "classes.yaml")) as fh:
-        names = yaml.safe_load(fh)["names"]
+def write_labels(path: str, names) -> None:
+    """Write one class name per line, in the model's own class order.
+
+    The names come from the trained weights, NOT from classes.yaml: if
+    classes.yaml was edited after training (e.g. a new class added), using it
+    here would silently give every detection the wrong name."""
+    if isinstance(names, dict):
+        names = [names[i] for i in sorted(names)]
     with open(path, "w") as fh:
-        for i in range(len(names)):
-            fh.write(f"{names[i]}\n")
+        for n in names:
+            fh.write(f"{n}\n")
+
+
+def check_against_classes_yaml(names) -> None:
+    try:
+        with open(os.path.join(HERE, "classes.yaml")) as fh:
+            want = yaml.safe_load(fh)["names"]
+        want = [want[i] for i in sorted(want)]
+    except Exception:
+        return
+    have = [names[i] for i in sorted(names)] if isinstance(names, dict) else list(names)
+    if have != want:
+        print("NOTE: this model's classes differ from training/classes.yaml")
+        print(f"  model:        {have}")
+        print(f"  classes.yaml: {want}")
+        print("  The labels file is written from the MODEL (correct for this model).")
 
 
 def main() -> int:
@@ -74,7 +94,8 @@ def main() -> int:
     dst = os.path.join(os.path.abspath(args.out), args.model_name + ".tflite")
     shutil.copy(src, dst)
     labels = os.path.join(os.path.abspath(args.out), args.model_name + "_labels.txt")
-    write_labels(labels)
+    write_labels(labels, model.names)
+    check_against_classes_yaml(model.names)
     print(f"\nCPU model  -> {dst}")
     print(f"labels     -> {labels}")
 

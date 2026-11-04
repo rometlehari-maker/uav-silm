@@ -82,12 +82,17 @@ camera, which you asked to avoid.)
 
 ### Performance — honest numbers
 
-A **Raspberry Pi 3 does ~1–3 FPS** on a quantised 320×320 detector. That is
-enough for large, slow-moving targets (combines, vehicles, fires) seen from
-80–120 m **if** you fly high/slow enough that a target stays in frame for a
-second or two — the de-dup and `detect_every_n_frames` settings are tuned for
-this. If you want real-time (30+ FPS), add a **$60 Coral USB accelerator**; the
-code detects it and uses it automatically. No other change.
+A **Raspberry Pi 3 does ~1–3 FPS** on a quantised 320×320 detector. Speed is
+fine (a target stays in view ~5 s at 100 m), but **object size is the real
+limit**: the 1280-px frame is shrunk to 320 px for the model, so at 100 m a
+car is only ~8×3 px and a cow ~4×1 px, too small to detect. At 100 m without
+tiling, expect only large objects: combines with headers, buildings, fire and
+smoke plumes, timber stacks. Cars become detectable at ~60 m with 2×2 tiled
+detection; livestock, people and deer need lower flights or a larger model
+input. Tiling and larger inputs multiply the computing needed, so in practice
+they need a **$60 Coral USB accelerator** (detected and used automatically).
+Check any object with `tools/pixels_on_target.py` (see
+`training/ADDING_OBJECTS.md`, step 1).
 
 ---
 

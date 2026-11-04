@@ -68,6 +68,7 @@ class Recon:
                 score_threshold=float(dcfg.get("score_threshold", 0.5)),
                 fmt=dcfg.get("format", "auto"),
                 iou_threshold=float(dcfg.get("iou_threshold", 0.45)),
+                class_thresholds=dcfg.get("class_thresholds"),
             )
         self.targets = set(cfg.get("targets", []))
         self._tiled = bool(dcfg.get("tiled", False))

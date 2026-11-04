@@ -43,6 +43,7 @@ def selftest(cfg: dict) -> int:
             float(cfg["detector"].get("score_threshold", 0.5)),
             fmt=cfg["detector"].get("format", "auto"),
             iou_threshold=float(cfg["detector"].get("iou_threshold", 0.45)),
+            class_thresholds=cfg["detector"].get("class_thresholds"),
         )
     fire = FireDetector(cfg.get("fire", {}))
     geo = GeoReferencer(cfg.get("georef", {}), image_size=cam.frame_size)

@@ -41,6 +41,12 @@ detector:
   labels: models/coco_labels.txt
   format: auto            # auto | ssd | yolo  (auto picks by output tensors)
   score_threshold: 0.45
+  # Optional per-class thresholds (override score_threshold for that class).
+  # Lower for a rare class you'd rather not miss, higher for one that causes
+  # false alarms. Tune from the confusion matrix / eval_model.py output.
+  # class_thresholds:
+  #   fire: 0.30
+  #   person: 0.60
   iou_threshold: 0.45     # NMS IoU for YOLO models
   tiled: false            # true = tiled inference (better small-object recall,
   tile_grid: [2, 2]       #        costs grid[0]*grid[1]x compute -> Coral only)

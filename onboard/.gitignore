@@ -13,3 +13,5 @@ frames/
 
 models/*_labels.txt
 .pytest_cache/
+training/practice/
+training/to_label/

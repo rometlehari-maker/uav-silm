@@ -110,7 +110,7 @@ class DetectionStore:
                 cv2.rectangle(img, p0, p1, (0, 255, 255), 2)
                 cv2.putText(
                     img, f"{d['label']} {d['score']:.2f}",
-                    (p0[0], max(0, p0[1] - 6)),
+                    (p0[0], max(14, p0[1] - 6)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2,
                 )
         cv2.imwrite(jpg_path, img, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])

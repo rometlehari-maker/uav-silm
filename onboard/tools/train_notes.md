@@ -8,7 +8,7 @@ no code changes, just new files + config.
 ## 1. Data
 
 - Collect aerial/oblique images of the targets at realistic altitude and angle
-  (ideally from your own camera at ~80–120 m). A few hundred boxed instances per
+  (ideally from your own camera at your mission altitude). A few hundred boxed instances per
   class is enough for a usable student-grade model; more is better.
 - Useful public starting points to supplement your own data:
   - Agriculture/vehicle sets on Roboflow Universe (search "combine harvester",

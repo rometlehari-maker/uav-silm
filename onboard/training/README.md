@@ -1,5 +1,10 @@
 # Training the SILM ag/forestry detector
 
+> **Adding a new object (e.g. deer, excavators, irrigation pivots)?** Follow
+> [`ADDING_OBJECTS.md`](ADDING_OBJECTS.md): a step-by-step tutorial covering
+> whether the camera can see it, labelling, merging datasets, retraining,
+> checking the results and deploying, with a 10-minute practice run.
+
 This folder trains the object detector that runs on the aircraft. The pipeline
 is: **get labelled data → `train.py` → `export.py` → drop the `.tflite` into
 `../models/` → set `config.yaml`**. The onboard code already knows how to run a
@@ -16,7 +21,8 @@ Real-world performance is decided almost entirely by **data**, not by the code.
 To get a detector that likely works over your fields:
 
 1. **Match the viewpoint.** Train on images taken from roughly your flight
-   altitude and camera angle (near-nadir / oblique from 80–120 m). A model
+   altitude and camera angle (near-nadir, at the altitude you will fly; check the
+   object is big enough there with `../tools/pixels_on_target.py`). A model
    trained on ground-level photos will largely fail top-down. Your own saved
    flight frames (`storage.save_all_frames: true`) are the best data you can
    get — use the fly → label → retrain loop below.
