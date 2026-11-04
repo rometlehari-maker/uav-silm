@@ -39,6 +39,13 @@
       that corrupted the height rate enough to trigger the landing flare
       tens of metres up (SITL). Needs AHRS_OPTIONS=1 so the AHRS doesn't fall
       back to DCM, which navigates on raw GPS. SLM_SRC_SW=0 disables this.
+    * Arming gate: refuses to arm ("PreArm: SILM: ...") until the EKF has set
+      its origin from GPS, home is set and GPS is good. AHRS_OPTIONS=1 removes
+      ArduPilot's own "not using configured AHRS type" pre-arm check, and in
+      SITL the aircraft then armed and launched before the EKF had GPS; the
+      origin was set in the climb and every height after that was ~20 m off
+      (landing flare 20 m up). This gate puts that check back, whatever arms
+      the aircraft (planner button, ground station, test tool).
     * If GPS comes back, it announces recovery but does NOT resume the survey:
       after a GPS loss the safe default is to land.
     * If a ground station changes the mode after the script acted, the script
@@ -86,6 +93,31 @@ local SRC_SET_GPS = 0         -- EK3_SRC1_*: normal, with GPS
 local SRC_SET_NO_GPS = 1      -- EK3_SRC2_*: no GPS (dead reckoning)
 local on_no_gps_src = false   -- we switched the EKF to SRC_SET_NO_GPS
 
+-- Arming gate (auxiliary arming authorisation). nil if unavailable.
+local auth_id = arming:get_aux_auth_id()
+local auth_state = false      -- last state sent (false = nothing sent yet; nil = passed)
+
+local function update_arming_gate(good)
+  if auth_id == nil or arming:is_armed() then return end
+  local why = nil
+  if SLM_ENABLE:get() == 1 then
+    if not ahrs:home_is_set() then
+      why = "SILM: waiting for home"
+    elseif ahrs:get_origin() == nil then
+      why = "SILM: waiting for EKF to use GPS"
+    elseif not good then
+      why = "SILM: GPS not good enough"
+    end
+  end
+  if why == auth_state then return end
+  if why == nil then
+    arming:set_aux_auth_passed(auth_id)
+  else
+    arming:set_aux_auth_failed(auth_id, why)
+  end
+  auth_state = why
+end
+
 local function use_no_gps_sources(want)
   if want and SLM_SRC_SW:get() ~= 1 then want = false end
   if want == on_no_gps_src then return end
@@ -132,6 +164,7 @@ local function end_episode()
 end
 
 local function update()
+  update_arming_gate(gps_good())
   if SLM_ENABLE:get() ~= 1 then
     end_episode()
     last_ms = nil

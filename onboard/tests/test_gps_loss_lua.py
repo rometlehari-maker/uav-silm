@@ -16,7 +16,7 @@ SCRIPT = os.path.join(os.path.dirname(__file__), "..", "ardupilot", "scripts", "
 
 MOCKS = r"""
 sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={},
-       src_set=0, src_changes={},
+       src_set=0, src_changes={}, home_set=true, origin=true, auth=nil, auth_calls=0,
        taking_off=false, landing=false, nav_index=3, mission={16, 22, 16, 16, 16, 189, 16, 21}}
 params = {}
 
@@ -34,6 +34,9 @@ function gps:get_hdop(i) return sim.hdop end
 
 arming = {}
 function arming:is_armed() return sim.armed end
+function arming:get_aux_auth_id() return 0 end
+function arming:set_aux_auth_passed(id) sim.auth = "passed"; sim.auth_calls = sim.auth_calls + 1 end
+function arming:set_aux_auth_failed(id, msg) sim.auth = msg; sim.auth_calls = sim.auth_calls + 1 end
 
 vehicle = {}
 function vehicle:get_likely_flying() return sim.flying end
@@ -51,6 +54,8 @@ function mission:get_item(i)
 end
 
 ahrs = {}
+function ahrs:home_is_set() return sim.home_set end
+function ahrs:get_origin() if sim.origin then return {} end return nil end
 function ahrs:set_posvelyaw_source_set(i) sim.src_set = i; table.insert(sim.src_changes, i) end
 
 gcs = {}
@@ -334,3 +339,61 @@ def test_disabling_script_mid_episode_restores_sources():
     sim.g.params["SLM_ENABLE"] = 0
     sim.run_for(2)
     assert sim.s.src_set == 0
+
+
+# ---- arming gate (AHRS_OPTIONS=1 removes ArduPilot's own EKF pre-arm check) --
+
+def _on_ground(sim):
+    sim.s.armed = False
+    sim.s.flying = False
+
+
+def test_arming_blocked_until_ekf_has_gps_origin():
+    sim = Sim()
+    _on_ground(sim)
+    sim.s.origin = False
+    sim.run_for(2)
+    assert sim.s.auth == "SILM: waiting for EKF to use GPS"
+    sim.s.origin = True
+    sim.run_for(1)
+    assert sim.s.auth == "passed"
+
+
+def test_arming_blocked_without_home_or_with_bad_gps():
+    sim = Sim()
+    _on_ground(sim)
+    sim.s.home_set = False
+    sim.run_for(1)
+    assert sim.s.auth == "SILM: waiting for home"
+    sim.s.home_set = True
+    sim.s.sats = 4
+    sim.run_for(1)
+    assert sim.s.auth == "SILM: GPS not good enough"
+    sim.s.sats = 14
+    sim.run_for(1)
+    assert sim.s.auth == "passed"
+
+
+def test_arming_gate_passes_immediately_when_ready_and_does_not_spam():
+    sim = Sim()
+    _on_ground(sim)
+    sim.run_for(30)
+    assert sim.s.auth == "passed"
+    assert sim.s.auth_calls == 1
+
+
+def test_arming_gate_released_when_script_disabled():
+    sim = Sim()
+    _on_ground(sim)
+    sim.s.origin = False
+    sim.run_for(1)
+    sim.g.params["SLM_ENABLE"] = 0
+    sim.run_for(2)
+    assert sim.s.auth == "passed"
+
+
+def test_arming_gate_left_alone_in_flight():
+    sim = Sim()                               # armed and flying
+    sim.s.origin = False
+    sim.run_for(5)
+    assert sim.s.auth_calls == 0

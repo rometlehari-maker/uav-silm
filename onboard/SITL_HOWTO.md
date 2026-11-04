@@ -5,6 +5,7 @@ This guide has three parts:
 - **Part A: First-time setup.** Done once, takes about 30-45 minutes.
 - **Part B: Your first test run.** Includes the one-time SITL restart.
 - **Part C: Every time after that.** Opening it again after you've closed everything, and the edit, run, look loop.
+- **Part D: What you're looking at.** Every window, field, message, command and output file explained, plus a **Glossary**.
 
 If you're new to Ubuntu or terminals, read **Part 0** first.
 
@@ -410,6 +411,260 @@ Nothing is lost when you do this. Settings stay in `~/sitlrun/eeprom.bin`, and r
 
 ---
 
+## Part D: What you're looking at (every window, field and file)
+
+### D1. Terminal 1 (MAVProxy): the messages while SITL starts
+
+`sitl` first prints `SIM_VEHICLE: ...` lines (sim_vehicle.py checking the build and starting the simulator), then `RiTW: Starting ArduPlane ...` (the simulated flight controller starting), then MAVProxy's own lines, and finally the autopilot's messages. The exact set varies; these are the ones that matter:
+
+| Message | Meaning |
+|---|---|
+| `Connect tcp:127.0.0.1:5760 ...` / `Detected vehicle 1:1 on link 0` | MAVProxy is connected to the simulated autopilot |
+| `Received NNNN parameters` | It has downloaded all of the autopilot's parameters |
+| `SILM GPS-loss failsafe loaded` | **Your Lua script is running.** If it's missing, see Troubleshooting |
+| `EKF3 IMU0 initialised` / `EKF3 IMU1 initialised` | The position/attitude estimator has started (two copies, one per simulated IMU) |
+| `EKF3 IMU0 is using GPS` | The EKF has accepted GPS; the aircraft knows where it is |
+| `AHRS: EKF3 active` | The autopilot is using the EKF for navigation (good) |
+| `Airspeed 1 calibrated` | Zero-airspeed calibration finished (needs the plane still) |
+| `PreArm: ...` | A reason it *would* refuse to arm right now. Normal for the first ~30-60 s while things settle. **Missing mission item: land** is normal before the test uploads its mission |
+| `PreArm: SILM: waiting for EKF to use GPS` (also `waiting for home`, `GPS not good enough`) | Your script's **arming gate**: it won't arm until the EKF has a GPS position. Normal for the first ~20-30 s after SITL starts (and after power-on on the real aircraft). Wait |
+| `Lua: ...` / `Scripting: ...` | A Lua script problem. The line names the file and line number |
+
+The prompt itself shows the current flight mode, for example `MANUAL>`, `AUTO>`, `RTL>`. It changes on its own while the test flies.
+
+### D2. MAVProxy commands (typed at the `MANUAL>` prompt in Terminal 1)
+
+You only *need* `param set BATT_VOLT_MULT 13.4667`, once. The rest are for looking around. **Don't change modes or arm/disarm while a test is running**: the test is flying the aircraft.
+
+| Command | What it does |
+|---|---|
+| `param show BATT*` | Show parameters matching a pattern (`*` = anything). E.g. `param show SLM*`, `param show EK3_SRC*`, `param show AHRS_OPTIONS` |
+| `param set NAME VALUE` | Change a parameter in the simulator (saved in `eeprom.bin`) |
+| `param fetch` | Re-download all parameters (e.g. after a Lua script created new ones) |
+| `status` | Dump the latest of every message the autopilot sends (long) |
+| `wp list` | Show the mission currently loaded in the autopilot |
+| `fence list` | Show the geofence |
+| `mode` | List the available flight modes |
+| `mode RTL` | Change mode (e.g. to stop a stuck test; then Ctrl+C the test in Terminal 2) |
+| `arm throttle` / `disarm` | Arm / disarm by hand. Not needed: the test arms |
+| `module load map` | Open the map window if you started without `--map` |
+| `help` | List every command |
+
+Press **Tab** to complete command and parameter names. Press **↑** for earlier commands.
+
+### D3. The console window (grey, opened by `--console`)
+
+Read-only status display; you never need to click in it. Its rows, top to bottom:
+
+**Row 1: status lights.** The colour code is the same for all of them:
+**green** = present and healthy, **red** = present but unhealthy, **grey** = present but disabled, **black** = not fitted, **orange/yellow** = warning (EKF variance getting large / terrain data still loading).
+
+| Field | Meaning |
+|---|---|
+| `Mode` (blue text, e.g. `AUTO`) | Current flight mode (see the Glossary) |
+| `Sys:1` | Which aircraft (system ID) this is |
+| `ARM` | **Green** = armed (motor live), **red** = disarmed |
+| `GPS OK3 (14)` | GPS fix type (`OK3` = 3D fix) and number of satellites. **Red** with a number = no usable fix. Watch it flicker during the jam test |
+| `Vcc` | Flight-controller supply voltage (~5 V) |
+| `Radio` | RC/telemetry radio signal. Not used here (no radio in SITL) |
+| `INS` | Inertial sensors (gyros, accelerometers) |
+| `MAG` | Compass |
+| `AS` | Airspeed sensor. Must be green: dead reckoning depends on it |
+| `RNG` | Rangefinder (black/grey: not fitted) |
+| `AHRS` | Attitude and heading estimate health. Turns red while the GPS is jammed |
+| `EKF` | EKF health from its error estimates: green < 0.5, **orange** 0.5-1.0, **red** ≥ 1.0. Expect orange/red while jammed |
+| `LOG` | Onboard logging |
+| `RC` | RC receiver. **Red is normal** on this aircraft: it has none |
+| `TERR` | Terrain data (yellow while downloading) |
+| `PRE` | Pre-arm checks: **green = it could arm now**, red = a `PreArm:` reason exists |
+
+**Row 2: links.** `Link 1 OK (...)` with packet counts and loss %. Red = MAVProxy lost the connection to SITL.
+
+**Row 3: flight data.**
+
+| Field | Meaning |
+|---|---|
+| `Hdg 045/045` | Heading now / heading it wants (degrees, 0 = north) |
+| `Alt` | Height above home (m) |
+| `AGL` | Height above the ground under the aircraft (terrain/rangefinder) |
+| `AirSpeed` | Airspeed (m/s), from the simulated pitot tube |
+| `GPSSpeed` | Ground speed from GPS (meaningless while jammed) |
+| `Thr` | Throttle % |
+| `Roll`, `Pitch` | Attitude (degrees) |
+| `Wind 250/6.0` | Wind the autopilot has *estimated*: from-direction / speed. Compare with your `--wind-dir` / `--wind` |
+
+**Row 4: mission.**
+
+| Field | Meaning |
+|---|---|
+| `WP 3/12` | Current mission item / last item |
+| `Distance` | Distance to the current waypoint |
+| `Bearing` | Direction to the current waypoint |
+| `AltError` | How far above (+) or below (−) its target height it is |
+| `AspdError` | Airspeed error vs target |
+| `FlightTime` | Time since takeoff |
+| `ETR` | Estimated time to reach the waypoint |
+| `Param 1482/1482` | Parameters downloaded / total |
+| `Mission` | Mission items downloaded |
+
+**Below the rows:** a scrolling copy of the autopilot's messages (the same `[ap]` lines the test prints).
+
+**Menus:** **MAVProxy** → *Settings* (units, etc.), *Show Map*, *Show Map3d*, *Show HUD* (artificial horizon), *Show Checklist*. **Vehicle** → pick which aircraft if several are connected (only one here). None of them are needed for the test.
+
+### D4. The map window (only if you started with `--map`, or `module load map`)
+
+| What you see | Meaning |
+|---|---|
+| Plane icon | Where the autopilot **thinks** the aircraft is (during the jam this jumps around, that's the point) |
+| Line behind the plane | Track flown (estimated position) |
+| Numbered points + lines | The mission (loaded by the test) |
+| Circle around home | The geofence (`FENCE_RADIUS`) |
+| `H` | Home |
+
+| Action | How |
+|---|---|
+| Zoom | Mouse wheel, or `+` / `-` keys |
+| Pan | Drag with the left mouse button |
+| Keep the plane centred | **View → Follow** (Ctrl+F) |
+| Grid | **View → Grid** (Ctrl+G) |
+| Jump to a coordinate | **View → Goto** (Ctrl+P) |
+| Map style | **View → Tile Service** |
+| Brighter/darker | Ctrl+B / Ctrl+Shift+B |
+
+**Right-click** opens a menu with *Fly To*, *Set Home*, *Set Origin*, *Terrain Check*, *Show Position*, *Google Maps Link*, and editing tools for waypoints, fence and rally points. **Don't use them during a test**: they change what the aircraft is doing. *Show Position* and *Google Maps Link* are harmless.
+
+The map needs internet to download map tiles. On a slow connection it may show grey squares for a while.
+
+### D5. Terminal 2: the test's output, line by line
+
+| Line | Meaning |
+|---|---|
+| `connected to SITL` | The test reached SITL on port 5762 (or 5760) |
+| `WARNING: could not set [...]` | A parameter in your file doesn't exist in this ArduPilot version (or a `SLM_*` before the script loaded) |
+| `waiting for GPS/EKF ...` | Waiting until the autopilot has a position |
+| `mission uploaded (13 items; landing sequence from item 11, touchdown ...)` | The test built and loaded a mission: takeoff, survey lines, `DO_LAND_START` (item 11), approach, land. Touchdown = launch point |
+| `[ap] ...` | A message **from the autopilot**, passed through (same as in Terminal 1) |
+| `[ap] Arm: ...` / `[ap] PreArm: ...` | Why it can't arm *yet*. The test keeps trying for a while; if it ends in `could not arm`, the last reason is the one to fix |
+| `armed, AUTO - no RC from here on` | Armed and in AUTO; from now on it flies on its own, like the real aircraft |
+| `[ap] Mission: 1 Takeoff` | Mission item 1 (takeoff) started |
+| `[ap] Takeoff complete at 50m` | Climb-out done; flying the survey |
+| `t=44s  702 m from home: GPS JAM ON` | The test switched on SITL's GPS jamming (or `DISABLE ON` = GPS off). `t` = seconds since arming |
+| `[ap] PreArm: SILM: waiting for EKF to use GPS` | The arming gate is holding (see D1). The test keeps retrying; it arms once the EKF has GPS |
+| `[ap] SILM: GPS lost/degraded, dead reckoning` | Your script noticed bad GPS (first bad sample) |
+| `[ap] SILM: EKF ignoring GPS (source set 2)` | Your script told the EKF to stop using GPS |
+| `[ap] SILM: GPS bad 5s -> RTL/landing on dead reckoning` | **The failsafe acted**: RTL, which flies the landing sequence |
+| `[ap] Landing sequence start` / `Mission: 11 LandStart` | Jumped to the landing part of the mission |
+| `[ap] Circle fence breached` | The *estimated* position went outside the fence (also happens when the jam makes the estimate jump) |
+| `t=135s GPS restored, true distance to touchdown 340 m` | The test switched the jamming off; where the aircraft really is |
+| `[ap] SILM: GPS recovered` / `EKF using GPS again` | GPS good for `SLM_GPS_OK_S`; EKF back on GPS |
+| `[ap] Mission: 13 Land` / `Landing approach start` / `Landing glide slope` | Final approach |
+| `[ap] Flare 3.3m sink=1.7 speed=15.4 dist=53.8` | Flare started: at 3.3 m height, sinking 1.7 m/s, 15.4 m/s airspeed, 53.8 m before the land point. **A flare far above `LAND_FLARE_ALT` (3 m), or with an absurd sink, means the height estimate was wrong** |
+| `[ap] SIM Hit ground at 0.5 m/s` | Simulated touchdown speed |
+| `[ap] Distance from LAND point=31m` | How far from the planned point it stopped (autopilot's own number) |
+| `t=185s  landed and disarmed` | The test saw it disarm by itself; flight over |
+| `=== RESULT ===` and the PASS/FAIL list | The grades (Part B6) |
+
+**Numbers under the grades:**
+
+| Number | Meaning |
+|---|---|
+| `rtl_after_s` | Seconds from GPS going bad to the failsafe acting. Must be ≤ `SLM_GPS_LOSS_S` + 6 |
+| `true_dist_at_fault_m` | Real distance from the landing point when GPS went bad |
+| `true_dist_at_restore_m` | Real distance when GPS came back. Must be smaller than the one above |
+| `max_true_dist_m` | Furthest real distance from home in the whole flight. Must be ≤ `FENCE_RADIUS` |
+| `dead_reckoning_error_max_m` | Worst gap between where it *was* and where it *thought* it was while blind. With jamming this includes the jammer's fake jumps, so it can be huge even in a good run |
+| `reconverged_after_s` | Seconds after GPS returned until the estimate was within 15 m of the truth (must be ≤ 40) |
+| `touchdown_error_m` | Real touchdown distance from the planned point. Must be ≤ `--land-radius-m` (150) |
+| `blind_at_touchdown` | `True` = it landed while GPS was still bad (a dead-reckoned landing) |
+
+### D6. The files in the `--out` folder
+
+**`track.png`**: a map in metres from the launch point (north up, east right).
+
+| Line/marker | Meaning |
+|---|---|
+| Black line | True path (from the simulator) |
+| Thick red | True path while GPS was bad |
+| Blue dashes | Where the autopilot *thought* it was while GPS was bad. Under jamming this jumps far away: those are the jammer's fake positions |
+| Black triangle | Launch |
+| Green X | Planned touchdown |
+
+**`result.json`**: every number above, all grades (`checks`), the scenario (`fault`, `fault_s`, `wind_mps`, `wind_dir_deg`, `touchdown_planned`) and **`ap_messages`**: every autopilot message in order. The first place to look when a run fails. To print just the messages:
+
+```bash
+python3 -c "import json; print('\n'.join(json.load(open('sitl_jam/result.json'))['ap_messages']))"
+```
+
+**`track.csv`**: 5 rows per second. Opens in Excel.
+
+| Column | Meaning |
+|---|---|
+| `t` | Seconds since arming |
+| `phase` | `survey` (before the fault), `gps_fault`, `gps_restored` |
+| `mode` | Flight mode number: 10 = AUTO, 11 = RTL (0 MANUAL, 5 FBWA, 12 LOITER) |
+| `seq` | Current mission item |
+| `landing` | `True` once inside the landing sequence |
+| `armed` | Motor armed |
+| `true_lat`, `true_lon` | Real position (simulator) |
+| `est_lat`, `est_lon` | Autopilot's position estimate |
+| `alt` | Autopilot's height above home (m) |
+
+### D7. Other files
+
+| Path | What it is |
+|---|---|
+| `~/sitlrun/eeprom.bin` | SITL's saved parameters. Delete it for a factory-fresh simulator (then redo B2 and B4) |
+| `~/sitlrun/scripts/` | Lua scripts SITL runs at boot |
+| `~/sitlrun/logs/` | Onboard flight logs (`.BIN`), one per boot. Open them in Mission Planner or UAV Log Viewer (plot.ardupilot.org) to see everything the autopilot recorded |
+| `~/sitlrun/terrain/` | Downloaded terrain height data |
+| `~/sitlrun/mav.tlog` | MAVProxy's telemetry recording |
+
+---
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **ArduPilot / ArduPlane** | The autopilot software on your flight controller; ArduPlane is its fixed-wing version |
+| **SITL** | Software In The Loop: ArduPlane compiled for your PC, flying a simulated aircraft. Same code as on the real board |
+| **sim_vehicle.py** | ArduPilot's launcher that starts SITL (and MAVProxy) |
+| **MAVProxy** | A text ground station: the `MANUAL>` prompt, the console and map windows |
+| **MAVLink** | The message protocol between autopilot and ground station/test |
+| **Port 5760 / 5762 / 5763** | SITL's network connections: 5760 = MAVProxy, 5762 = the test, 5763 = free (Mission Planner) |
+| **Parameter / `.param` file** | A named setting in the autopilot (`NAME,value`). Your file is the aircraft's configuration |
+| **eeprom.bin** | Where SITL stores parameters, like the flight controller's memory |
+| **Lua script** | A small program running inside the autopilot (`silm_gps_loss.lua`) |
+| **WSL / Ubuntu** | Linux running inside Windows |
+| **Terminal / prompt** | The text window / the `$` (Ubuntu) or `MANUAL>` (MAVProxy) where you type |
+| **AUTO** | Mode: fly the uploaded mission |
+| **RTL** | Return To Launch. With `RTL_AUTOLAND=2`: fly the mission's landing sequence |
+| **MANUAL, FBWA, LOITER** | Other modes (pilot control, assisted, circle). Not used without an RC link |
+| **Mission / waypoint / item** | The flight plan, a list of numbered items (takeoff, waypoints, land...) |
+| **DO_LAND_START** | Mission item that marks where the landing sequence begins |
+| **Flare** | The final nose-up just before touchdown (`LAND_FLARE_ALT`, `LAND_FLARE_SEC`). Once it starts, the plane commits to landing where it is |
+| **Arm / disarm** | Motor enabled / disabled |
+| **PreArm check** | A safety check that must pass before arming |
+| **Failsafe** | Automatic action when something goes wrong (GPS, battery, fence) |
+| **Geofence (`FENCE_*`)** | Boundary around home; crossing it triggers RTL |
+| **GPS fix (3D)** | GPS has a full position. Under jamming a receiver can claim a fix while giving garbage |
+| **Satellites / HDOP** | GPS quality: more satellites and lower HDOP are better |
+| **Jamming / spoofing** | Radio interference that blocks GPS / fakes GPS positions |
+| **Dead reckoning** | Estimating position from airspeed, heading and learnt wind, without GPS. Error grows with time |
+| **EKF (EKF3)** | Extended Kalman Filter: the autopilot's main estimator, mixing IMU, GPS, baro, compass, airspeed |
+| **AHRS** | The layer that picks the estimate the autopilot flies on (EKF3 normally) |
+| **DCM** | Older, simpler backup estimator. Takes position straight from GPS, which is dangerous under jamming (hence `AHRS_OPTIONS=1`) |
+| **EKF source set** | Which sensors the EKF uses for position, velocity, height and yaw. Set 1 = normal (GPS); set 2 = GPS-loss (no GPS). `EK3_SRC1_*` / `EK3_SRC2_*` |
+| **IMU / INS** | Gyros + accelerometers |
+| **Baro** | Barometer: height from air pressure |
+| **Compass / MAG** | Magnetometer: heading |
+| **Airspeed sensor / pitot** | Measures speed through the air; essential for dead reckoning |
+| **Innovation / variance** | How far a measurement disagrees with the EKF's prediction / how unsure the EKF is |
+| **Home / origin** | Launch position the autopilot measures from |
+| **Touchdown error** | Real distance between the landing spot and the planned point |
+| **PASS / FAIL** | A grade from the test (Part B6) |
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause, and the fix |
@@ -429,6 +684,7 @@ Nothing is lost when you do this. Settings stay in `~/sitlrun/eeprom.bin`, and r
 | Ctrl+V doesn't paste | Use right-click, or **Ctrl+Shift+V** (0.5) |
 | The prompt says `root@...` | The user wasn't created on first start. See 0.2 |
 | The console or map window doesn't open | Your Windows doesn't support GUI apps in WSL (needs Windows 11, or `wsl --update`). It's not needed: use the start command without `--console` from B1 |
+| `could not arm` + `PreArm: SILM: waiting for EKF to use GPS` | The EKF never got a GPS position within the test's 2-minute arming window. Restart SITL (C2) and run again. If it repeats, check at the `MANUAL>` prompt that `param show SIM_GPS1_ENABLE` is 1 and `param show SLM_ENABLE` is 1 |
 | You want a completely fresh simulator | `rm ~/sitlrun/eeprom.bin`, then redo B2 and B4 |
 
 ## Notes

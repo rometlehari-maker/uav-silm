@@ -157,6 +157,26 @@ GPS loss:
 - **`EK3_OPTIONS=1` (JammingExpected)**: after a GPS loss the EKF re-checks GPS
   quality before trusting it again, so a bad or faked signal can't snap the
   position to the wrong place.
+- **EKF source set 2 = "no GPS"** (`EK3_SRC2_*`): from the first bad GPS sample
+  until GPS has been good for `SLM_GPS_OK_S`, `silm_gps_loss.lua` switches the
+  EKF to source set 2: no GPS position or velocity, barometer height, compass
+  heading. It dead-reckons on airspeed instead of fusing a jammed receiver,
+  which still reports a flickering "3D fix" with fake positions and fake climb
+  rates. In SITL, the fake climb rate made the landing flare fire 30–100 m up,
+  and the aircraft touched down hundreds of metres short. `SLM_SRC_SW=0` turns
+  the switch off.
+- **`AHRS_OPTIONS=1` (no DCM fallback in forward flight)**: otherwise, when the
+  EKF rejects GPS but the receiver claims a fix, the autopilot falls back to
+  DCM, which steers on the **raw** GPS position, i.e. wherever the jammer says.
+  In SITL this flew the aircraft out of the geofence.
+- **Arming gate** (in `silm_gps_loss.lua`): `AHRS_OPTIONS=1` also removes
+  ArduPilot's own "AHRS: not using configured AHRS type" pre-arm check, so the
+  aircraft could be armed and thrown **before the EKF has a GPS position**. In
+  SITL the EKF then set its origin during the climb, and every height after that
+  was ~20 m off (flare 20 m up). The script therefore refuses to arm, with
+  `PreArm: SILM: waiting for EKF to use GPS` / `waiting for home` / `GPS not
+  good enough`, until all three are fine. **After power-on, wait for the GPS
+  and for this message to clear before pressing Arm for launch.**
 - **`FENCE_*`**: a geofence around home forces RTL → landing sequence if the
   (dead-reckoned) position leaves it, bounding the worst case.
 - **`FS_SHORT_ACTN=0`, `FS_LONG_ACTN=0`**: with no link these never fire; kept at
