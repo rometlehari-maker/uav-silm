@@ -354,11 +354,12 @@ def run(args) -> int:
         flew = flew or ep[2] > 20
         # Log every 0.2 s, and always on an arm/disarm change: the loop stops
         # right after disarm, and grading reads the last row's armed state.
+        row = {"t": round(now, 2), "phase": phase, "mode": s.mode(), "seq": seq,
+               "landing": landing, "armed": armed,
+               "true_lat": tp[0], "true_lon": tp[1], "est_lat": ep[0], "est_lon": ep[1],
+               "alt": ep[2]}
         if now - last_log >= 0.2 or (rows and rows[-1]["armed"] != armed):
-            rows.append({"t": round(now, 2), "phase": phase, "mode": s.mode(), "seq": seq,
-                         "landing": landing, "armed": armed,
-                         "true_lat": tp[0], "true_lon": tp[1], "est_lat": ep[0], "est_lon": ep[1],
-                         "alt": ep[2]})
+            rows.append(row)
             last_log = now
         d_home = dist_m(hl, hn, tp[0], tp[1])
 
@@ -386,6 +387,8 @@ def run(args) -> int:
         if restore_t is not None and flew and not armed and now - restore_t >= 10 and (
                 reconverged or now - restore_t >= 45):
             print(f"t={now:.0f}s  landed and disarmed")
+            if rows[-1] is not row:
+                rows.append(row)          # the sample that ended the run is graded too
             break
         if fault_t is None and flew and not armed:
             print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
