@@ -6,14 +6,120 @@ This guide has three parts:
 - **Part B: Your first test run.** Includes the one-time SITL restart.
 - **Part C: Every time after that.** Opening it again after you've closed everything, and the edit, run, look loop.
 
-You'll use **two Ubuntu terminals** side by side:
+If you're new to Ubuntu or terminals, read **Part 0** first.
 
-| Terminal | What runs in it | Leave it open? |
+---
+
+## Part 0: Ubuntu and terminal basics
+
+### 0.1 Opening Ubuntu
+
+Once WSL is installed (A1) and you've rebooted, any of these opens an Ubuntu terminal:
+
+- **Start menu:** press the **Windows key**, type **Ubuntu**, and press **Enter**.
+- **Win+R:** press **Windows key + R**, type `wsl`, and press **Enter**.
+- **Windows Terminal:** click the **˅** arrow next to the tab and pick **Ubuntu-24.04**.
+- **From PowerShell or Command Prompt:** type `wsl -d Ubuntu-24.04` (or just `wsl`).
+
+You're in Ubuntu when the prompt looks like `yourname@YOUR-PC:~$`.
+
+If "Ubuntu" isn't in the Start menu, run `wsl -l -v` in PowerShell. If nothing is listed, install it with `wsl --install -d Ubuntu-24.04` and reboot.
+
+### 0.2 The first start: creating your Linux user
+
+The very first time Ubuntu opens, it takes a minute to set up, then asks:
+
+1. **`Enter new UNIX username:`** Type a short name in lowercase, with no spaces (for example `romet`), and press Enter.
+2. **`New password:`** Type a password and press Enter. **Nothing appears while you type, not even dots.** That's normal.
+3. **`Retype new password:`** Type the same password again.
+
+When you see `Installation successful!` and a prompt with your name, you're done. This is your Linux login, separate from Windows. You'll need the password whenever a command asks `[sudo] password for ...`.
+
+**If that went wrong** (the window closed, or the prompt says `root@...` instead of your name), create the user yourself. In Ubuntu, run:
+
+```bash
+adduser romet
+usermod -aG sudo romet
+```
+
+Then, in **PowerShell**:
+
+```
+ubuntu2404.exe config --default-user romet
+```
+
+Close Ubuntu and open it again. Use your own name in place of `romet` in all three commands.
+
+### 0.3 You need TWO Ubuntu windows
+
+SITL keeps one terminal busy the whole time it runs, so the test runs in a **second** Ubuntu window:
+
+| Window | What runs in it | Notes |
 |---|---|---|
-| **Terminal 1: "SITL"** | The simulated plane, with the MAVProxy prompt | Yes, the whole session |
-| **Terminal 2: "TEST"** | The test script, git and file editing | Yes |
+| **Terminal 1: "SITL"** | `sitl`, then the MAVProxy prompt (`MANUAL>`) | **Don't close it** while testing; closing it stops the simulator |
+| **Terminal 2: "TEST"** | `silmtest ...`, `git`, `nano`, `explorer.exe` | Use it for everything else |
 
-To open a second Ubuntu terminal, use Windows Terminal: click the **˅** arrow next to the tab and choose **Ubuntu-24.04**. You can also just open "Ubuntu" from the Start menu again.
+**There's no second terminal until you open one.** Open Ubuntu again, the same way as in 0.1:
+
+- the **Start menu** again (Windows key, type Ubuntu, Enter) gives a second, separate window,
+- or **Win+R**, then `wsl`, then Enter,
+- or, if your window has tabs at the top (Windows Terminal), press **Ctrl+Shift+T**, or click **˅** and choose **Ubuntu-24.04**. If it has no tabs, use one of the first two.
+
+Both windows are the same Ubuntu with the same files. To check the new one:
+
+```bash
+cd ~/uav-silm/onboard
+```
+
+The prompt should change to something like `romet@YOUR-PC:~/uav-silm/onboard$`.
+
+### 0.4 Which window do I type into?
+
+After `sitl` starts, you'll have up to three windows:
+
+| Window | What it is | Type in it? |
+|---|---|---|
+| **Ubuntu Terminal 1** | Scrolling messages, then a `MANUAL>` prompt (the MAVProxy prompt) | **Yes.** `param set ...` commands go here |
+| **Console** (grey window with status lines: mode, GPS, battery) | Opened by `--console` | **No**, only for watching |
+| **Map** (only if you added `--map`) | The plane on a map | **No**, only for watching |
+| **Ubuntu Terminal 2** | Normal `$` prompt | **Yes.** `silmtest ...` and everything else |
+
+- The map and console windows only appear *after* you run `sitl`. So `sitl` itself always goes in a plain Ubuntu terminal.
+- If messages scroll over the `MANUAL>` prompt, press **Enter** once and it shows again. You can type even while messages scroll.
+- `MANUAL>` commands (`param set ...`) only work in Terminal 1. Ubuntu commands (`silmtest`, `cd`, `git`) **don't** work at the `MANUAL>` prompt; they go in Terminal 2.
+
+### 0.5 Terminal survival kit
+
+| Want to | Do this |
+|---|---|
+| Paste a command | **Right-click** in the window, or **Ctrl+Shift+V** (plain Ctrl+V often doesn't work) |
+| Copy text from the terminal | Select it with the mouse, then **Ctrl+Shift+C** (or right-click in the classic window) |
+| Stop whatever is running | **Ctrl+C** (that's "stop", not "copy", in a terminal) |
+| Repeat or edit an earlier command | **↑** / **↓** arrows, then **Enter** |
+| Finish typing a file or folder name | **Tab** |
+| Go to your home folder | `cd ~` (`~` means `/home/yourname`) |
+| See what's in the current folder | `ls` |
+| See where you are | `pwd` |
+| Clear the screen | `clear`, or **Ctrl+L** |
+| Run a block of several lines | Paste it all at once; each line runs in turn |
+
+- Password prompts never show what you type.
+- Lines starting with `#` in this guide are comments. Pasting them is harmless.
+- Commands are case-sensitive: `Sitl` is not `sitl`.
+
+### 0.6 Your Ubuntu files from Windows
+
+- **From Ubuntu, open a folder in Windows Explorer:** `explorer.exe .` (the current folder) or `explorer.exe sitl_jam`.
+- **From Windows:** type this in the File Explorer address bar:
+  `\\wsl$\Ubuntu-24.04\home\<yourname>\uav-silm\onboard`
+  Ubuntu also shows up as **Linux → Ubuntu-24.04** in Explorer's left panel.
+- **Windows' own drives inside Ubuntu:** `C:\` is `/mnt/c/`. Keep the project in your Ubuntu home folder (`~`), not under `/mnt/c`: it's much faster there.
+
+### 0.7 Editing files
+
+- **In the terminal:** `nano <file>`. Save with **Ctrl+O** then **Enter**; exit with **Ctrl+X**.
+- **VS Code (nicer):** install VS Code on Windows with the **WSL** extension. Then in Ubuntu, run `cd ~/uav-silm && code .`.
+- Notepad via `\\wsl$\...` also works for quick edits.
 
 ---
 
@@ -27,7 +133,7 @@ In **PowerShell (Run as administrator)**:
 wsl --install -d Ubuntu-24.04
 ```
 
-Reboot, then open **Ubuntu** from the Start menu. The first time, it asks you to create a Linux username and password. Nothing shows while you type the password, which is normal. Remember the password; `sudo` asks for it.
+Reboot, then open **Ubuntu** from the Start menu (0.1) and create your Linux user (0.2).
 
 ### A2. Get the two repositories (Terminal 1)
 
@@ -99,11 +205,13 @@ The rest of this guide uses the shortcuts. Without them, use the full commands f
 
 ### B1. Start SITL (Terminal 1)
 
+Open Ubuntu (0.1). This window is **Terminal 1**. At the normal `$` prompt, type:
+
 ```bash
 sitl
 ```
 
-The first start takes about 30 seconds. You'll get a **MAVProxy prompt** (something like `MANUAL>`), and a console window may open. Let it sit until the messages slow down, about 30 more seconds.
+The first start takes about 30 seconds. Terminal 1 fills with messages and ends at a **MAVProxy prompt** (something like `MANUAL>`; press Enter if it's hidden). A grey **console** window may open too; that one is only for watching (see 0.4). Let it sit until the messages slow down, about 30 more seconds.
 
 If you get an error about the console or a display, start it without the window instead (the prompt in the terminal still works):
 
@@ -111,7 +219,7 @@ If you get an error about the console or a display, start it without the window 
 cd ~/sitlrun && ~/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane --custom-location=59.40,24.70,30,0
 ```
 
-### B2. Fix the simulated battery (once, at the MAVProxy prompt in Terminal 1)
+### B2. Fix the simulated battery (once, at the `MANUAL>` prompt in Terminal 1, not in the console or map window)
 
 Your param file has **4S** battery thresholds (critical at 13.2 V), but the simulated plane has a **3S** battery (12.6 V). Without this fix it refuses to arm with "Battery 1 critical voltage failsafe". Type this at the MAVProxy prompt:
 
@@ -122,6 +230,8 @@ param set BATT_VOLT_MULT 13.4667
 This makes the simulator report 16.8 V, the same as a full 4S pack. It is saved in `~/sitlrun/eeprom.bin`, so you only do it once. **Never put this line in `gps_denied_failsafe.param`**: it's a simulator-only trick.
 
 ### B3. First test run (Terminal 2)
+
+**Open a second Ubuntu window now** (0.3): Start menu, then Ubuntu, then Enter. Leave Terminal 1 running. In the new window:
 
 ```bash
 silmtest --fault jam --wind 6 --out sitl_jam
@@ -215,13 +325,13 @@ What each check means:
 
 The Ubuntu windows are closed, or the PC was restarted.
 
-**Terminal 1:**
+**Terminal 1** (open Ubuntu):
 ```bash
 sitl
 ```
 Wait until it settles (about 30 s) and you've seen `SILM GPS-loss failsafe loaded`.
 
-**Terminal 2:**
+**Terminal 2** (open Ubuntu a second time; see 0.3):
 ```bash
 cd ~/uav-silm && git pull
 silmtest --fault jam --wind 6 --out run_01
@@ -313,6 +423,12 @@ Nothing is lost when you do this. Settings stay in `~/sitlrun/eeprom.bin`, and r
 | `timeout` | The plane never got back down. Look at `track.png`, and increase `--timeout-s` for very long missions |
 | `Address already in use` when starting SITL | An old SITL is still running. Run `pkill -f arduplane`, then `sitl` |
 | `sitl: command not found` | The shortcuts weren't added (A5), or the terminal predates them. Run `source ~/.bashrc` |
+| "There's no second terminal" | You open it yourself: Start menu, then Ubuntu, then Enter again (0.3) |
+| Typed `silmtest` at the `MANUAL>` prompt and got `Unknown command` | That's MAVProxy, in Terminal 1. Run `silmtest` in Terminal 2 (0.4) |
+| Typed `param set ...` at a `$` prompt and got `command not found` | That's a plain Ubuntu terminal. `param set` goes at the `MANUAL>` prompt in Terminal 1 (0.4) |
+| Ctrl+V doesn't paste | Use right-click, or **Ctrl+Shift+V** (0.5) |
+| The prompt says `root@...` | The user wasn't created on first start. See 0.2 |
+| The console or map window doesn't open | Your Windows doesn't support GUI apps in WSL (needs Windows 11, or `wsl --update`). It's not needed: use the start command without `--console` from B1 |
 | You want a completely fresh simulator | `rm ~/sitlrun/eeprom.bin`, then redo B2 and B4 |
 
 ## Notes
