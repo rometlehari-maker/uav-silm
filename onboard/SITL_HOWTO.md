@@ -1,11 +1,12 @@
 # Running the GPS-loss failsafe test in SITL (Windows + WSL2)
 
-This guide has three parts:
+This guide has these parts (plus Part 0, basics, a Troubleshooting table and Notes):
 
 - **Part A: First-time setup.** Done once, takes about 30-45 minutes.
 - **Part B: Your first test run.** Includes the one-time SITL restart.
 - **Part C: Every time after that.** Opening it again after you've closed everything, and the edit, run, look loop.
 - **Part D: What you're looking at.** Every window, field, message, command and output file explained, plus a **Glossary**.
+- **Part E: What the tests found.** Expected results for 8 scenarios, the problems that were fixed, and how to update (E3).
 
 If you're new to Ubuntu or terminals, read **Part 0** first.
 
@@ -272,10 +273,13 @@ armed, AUTO - no RC from here on
 [ap] Mission: 1 Takeoff
 [ap] Takeoff complete at 50m
 t=44s  702 m from home: GPS JAM ON
+[ap] SILM: GPS lost/degraded, dead reckoning
+[ap] SILM: EKF ignoring GPS (source set 2)
 [ap] SILM: GPS bad 5s -> RTL/landing on dead reckoning     <- the failsafe working
 [ap] Landing sequence start
 t=135s GPS restored, ...
 [ap] SILM: GPS recovered
+[ap] SILM: EKF using GPS again (source set 1)
 [ap] Mission: 13 Land
 t=185s landed and disarmed
 
@@ -369,6 +373,8 @@ explorer.exe run_02_flare4m
 To edit in VS Code instead: install VS Code on Windows with the **WSL** extension, then in Ubuntu run `cd ~/uav-silm && code .`.
 
 ### C4. Scenarios worth running
+
+What to expect from each is in **E1**.
 
 ```bash
 silmtest --fault jam     --wind 6                      --out jam_w6         # baseline
@@ -515,7 +521,7 @@ Read-only status display; you never need to click in it. Its rows, top to bottom
 
 | What you see | Meaning |
 |---|---|
-| Plane icon | Where the autopilot **thinks** the aircraft is (during the jam this jumps around, that's the point) |
+| Plane icon | Where the autopilot **thinks** the aircraft is. With the current files it moves smoothly even while jammed; if it jumps around, the EKF is following the fake GPS (see E2) |
 | Line behind the plane | Track flown (estimated position) |
 | Numbered points + lines | The mission (loaded by the test) |
 | Circle around home | The geofence (`FENCE_RADIUS`) |
@@ -572,7 +578,7 @@ The map needs internet to download map tiles. On a slow connection it may show g
 | `true_dist_at_fault_m` | Real distance from the landing point when GPS went bad |
 | `true_dist_at_restore_m` | Real distance when GPS came back. Must be smaller than the one above |
 | `max_true_dist_m` | Furthest real distance from home in the whole flight. Must be ≤ `FENCE_RADIUS` |
-| `dead_reckoning_error_max_m` | Worst gap between where it *was* and where it *thought* it was while blind. With jamming this includes the jammer's fake jumps, so it can be huge even in a good run |
+| `dead_reckoning_error_max_m` | Worst gap between where it *was* and where it *thought* it was while blind. Current files: roughly the touchdown overshoot (~70-170 m, mostly after touchdown while the EKF still has no GPS). Thousands of metres means it followed the jammer (E2) |
 | `reconverged_after_s` | Seconds after GPS returned until the estimate was within 15 m of the truth (must be ≤ 40) |
 | `touchdown_error_m` | Real touchdown distance from the planned point. Must be ≤ `--land-radius-m` (150) |
 | `blind_at_touchdown` | `True` = it landed while GPS was still bad (a dead-reckoned landing) |
@@ -585,7 +591,7 @@ The map needs internet to download map tiles. On a slow connection it may show g
 |---|---|
 | Black line | True path (from the simulator) |
 | Thick red | True path while GPS was bad |
-| Blue dashes | Where the autopilot *thought* it was while GPS was bad. Under jamming this jumps far away: those are the jammer's fake positions |
+| Blue dashes | Where the autopilot *thought* it was while GPS was bad. It should follow the red line closely and drift apart only near the end (the landing overshoot, E1). A fan of long jumps means the autopilot was navigating on the jammer's fake positions: the old problem in E2 |
 | Black triangle | Launch |
 | Green X | Planned touchdown |
 
@@ -618,6 +624,56 @@ python3 -c "import json; print('\n'.join(json.load(open('sitl_jam/result.json'))
 | `~/sitlrun/logs/` | Onboard flight logs (`.BIN`), one per boot. Open them in Mission Planner or UAV Log Viewer (plot.ardupilot.org) to see everything the autopilot recorded |
 | `~/sitlrun/terrain/` | Downloaded terrain height data |
 | `~/sitlrun/mav.tlog` | MAVProxy's telemetry recording |
+
+---
+
+## Part E: What the tests found, and what results to expect
+
+### E1. Expected results (current files, ArduPilot master, Nov 2026)
+
+8 scenarios flown in SITL, one at a time, all with `--fault jam` except the last:
+
+| Scenario | Failsafe after | Flare at | Touchdown error | Result |
+|---|---|---|---|---|
+| `--wind 6` (the standard test) | 5.4 s | 3.0 m | 73 m | PASS |
+| `--wind 6 --wind-dir 200` | 5.4 s | 3.0 m | 75 m | PASS |
+| `--wind 8 --wind-dir 300` | 5.1 s | 2.9 m | 93 m | PASS |
+| `--wind 4 --wind-dir 90` | 5.4 s | 2.9 m | 67 m | PASS |
+| `--wind 6 --trigger-m 900` | 5.5 s | 2.9 m | 83 m | PASS |
+| `--wind 6 --fault-s 150` | 5.2 s | 3.0 m | 74 m | PASS |
+| `--fault disable --wind 6 --fault-s 120` (lands blind) | 5.3 s | 2.9 m | 76 m | PASS |
+| `--wind 10 --wind-dir 250` | 5.4 s | 2.9 m | **160 m** | **FAIL** (limit 150 m) |
+
+Your numbers will differ a little. The jamming simulation is random, but repeatable for the same settings on the same ArduPilot version.
+
+- **Failsafe ~5 s, flare at ~3 m** in every run: those are the parts the fixes below made reliable.
+- **Touchdowns 70-95 m long** (past the planned point, along the landing direction), only 1-26 m sideways. Without GPS the EKF can't re-measure the wind, so it keeps the wind it learned at 100 m. Near the ground the wind is weaker (SITL simulates wind shear, like real air), so on the final approach the aircraft goes further than it thinks. The position error stays under ~7 m down to 30 m height, then grows. The simulated belly landing also slides on: with working GPS it stopped 10-30 m long.
+- **The 10 m/s FAIL is a real limit, not a bug.** That wind is over half the aircraft's airspeed. See FLIGHT_READY.md A4: keep ≥ 150 m of clear ground beyond the touchdown point, and don't rely on blind landings above ~8 m/s.
+
+### E2. What was wrong before (fixed, but good to recognise in old results)
+
+| Symptom in old results | Cause | Fix (all in `gps_denied_failsafe.param` / `silm_gps_loss.lua`) |
+|---|---|---|
+| Flew **away** while jammed and left the fence (`headed_home_while_blind` / `stayed_inside_fence` FAIL); lots of `AHRS: DCM active` in the messages | The EKF rejected the jammed GPS, but the receiver still claimed a fix, so the autopilot fell back to DCM, which steers on the raw (fake) GPS position | `AHRS_OPTIONS,1` |
+| `Flare 89.2m sink=-69.77` or similar: flare far above 3 m, absurd sink, touchdown hundreds of metres short | The EKF kept fusing the jammed GPS's fake climb rate | The script switches the EKF to source set 2 (`EK3_SRC2_*`, no GPS) for the whole GPS-loss episode |
+| Every height ~20 m off; `Flare 20.6m sink=0.01` | With `AHRS_OPTIONS=1` the aircraft could be armed before the EKF had GPS, so the EKF origin was set during the climb | Arming gate in the script: `PreArm: SILM: waiting for EKF to use GPS` |
+| `rtl_in_time` FAIL in strong wind (failsafe after 12 s) | Between dropouts, the jammed receiver reported a perfect fix, so only the dropouts counted | During an episode, a fix > `SLM_GPS_DIFF_M` (50 m) from the GPS-free EKF position also counts as bad |
+
+The test tool itself also had bugs, now fixed: `landed` was graded FAIL after a good landing; `estimate_reconverged` was graded FAIL after a blind landing; it hung after losing the connection.
+
+### E3. Getting these fixes onto your PC
+
+In **Terminal 2**:
+
+```bash
+cd ~/uav-silm && git pull
+```
+
+Then **restart SITL** in Terminal 1: Ctrl+C, then `sitl`. The `sitl` shortcut copies the new script into `~/sitlrun/scripts/`. The new `SLM_*` parameters appear after this restart. If the test then prints `script is not running ... restart SITL`, restart SITL once more (the script's parameter table grew, which needs a fresh start). Nothing else is needed: the test loads the new parameter file on every run.
+
+### E4. Don't run two simulators at once
+
+`sim_vehicle.py` kills **every** running ArduPlane simulator when it starts. Starting a second SITL (even with `-I1`) silently kills the first one mid-flight, and the test then reports a lost connection. Run one SITL and one test at a time.
 
 ---
 

@@ -222,11 +222,20 @@ mission the same way: `--mission silm_mission.waypoints --trigger-s 240` (start
 SITL at your launch point). **Do not fly the real aircraft until these pass.**
 
 ### A4. Honest limits
-- Dead-reckoning drifts with wind-estimate error — it's a controlled recovery,
-  not infinite blind flight. A landing flown after GPS loss can be **tens of
-  metres** off the strip; choose a landing area with that margin. The geofence
-  bounds the worst case. This is how commercial fixed-wing autopilots handle
-  GPS loss; it is a safety feature, not GPS-denied precision navigation.
+- Dead-reckoning drifts with wind-estimate error. It's a controlled recovery,
+  not infinite blind flight. Without GPS the EKF can't re-measure the wind, so
+  it keeps the wind it learned at altitude. Near the ground the real wind is
+  weaker (wind shear), so the aircraft travels further than it thinks on the
+  final approach. In SITL (generic 2 kg model, landing into the wind) the blind
+  position error stayed under ~7 m down to 30 m height, then grew. The
+  touchdown ended up **70–95 m long** (past the planned point) in 4–8 m/s wind,
+  and **~155 m long in 10 m/s**. Sideways error was 1–26 m (39 m in 10 m/s).
+  With GPS working, touchdowns were 10–30 m long. **For a mission that may end
+  in a blind landing, keep at least 150 m of clear, flat ground beyond the
+  touchdown point, along the landing direction.** Don't rely on blind landings
+  in winds above ~8 m/s. The geofence bounds the worst case. This is how
+  commercial fixed-wing autopilots handle GPS loss: a safety feature, not
+  GPS-denied precision navigation.
 - **No RC means no tuning flights with a pilot.** AUTOTUNE and trimming
   normally need manual flying. Start from well-chosen defaults for a 1.4 m
   pusher, check control directions on the bench (AUTO on the ground: tilt the
