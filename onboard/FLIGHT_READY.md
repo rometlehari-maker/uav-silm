@@ -163,14 +163,21 @@ GPS loss:
   0 so a stray setting can't abort a mission.
 
 ### A3. Prove it without flying (SITL — do this before the first flight)
-On your PC, with ArduPilot's simulator installed (instructions at the top of
-`tools/sitl_failsafe_test.py`):
+On your PC, with ArduPilot's simulator installed. **Step-by-step guide
+(Windows/WSL2, first run and repeat runs): [`SITL_HOWTO.md`](SITL_HOWTO.md).**
+Short form:
 ```bash
-# in the folder you start SITL from:
-mkdir -p scripts && cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
-Tools/autotest/sim_vehicle.py -v ArduPlane --console --map -L 59.40,24.70,30,0
+# once: a folder to start SITL from, with the script in scripts/
+mkdir -p ~/sitlrun/scripts
+cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua ~/sitlrun/scripts/
 
-# in another terminal, from onboard/:
+# terminal 1: start SITL (-L only takes a NAMED location; use --custom-location)
+cd ~/sitlrun && ~/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane --console \
+    --custom-location=59.40,24.70,30,0
+# once, at the MAVProxy prompt (SITL's battery is 3S, this file is for 4S):
+#   param set BATT_VOLT_MULT 13.4667
+
+# terminal 2, from onboard/ (first run enables scripting -> restart SITL once):
 python3 tools/sitl_failsafe_test.py --fault jam --wind 6 --out sitl_jam
 python3 tools/sitl_failsafe_test.py --fault disable --fault-s 120 --out sitl_off
 ```

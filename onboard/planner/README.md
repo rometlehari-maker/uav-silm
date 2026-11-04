@@ -73,6 +73,7 @@ controller and runs the same check before every flight.
 python tools/sitl_failsafe_test.py --mission silm_mission.waypoints --trigger-s 240
 ```
 
-(start SITL with `-L` at your launch point; see the top of that file.) It
+(start SITL with `--custom-location=<lat>,<lon>,<alt>,0` at your launch point;
+see `onboard/SITL_HOWTO.md`.) It
 flies your mission, kills or jams GPS mid-survey, and checks it still lands and
 disarms near the planned touchdown.

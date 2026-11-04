@@ -17,28 +17,42 @@ grades the outcome:
 
 The mission is built by the laptop planner's code (planner/survey.py), or pass
 your own planner output with --mission silm_mission.waypoints (start SITL at
-that mission's launch point with -L).
+that mission's launch point with --custom-location).
 
-Run on your PC (not on the aircraft):
+Run on your PC (not on the aircraft). Step-by-step guide for Windows/WSL2,
+including first-time setup and repeat runs: onboard/SITL_HOWTO.md. Short form:
 
-  1. Get ArduPilot and build/start SITL once (see ArduPilot "SITL setup" docs):
+  1. Get ArduPilot and build SITL once (see ArduPilot "SITL setup" docs):
        git clone --recursive https://github.com/ArduPilot/ardupilot
        cd ardupilot && Tools/environment_install/install-prereqs-ubuntu.sh -y
-  2. Put the script where SITL loads scripts (a `scripts/` folder in the
-     directory you start sim_vehicle.py from):
-       mkdir -p scripts && cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua scripts/
-  3. Start SITL (near your field, e.g. Tallinn):
-       Tools/autotest/sim_vehicle.py -v ArduPlane --console --map \
-           -L 59.40,24.70,30,0      # or any lat,lon,alt,heading
-  4. In another terminal:
-       python3 tools/sitl_failsafe_test.py --params ardupilot/gps_denied_failsafe.param \
-           --fault jam --wind 6 --out sitl_results
+       . ~/.profile && ./waf configure --board sitl && ./waf plane
+  2. Make a folder to start SITL from, with the script in its `scripts/`
+     subfolder (SITL loads scripts and keeps its eeprom.bin in that folder):
+       mkdir -p ~/sitlrun/scripts
+       cp ~/uav-silm/onboard/ardupilot/scripts/silm_gps_loss.lua ~/sitlrun/scripts/
+  3. Start SITL there (near your field, e.g. Tallinn). Use --custom-location;
+     -L only accepts a NAMED location from locations.txt:
+       cd ~/sitlrun && ~/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane \
+           --console --custom-location=59.40,24.70,30,0   # lat,lon,alt,heading
+  4. Once, at the MAVProxy prompt: SITL's plane has a 3S (12.6 V) battery but
+     gps_denied_failsafe.param has 4S thresholds, so scale the simulated
+     reading to 4S (simulator only - never put this in your param file):
+       param set BATT_VOLT_MULT 13.4667
+  5. In another terminal, from onboard/:
+       python3 tools/sitl_failsafe_test.py --fault jam --wind 6 --out sitl_results
 
   The first run sets SCR_ENABLE=1; SITL then needs one restart for the script
-  to load (the tool tells you). Repeat with --fault disable, different
-  --wind / --wind-dir, and longer --fault-s to see how far dead reckoning drifts
+  to load (the tool tells you). Restart SITL before every run for a clean
+  start. Repeat with --fault disable, different --wind / --wind-dir /
+  --trigger-m, and longer --fault-s to see how far dead reckoning drifts
   (a long --fault-s means the landing itself is flown on dead reckoning - that is
-  the real worst case, and it shows how far off the touchdown can be).
+  the real worst case, and it shows how far off the touchdown can be). The
+  jamming simulation is random, so one PASS is not enough: run several
+  scenarios.
+
+  SITL keeps parameters in eeprom.bin between runs; the tool loads your param
+  file every run, but a parameter you DELETE from the file keeps its old value
+  in SITL until you delete eeprom.bin (then redo step 4 and the restart).
 
   SITL's plane takes off from a runway, not from a throw, so the tool sets
   TKOFF_THR_MINACC=0 in the simulator only. Everything else is your file.
@@ -298,8 +312,8 @@ def run(args) -> int:
 
     items, land, land_start = build_mission(args, home)
     if dist_m(hl, hn, items[1].lat or hl, items[1].lon or hn) > 200:
-        print("WARNING: the mission's takeoff is far from where SITL started - start SITL with -L "
-              "at the mission's launch point")
+        print("WARNING: the mission's takeoff is far from where SITL started - start SITL with "
+              "--custom-location=<lat>,<lon>,<alt>,0 at the mission's launch point")
     try:
         mm.upload(s.m, items)
     except RuntimeError as exc:
@@ -435,7 +449,8 @@ def plot(rows, home, fault_t, restore_t, path, land=None):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--connect", default="tcp:127.0.0.1:5762",
-                    help="SITL MAVLink endpoint (5762 is free while MAVProxy uses 5760)")
+                    help="SITL MAVLink endpoint (5762 is free while MAVProxy uses 5760; "
+                         "use tcp:127.0.0.1:5760 if SITL runs with --no-mavproxy)")
     ap.add_argument("--params", default=os.path.join(os.path.dirname(__file__), "..",
                                                      "ardupilot", "gps_denied_failsafe.param"))
     ap.add_argument("--fault", choices=["jam", "disable"], default="jam")
