@@ -17,6 +17,7 @@ SCRIPT = os.path.join(os.path.dirname(__file__), "..", "ardupilot", "scripts", "
 MOCKS = r"""
 sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={},
        src_set=0, src_changes={}, home_set=true, origin=true, auth=nil, auth_calls=0,
+       gps_off_m=0,
        taking_off=false, landing=false, nav_index=3, mission={16, 22, 16, 16, 16, 189, 16, 21}}
 params = {}
 
@@ -31,6 +32,10 @@ function gps:primary_sensor() return 0 end
 function gps:status(i) return sim.gps_status end
 function gps:num_sats(i) return sim.sats end
 function gps:get_hdop(i) return sim.hdop end
+local Loc = {}
+Loc.__index = Loc
+function Loc:get_distance(o) return math.abs(self.x - o.x) end
+function gps:location(i) return setmetatable({x=sim.gps_off_m}, Loc) end
 
 arming = {}
 function arming:is_armed() return sim.armed end
@@ -55,6 +60,7 @@ end
 
 ahrs = {}
 function ahrs:home_is_set() return sim.home_set end
+function ahrs:get_location() return setmetatable({x=0}, Loc) end
 function ahrs:get_origin() if sim.origin then return {} end return nil end
 function ahrs:set_posvelyaw_source_set(i) sim.src_set = i; table.insert(sim.src_changes, i) end
 
@@ -117,6 +123,7 @@ def test_compiles_and_creates_params():
     assert sim.g.params["SLM_MIN_SATS"] == 6
     assert sim.g.params["SLM_MAX_HDOP"] == 2.5
     assert sim.g.params["SLM_SRC_SW"] == 1
+    assert sim.g.params["SLM_GPS_DIFF_M"] == 50
     assert any("loaded" in m for m in sim.msgs())
 
 
@@ -397,3 +404,63 @@ def test_arming_gate_left_alone_in_flight():
     sim.s.origin = False
     sim.run_for(5)
     assert sim.s.auth_calls == 0
+
+
+# ---- jammed fixes that LOOK good (SITL jamming: RTK fixed, 10+ sats) -------
+
+def _jam(sim, cycles, fake_off_m):
+    """Mostly 'perfect' fixes at a fake position, with short dropouts."""
+    for _ in range(cycles):
+        sim.s.gps_status, sim.s.gps_off_m = 1, 0
+        sim.run_for(0.4)
+        sim.s.gps_status, sim.s.gps_off_m = 6, fake_off_m
+        sim.run_for(1.6)
+
+
+def test_fake_good_fixes_far_from_ekf_count_as_bad():
+    sim = Sim()
+    _jam(sim, 3, fake_off_m=800)              # 6 s: only 1.2 s of real dropouts
+    assert sim.mode_changes() == [11]
+
+
+def test_fake_good_fixes_near_ekf_count_as_good():
+    """Without the position check only the dropouts count (old behaviour)."""
+    sim = Sim()
+    _jam(sim, 3, fake_off_m=10)
+    assert sim.mode_changes() == []
+
+
+def test_position_check_can_be_disabled():
+    sim = Sim()
+    sim.g.params["SLM_GPS_DIFF_M"] = 0
+    _jam(sim, 3, fake_off_m=800)
+    assert sim.mode_changes() == []
+
+
+def test_position_check_needs_the_no_gps_ekf():
+    """With SLM_SRC_SW=0 the EKF follows the GPS, so a disagreement means
+    nothing and must not be used."""
+    sim = Sim()
+    sim.g.params["SLM_SRC_SW"] = 0
+    _jam(sim, 3, fake_off_m=800)
+    assert sim.mode_changes() == []
+
+
+def test_far_gps_outside_an_episode_does_nothing():
+    sim = Sim()
+    sim.s.gps_off_m = 800                     # quality fine, no episode
+    sim.run_for(30)
+    assert sim.mode_changes() == [] and sim.src_changes() == []
+
+
+def test_genuine_gps_far_from_drifted_estimate_still_recovers():
+    """After a long blind leg the real GPS can be 150 m from the estimate:
+    10 s of good quality must still end the episode."""
+    sim = Sim()
+    sim.s.gps_status = 1
+    sim.run_for(30)
+    assert sim.mode_changes() == [11]
+    sim.s.gps_status, sim.s.gps_off_m = 3, 150
+    sim.run_for(11)
+    assert any("recovered" in m for m in sim.msgs())
+    assert sim.s.src_set == 0

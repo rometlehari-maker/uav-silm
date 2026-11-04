@@ -154,6 +154,13 @@ GPS loss:
   above `SLM_MAX_HDOP` (2.5). An episode only ends after `SLM_GPS_OK_S` (10)
   seconds of good GPS, so a jammer's flickering lock can't reset the timer. It
   only acts in AUTO.
+  A jammed or spoofed receiver can report a **perfect-looking** fix between
+  dropouts. In SITL's jamming it reported RTK fixed, 10–15 satellites, HDOP 1.2,
+  and the failsafe took 12 s instead of 5. So during an episode, a fix more than
+  `SLM_GPS_DIFF_M` (50 m) from the EKF's GPS-free position also counts as bad.
+  That only speeds up the RTL decision. Recovery still uses the quality checks,
+  because after a long blind leg the real GPS can be far from the drifted
+  estimate.
 - **`EK3_OPTIONS=1` (JammingExpected)**: after a GPS loss the EKF re-checks GPS
   quality before trusting it again, so a bad or faked signal can't snap the
   position to the wrong place.

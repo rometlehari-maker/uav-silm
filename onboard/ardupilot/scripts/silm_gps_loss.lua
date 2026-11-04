@@ -24,6 +24,15 @@
       satellites, OR HDOP above SLM_MAX_HDOP. Under real jamming the receiver
       flickers in and out of "lock" with junk satellites, so a plain fix check
       would keep resetting the timer.
+    * Jammers and spoofers can make the receiver report a perfect fix (SITL's
+      jamming: "RTK fixed", 10-15 satellites, HDOP 1.2 between dropouts), so
+      the quality checks alone counted only the dropouts and the failsafe took
+      12 s instead of 5 in strong wind. While an episode lasts (EKF on source
+      set 2, i.e. NOT using GPS) a fix further than SLM_GPS_DIFF_M from the
+      EKF's own position also counts as bad time. This only speeds up the RTL
+      decision; recovery still uses the quality checks alone, because after a
+      long blind leg the genuine GPS can legitimately be far from the drifted
+      estimate.
     * A loss episode starts at the first bad sample and only ends after GPS has
       been continuously good for SLM_GPS_OK_S seconds (hysteresis), so
       flickering lock during jamming cannot reset it.
@@ -61,6 +70,8 @@
     SLM_MIN_SATS    minimum satellites for GPS to count as good (default 6)
     SLM_MAX_HDOP    maximum HDOP for GPS to count as good (default 2.5)
     SLM_SRC_SW      1 = use EKF source set 2 (no GPS) during an episode (default 1)
+    SLM_GPS_DIFF_M  during an episode, a GPS fix further than this from the
+                    EKF's (GPS-free) position counts as bad (default 50 m; 0 = off)
 --]]
 
 local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
@@ -72,7 +83,7 @@ local RUN_MS = 200
 
 local PARAM_TABLE_KEY = 61
 local PARAM_TABLE_PREFIX = "SLM_"
-assert(param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 6), "SILM: could not add param table")
+assert(param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 8), "SILM: could not add param table")
 
 local function bind_add_param(name, idx, default_value)
   assert(param:add_param(PARAM_TABLE_KEY, idx, name, default_value),
@@ -88,6 +99,7 @@ local SLM_GPS_OK_S   = bind_add_param("GPS_OK_S", 3, 10)
 local SLM_MIN_SATS   = bind_add_param("MIN_SATS", 4, 6)
 local SLM_MAX_HDOP   = bind_add_param("MAX_HDOP", 5, 2.5)
 local SLM_SRC_SW     = bind_add_param("SRC_SW", 6, 1)
+local SLM_GPS_DIFF_M = bind_add_param("GPS_DIFF_M", 7, 50)
 
 local SRC_SET_GPS = 0         -- EK3_SRC1_*: normal, with GPS
 local SRC_SET_NO_GPS = 1      -- EK3_SRC2_*: no GPS (dead reckoning)
@@ -136,6 +148,16 @@ local good_since_ms = nil     -- start of the current continuous good stretch
 local last_ms = nil           -- previous update time
 local acted = false           -- already switched to RTL in this episode
 
+-- true if the GPS fix is far from the EKF position while the EKF is not
+-- using GPS (source set 2): the fix is fake (jammed / spoofed)
+local function gps_disagrees()
+  if not on_no_gps_src or SLM_GPS_DIFF_M:get() <= 0 then return false end
+  local ekf = ahrs:get_location()
+  local fix = gps:location(gps:primary_sensor())
+  if ekf == nil or fix == nil then return false end
+  return ekf:get_distance(fix) > SLM_GPS_DIFF_M:get()
+end
+
 local function gps_good()
   local inst = gps:primary_sensor()
   if gps:status(inst) < GPS_OK_FIX_3D then return false end
@@ -161,6 +183,27 @@ local function end_episode()
   bad_ms = 0
   good_since_ms = nil
   acted = false
+end
+
+-- switch to RTL once SLM_GPS_LOSS_S of bad GPS has accumulated in this episode
+local function maybe_act()
+  if acted or bad_ms < SLM_GPS_LOSS_S:get() * 1000 then return end
+  if vehicle:get_mode() == MODE_AUTO and vehicle:is_taking_off() then
+    return    -- let the takeoff climb finish; act on a later update
+  end
+  if vehicle:get_mode() == MODE_AUTO and in_landing_sequence() then
+    gcs:send_text(MAV_SEVERITY.WARNING, "SILM: GPS bad during landing - landing continues")
+  elseif vehicle:get_mode() == MODE_AUTO then
+    if vehicle:set_mode(MODE_RTL) then
+      gcs:send_text(MAV_SEVERITY.CRITICAL,
+        string.format("SILM: GPS bad %.0fs -> RTL/landing on dead reckoning", bad_ms / 1000))
+    else
+      gcs:send_text(MAV_SEVERITY.ERROR, "SILM: RTL mode change refused")
+    end
+  end
+  -- Mark handled whatever happened, so a mode set from a ground station is
+  -- never overridden and nothing re-triggers in this episode.
+  acted = true
 end
 
 local function update()
@@ -196,6 +239,13 @@ local function update()
     if (now - good_since_ms):tofloat() >= SLM_GPS_OK_S:get() * 1000 then
       gcs:send_text(MAV_SEVERITY.NOTICE, "SILM: GPS recovered")
       end_episode()
+      return update, RUN_MS
+    end
+    -- a "good-looking" fix far from the GPS-free EKF position is fake:
+    -- it counts towards the RTL decision (but not against recovery)
+    if flying and gps_disagrees() then
+      bad_ms = bad_ms + dt_ms
+      maybe_act()
     end
     return update, RUN_MS
   end
@@ -207,27 +257,7 @@ local function update()
     return update, RUN_MS
   end
   bad_ms = bad_ms + dt_ms
-
-  if (not acted) and bad_ms >= SLM_GPS_LOSS_S:get() * 1000 then
-    if vehicle:get_mode() == MODE_AUTO and vehicle:is_taking_off() then
-      -- let the takeoff climb finish; act on a later update
-      return update, RUN_MS
-    end
-    if vehicle:get_mode() == MODE_AUTO and in_landing_sequence() then
-      gcs:send_text(MAV_SEVERITY.WARNING, "SILM: GPS bad during landing - landing continues")
-    elseif vehicle:get_mode() == MODE_AUTO then
-      if vehicle:set_mode(MODE_RTL) then
-        gcs:send_text(MAV_SEVERITY.CRITICAL,
-          string.format("SILM: GPS bad %.0fs -> RTL/landing on dead reckoning", bad_ms / 1000))
-      else
-        gcs:send_text(MAV_SEVERITY.ERROR, "SILM: RTL mode change refused")
-      end
-    end
-    -- Mark handled whatever happened, so a mode set from a ground station is
-    -- never overridden and nothing re-triggers in this episode.
-    acted = true
-  end
-
+  maybe_act()
   return update, RUN_MS
 end
 
