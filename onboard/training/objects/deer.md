@@ -73,7 +73,8 @@ survey lines ≤40 m apart. A 45° bank turn at 16 m/s has a ~26 m radius (52 m
 across), wider than the line spacing: fly every other line and fill the gaps
 on the way back. Meadows are often edged by 20-30 m trees: plan the entry and
 exit legs above them. Keep within visual line of sight and the legal altitude
-limit.
+limit. The laptop planner does the line spacing and the every-other-line order
+for you: pick `deer` as the target, 30 m, 16 m/s.
 
 Other limits: **an ordinary camera cannot see a fawn hidden in tall grass.**
 Fawn searches are normally done with thermal cameras early in the morning.

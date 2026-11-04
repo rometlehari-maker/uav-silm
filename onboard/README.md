@@ -57,7 +57,7 @@ operator link in flight**:
 
 The companion computer **never commands the aircraft** and never transmits
 anything. If the Pi crashed mid-flight, the plane would still fly its mission
-and come home — you'd just lose that flight's photos. This separation is
+and land itself — you'd just lose that flight's photos. This separation is
 deliberate: it's what makes the system safe and link-free.
 
 **No RC means no manual takeover, ever.** What that requires (all in
