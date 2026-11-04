@@ -180,7 +180,7 @@ def main() -> int:
             print(f"Edge-TPU export skipped ({exc}). Needs the edgetpu compiler.")
 
     print("\nSet in config.yaml:")
-    print(f"  detector.format: yolo")
+    print("  detector.format: yolo")
     print(f"  detector.model:  models/{args.model_name}.tflite")
     print(f"  detector.labels: models/{args.model_name}_labels.txt")
     return 0

@@ -371,6 +371,10 @@ What they cover:
   against published SIYI frames), newest-frame RTSP reading, the 160° fisheye
   model and its calibration, letterboxing, telemetry at the frame's time,
   gimbal tilt in geo-referencing, and the preflight tool.
+- `test_integration.py`, `test_misc_paths.py`: telemetry against a fake
+  ArduPlane speaking real MAVLink (including a link drop), the app's main loop
+  end to end, offline map tiles and the tile downloader, the optical-flow
+  MAVLink message.
 - `test_training_tools.py`: the add-a-new-object tools (merging by class
   name, dataset checks, pre-labelling, per-class thresholds, size calculator).
 - `test_pipeline.py`, `test_confirm.py`, `test_health.py`,

@@ -23,7 +23,6 @@ Exit code 0 = no FAIL.
 from __future__ import annotations
 
 import argparse
-import math
 import os
 import shutil
 import sys

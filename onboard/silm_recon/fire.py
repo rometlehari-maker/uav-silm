@@ -34,12 +34,21 @@ class FireDetector:
         self.fire_score = float(cfg.get("fire_score", 0.6))
         self.smoke_score = float(cfg.get("smoke_score", 0.5))
         self.detect_smoke = bool(cfg.get("detect_smoke", True))
+        # Work on a downscaled copy: flames and smoke plumes are large, the
+        # size thresholds are fractions of the frame, and a full 1080p frame
+        # costs a Pi 3 several times more for the same answer.
+        self.proc_width = int(cfg.get("proc_width", 640))
 
     def detect(self, frame_bgr: np.ndarray) -> list[FireHit]:
         if not self.enabled:
             return []
         import cv2
 
+        h0, w0 = frame_bgr.shape[:2]
+        if self.proc_width and w0 > self.proc_width:
+            s = self.proc_width / float(w0)
+            frame_bgr = cv2.resize(frame_bgr, (self.proc_width, max(1, round(h0 * s))),
+                                   interpolation=cv2.INTER_AREA)
         h, w = frame_bgr.shape[:2]
         total = float(h * w)
         hits: list[FireHit] = []

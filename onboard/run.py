@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 
 import yaml
 
@@ -51,9 +52,14 @@ def selftest(cfg: dict) -> int:
 
     print("[selftest] reading 30 frames...")
     for i in range(30):
-        frame = cam.read()
+        # wait for a NEW frame (a live stream delivers them at its own rate)
+        frame, t_wait = None, time.time()
+        while frame is None and time.time() - t_wait < 5:
+            frame = cam.read()
+            if frame is None:
+                time.sleep(0.01)
         if frame is None:
-            print(f"  frame {i}: <no frame>")
+            print(f"  frame {i}: <no frame for 5 s>")
             continue
         hits = []
         if det is not None:

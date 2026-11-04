@@ -171,6 +171,17 @@ class TelemetryLink:
             except Exception:
                 pass
 
+    def _close_master(self) -> None:
+        # Close the old connection explicitly before reconnecting rather than
+        # relying on it being garbage-collected when replaced, so a serial
+        # port is never held open twice.
+        m, self._master = self._master, None
+        if m is not None:
+            try:
+                m.close()
+            except Exception:
+                pass
+
     def _run(self) -> None:
         backoff = 1.0
         while not self._stop.is_set():
@@ -179,15 +190,21 @@ class TelemetryLink:
                 backoff = 1.0
                 self._pump()
             except Exception as exc:  # reconnect on any link error
+                self._close_master()
+                if self._stop.is_set():
+                    break
                 print(f"[telemetry] link error: {exc}; retry in {backoff:.0f}s")
-                time.sleep(backoff)
+                self._stop.wait(backoff)
                 backoff = min(backoff * 2, 15.0)
+        self._close_master()
 
     def _pump(self) -> None:
         master = self._master
         st = self.state
         while not self._stop.is_set():
             msg = master.recv_match(blocking=True, timeout=2.0)
+            if msg is None and self._stop.is_set():
+                return
             if msg is None:
                 # No data for 2s -> treat as link drop, let _run reconnect.
                 raise TimeoutError("no MAVLink messages for 2s")
