@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""Desk-test the GPS-loss failsafe in ArduPilot's simulator (SITL).
+"""Desk-test the GPS-loss failsafe AND the no-RC autoland in ArduPilot's simulator.
 
-Flies a real AUTO mission in ArduPlane SITL with your failsafe parameters and
-the silm_gps_loss.lua script, then mid-mission either switches the simulated GPS
-off or turns on SITL's GPS JAMMING simulation (SIM_GPS1_JAM: blackout, then
-flickering lock with random satellites and position jumps). It records the
-TRUE position (from the simulator) against what the autopilot THINKS its
-position is, and grades the outcome:
+Flies a real NO-RC mission in ArduPlane SITL - automatic takeoff, survey lines,
+DO_LAND_START landing sequence, automatic landing - with your parameters and the
+silm_gps_loss.lua script. Mid-survey it either switches the simulated GPS off or
+turns on SITL's GPS JAMMING simulation (SIM_GPS1_JAM: blackout, then flickering
+lock with random satellites and position jumps). It records the TRUE position
+(from the simulator) against what the autopilot THINKS its position is, and
+grades the outcome:
 
-  * RTL engaged within SLM_GPS_LOSS_S + margin seconds of the fault
-  * the aircraft actually headed home while blind (true distance decreased)
+  * the failsafe engaged (RTL -> landing sequence) within SLM_GPS_LOSS_S + margin
+  * the aircraft headed for the landing point while blind (true distance fell)
   * it never left the geofence (true position)
   * after GPS returns, the position estimate re-converges
-  * it ends up loitering near home
+  * it LANDED and DISARMED by itself, close to the planned touchdown point
+
+The mission is built by the laptop planner's code (planner/survey.py), or pass
+your own planner output with --mission silm_mission.waypoints (start SITL at
+that mission's launch point with -L).
 
 Run on your PC (not on the aircraft):
 
@@ -31,7 +36,12 @@ Run on your PC (not on the aircraft):
 
   The first run sets SCR_ENABLE=1; SITL then needs one restart for the script
   to load (the tool tells you). Repeat with --fault disable, different
-  --wind / --wind-dir, and longer --fault-s to see how far dead reckoning drifts.
+  --wind / --wind-dir, and longer --fault-s to see how far dead reckoning drifts
+  (a long --fault-s means the landing itself is flown on dead reckoning - that is
+  the real worst case, and it shows how far off the touchdown can be).
+
+  SITL's plane takes off from a runway, not from a throw, so the tool sets
+  TKOFF_THR_MINACC=0 in the simulator only. Everything else is your file.
 """
 
 from __future__ import annotations
@@ -43,6 +53,10 @@ import math
 import os
 import sys
 import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "planner"))
 
 MODE_AUTO, MODE_RTL = 10, 11
 R_EARTH = 6378137.0
@@ -66,22 +80,25 @@ def dist_m(lat1, lon1, lat2, lon2):
 
 def analyse(rows, fault_t, restore_t, home, loss_s=5.0, fence_radius=1500.0,
             rtl_margin_s=6.0, reconverge_m=15.0, reconverge_within_s=40.0,
-            home_radius_m=300.0) -> dict:
+            land=None, land_radius_m=150.0) -> dict:
     """Grade a recorded flight. rows: dicts with t, true_lat, true_lon,
-    est_lat, est_lon, mode. Times in seconds. Returns {checks..., passed}."""
+    est_lat, est_lon, mode, and optionally landing (in the DO_LAND_START
+    sequence), armed and alt. home = (lat, lon) of launch, land = planned
+    touchdown (default home). Times in seconds. Returns {checks..., passed}."""
     hl, hn = home
+    ll, ln = land or home
 
     def at(t):
         return min(rows, key=lambda r: abs(r["t"] - t))
 
     res: dict = {}
-    rtl_rows = [r for r in rows if r["t"] >= fault_t and r["mode"] == MODE_RTL]
-    rtl_after = (rtl_rows[0]["t"] - fault_t) if rtl_rows else None
+    fs_rows = [r for r in rows if r["t"] >= fault_t and (r["mode"] == MODE_RTL or r.get("landing"))]
+    rtl_after = (fs_rows[0]["t"] - fault_t) if fs_rows else None
     res["rtl_after_s"] = None if rtl_after is None else round(rtl_after, 1)
     res["rtl_in_time"] = rtl_after is not None and rtl_after <= loss_s + rtl_margin_s
 
-    d_fault = dist_m(hl, hn, at(fault_t)["true_lat"], at(fault_t)["true_lon"])
-    d_restore = dist_m(hl, hn, at(restore_t)["true_lat"], at(restore_t)["true_lon"])
+    d_fault = dist_m(ll, ln, at(fault_t)["true_lat"], at(fault_t)["true_lon"])
+    d_restore = dist_m(ll, ln, at(restore_t)["true_lat"], at(restore_t)["true_lon"])
     res["true_dist_at_fault_m"] = round(d_fault, 1)
     res["true_dist_at_restore_m"] = round(d_restore, 1)
     res["headed_home_while_blind"] = d_restore < d_fault
@@ -105,15 +122,26 @@ def analyse(rows, fault_t, restore_t, home, loss_s=5.0, fence_radius=1500.0,
     res["estimate_reconverged"] = conv_t is not None and conv_t <= reconverge_within_s
 
     last = rows[-1]
-    d_end = dist_m(hl, hn, last["true_lat"], last["true_lon"])
-    res["final_true_dist_m"] = round(d_end, 1)
-    res["ended_near_home"] = d_end <= home_radius_m
+    res["disarmed_at_end"] = not last.get("armed", True)
+    res["landed"] = res["disarmed_at_end"] and last.get("alt", 0.0) < 5.0
+    res["blind_at_touchdown"] = bool(res["landed"] and restore_t > _touchdown_t(rows))
+    d_end = dist_m(ll, ln, last["true_lat"], last["true_lon"])
+    res["touchdown_error_m"] = round(d_end, 1)
+    res["landed_near_touchdown"] = res["landed"] and d_end <= land_radius_m
 
     checks = ["rtl_in_time", "headed_home_while_blind", "stayed_inside_fence",
-              "estimate_reconverged", "ended_near_home"]
+              "estimate_reconverged", "landed", "landed_near_touchdown"]
     res["passed"] = all(res[c] for c in checks)
     res["checks"] = {c: res[c] for c in checks}
     return res
+
+
+def _touchdown_t(rows):
+    """Time it disarmed (end of the landing), or the last row's time."""
+    for r in rows:
+        if r.get("landing") and not r.get("armed", True):
+            return r["t"]
+    return rows[-1]["t"]
 
 
 # ------------------------------------------------------------------ MAVLink
@@ -185,25 +213,12 @@ class Sitl:
         g = self.m.messages.get("GLOBAL_POSITION_INT")
         return (g.lat / 1e7, g.lon / 1e7, g.relative_alt / 1000.0) if g else None
 
-    def upload_mission(self, items):
-        mav = self.m.mav
-        mav.mission_count_send(self.m.target_system, self.m.target_component, len(items))
-        sent = set()
-        t0 = time.time()
-        while time.time() - t0 < 30:
-            msg = self.recv(["MISSION_REQUEST_INT", "MISSION_REQUEST", "MISSION_ACK"], timeout=1)
-            if msg is None:
-                continue
-            if msg.get_type() == "MISSION_ACK":
-                return msg.type == 0 and len(sent) == len(items)
-            seq = msg.seq
-            cmd, lat, lon, alt, p1 = items[seq]
-            mav.mission_item_int_send(
-                self.m.target_system, self.m.target_component, seq,
-                self.mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, cmd,
-                0, 1, p1, 0, 0, 0, int(lat * 1e7), int(lon * 1e7), alt)
-            sent.add(seq)
-        return False
+    def mission_seq(self):
+        mc = self.m.messages.get("MISSION_CURRENT")
+        return mc.seq if mc else None
+
+    def armed(self):
+        return bool(self.m.motors_armed())
 
     def arm(self, timeout=120):
         t0 = time.time()
@@ -219,14 +234,46 @@ class Sitl:
         return False
 
 
+def build_mission(args, home):
+    """Items (items[0] = home) and (land_lat, land_lon, index of DO_LAND_START)."""
+    from silm_recon import mavmission as mm
+    if args.mission:
+        items = mm.from_wpl(open(args.mission).read())
+    else:
+        import survey
+        hl, hn = home
+        b = math.radians(args.bearing)
+        perp = b + math.pi / 2
+
+        def pt(along, side):
+            return offset(hl, hn, along * math.cos(b) + side * math.cos(perp),
+                          along * math.sin(b) + side * math.sin(perp))
+        area = [pt(0.3 * args.out_m, -250), pt(args.out_m, -250), pt(args.out_m, 250),
+                pt(0.3 * args.out_m, 250)]
+        r = survey.plan(survey.PlanInput(
+            launch=home, area=area, landing=home, landing_heading_deg=args.wind_dir % 360,
+            alt_m=args.alt, fence_radius_m=args.fence_m))
+        if r["errors"]:
+            raise SystemExit("planner refused the test mission: " + "; ".join(r["errors"]))
+        items = r["items"]
+    errors, warnings = mm.check_mission(items, args.fence_m)
+    if errors:
+        raise SystemExit("mission is not flyable with no RC: " + "; ".join(errors))
+    land = next(it for it in items if it.command == mm.NAV_LAND)
+    start = min(i for i, it in enumerate(items) if it.command == mm.DO_LAND_START)
+    return items, (land.lat, land.lon), start
+
+
 def run(args) -> int:
+    from silm_recon import mavmission as mm
     s = Sitl(args.connect)
     print("connected to SITL")
 
-    # Parameters: your failsafe set + test setup.
+    # Parameters: your file + test setup. SITL's plane rolls off a runway, so the
+    # throw-detection threshold is switched off in the simulator only.
     params = read_param_file(args.params)
     params += [("SIM_WIND_SPD", args.wind), ("SIM_WIND_DIR", args.wind_dir),
-               ("SIM_GPS1_ENABLE", 1), ("SIM_GPS1_JAM", 0)]
+               ("SIM_GPS1_ENABLE", 1), ("SIM_GPS1_JAM", 0), ("TKOFF_THR_MINACC", 0)]
     bad = [n for n, v in params if not s.set_param(n, v)]
     if bad:
         print(f"WARNING: could not set {bad}")
@@ -238,7 +285,8 @@ def run(args) -> int:
         print("SCR_ENABLE is now 1 - restart SITL once, then re-run this test.")
         return 2
     loss_s = s.get_param("SLM_GPS_LOSS_S") or 5.0
-    fence_r = s.get_param("FENCE_RADIUS") or 1500.0
+    fence_r = s.get_param("FENCE_RADIUS") or args.fence_m
+    args.fence_m = fence_r
 
     # Wait for a position, take home = true position on the ground.
     print("waiting for GPS/EKF ...")
@@ -248,49 +296,51 @@ def run(args) -> int:
     home = s.true_pos()
     hl, hn = home
 
-    # Mission: takeoff, out along a bearing to --out-m, back, RTL.
-    b = math.radians(args.bearing)
-    pts = [offset(hl, hn, f * args.out_m * math.cos(b), f * args.out_m * math.sin(b))
-           for f in (0.3, 0.6, 1.0)]
-    side = offset(pts[-1][0], pts[-1][1], 300 * math.cos(b + math.pi / 2), 300 * math.sin(b + math.pi / 2))
-    back = [offset(hl, hn, 0.5 * args.out_m * math.cos(b) + 300 * math.cos(b + math.pi / 2),
-                   0.5 * args.out_m * math.sin(b) + 300 * math.sin(b + math.pi / 2))]
-    mav = s.mavutil.mavlink
-    items = [(mav.MAV_CMD_NAV_WAYPOINT, hl, hn, 0, 0),                  # 0: home placeholder
-             (mav.MAV_CMD_NAV_TAKEOFF, hl, hn, args.alt, 15)]           # 1: takeoff, 15 deg
-    items += [(mav.MAV_CMD_NAV_WAYPOINT, la, lo, args.alt, 0) for la, lo in pts + [side] + back]
-    items += [(mav.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0)]
-    if not s.upload_mission(items):
-        print("mission upload failed")
+    items, land, land_start = build_mission(args, home)
+    if dist_m(hl, hn, items[1].lat or hl, items[1].lon or hn) > 200:
+        print("WARNING: the mission's takeoff is far from where SITL started - start SITL with -L "
+              "at the mission's launch point")
+    try:
+        mm.upload(s.m, items)
+    except RuntimeError as exc:
+        print(f"mission upload failed: {exc}")
         return 1
-    print(f"mission uploaded ({len(items)} items, out to {args.out_m:.0f} m at {args.bearing:.0f} deg)")
+    print(f"mission uploaded ({len(items) - 1} items; landing sequence from item {land_start}, "
+          f"touchdown {land[0]:.6f}, {land[1]:.6f})")
 
     if not s.arm():
         print("could not arm (check pre-arm messages above)")
         return 1
     s.set_mode(MODE_AUTO)
-    print("armed, AUTO")
+    print("armed, AUTO - no RC from here on")
 
     os.makedirs(args.out, exist_ok=True)
     rows = []
     t_start = time.time()
     fault_t = restore_t = None
-    phase = "outbound"
+    phase = "survey"
     last_log = 0.0
+    flew = False
     while True:
         s.recv(timeout=0.2)
         now = time.time() - t_start
         tp, ep = s.true_pos(), s.est_pos()
         if tp is None or ep is None:
             continue
+        seq = s.mission_seq()
+        landing = s.mode() == MODE_AUTO and seq is not None and seq >= land_start
+        armed = s.armed()
+        flew = flew or ep[2] > 20
         if now - last_log >= 0.2:
-            rows.append({"t": round(now, 2), "phase": phase, "mode": s.mode(),
+            rows.append({"t": round(now, 2), "phase": phase, "mode": s.mode(), "seq": seq,
+                         "landing": landing, "armed": armed,
                          "true_lat": tp[0], "true_lon": tp[1], "est_lat": ep[0], "est_lon": ep[1],
                          "alt": ep[2]})
             last_log = now
         d_home = dist_m(hl, hn, tp[0], tp[1])
 
-        if fault_t is None and d_home >= args.trigger_m and ep[2] > 0.5 * args.alt:
+        if fault_t is None and not landing and ep[2] > 0.5 * args.alt and (
+                d_home >= args.trigger_m or (args.trigger_s and now >= args.trigger_s)):
             fault_t = now
             phase = "gps_fault"
             if args.fault == "jam":
@@ -303,8 +353,13 @@ def run(args) -> int:
             phase = "gps_restored"
             s.set_param("SIM_GPS1_JAM", 0)
             s.set_param("SIM_GPS1_ENABLE", 1)
-            print(f"t={now:.0f}s  GPS restored, true distance home {d_home:.0f} m")
-        elif restore_t is not None and now - restore_t >= args.after_s:
+            print(f"t={now:.0f}s  GPS restored, true distance to touchdown "
+                  f"{dist_m(land[0], land[1], tp[0], tp[1]):.0f} m")
+        elif restore_t is not None and flew and not armed and now - restore_t >= 10:
+            print(f"t={now:.0f}s  landed and disarmed")
+            break
+        elif fault_t is None and flew and not armed:
+            print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
             break
         if now > args.timeout_s:
             print("timeout")
@@ -319,24 +374,27 @@ def run(args) -> int:
     if fault_t is None or restore_t is None:
         print("fault was never triggered/restored - increase --timeout-s or reduce --trigger-m")
         return 1
-    res = analyse(rows, fault_t, restore_t, home, loss_s=loss_s, fence_radius=fence_r)
+    res = analyse(rows, fault_t, restore_t, home, loss_s=loss_s, fence_radius=fence_r,
+                  land=land, land_radius_m=args.land_radius_m)
     res.update({"fault": args.fault, "fault_s": args.fault_s, "wind_mps": args.wind,
-                "wind_dir_deg": args.wind_dir, "ap_messages": s.texts[-40:]})
+                "wind_dir_deg": args.wind_dir, "touchdown_planned": land,
+                "ap_messages": s.texts[-40:]})
     with open(os.path.join(args.out, "result.json"), "w") as fh:
         json.dump(res, fh, indent=2)
 
-    plot(rows, home, fault_t, restore_t, os.path.join(args.out, "track.png"))
+    plot(rows, home, fault_t, restore_t, os.path.join(args.out, "track.png"), land)
     print("\n=== RESULT ===")
     for k, v in res["checks"].items():
         print(f"  {'PASS' if v else 'FAIL'}  {k}")
     for k in ("rtl_after_s", "true_dist_at_fault_m", "true_dist_at_restore_m", "max_true_dist_m",
-              "dead_reckoning_error_max_m", "reconverged_after_s", "final_true_dist_m"):
+              "dead_reckoning_error_max_m", "reconverged_after_s", "touchdown_error_m",
+              "blind_at_touchdown"):
         print(f"        {k}: {res[k]}")
     print(f"\n{'PASSED' if res['passed'] else 'FAILED'} - details in {args.out}/")
     return 0 if res["passed"] else 1
 
 
-def plot(rows, home, fault_t, restore_t, path):
+def plot(rows, home, fault_t, restore_t, path, land=None):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -359,7 +417,10 @@ def plot(rows, home, fault_t, restore_t, path):
     ax.plot([p[1] for p in pt], [p[0] for p in pt], color="#d33", lw=2.5, label="true, GPS lost")
     ax.plot([p[1] for p in pe], [p[0] for p in pe], "--", color="#36c", lw=1.5,
             label="autopilot's estimate, GPS lost")
-    ax.plot(0, 0, "k^", ms=10, label="home")
+    ax.plot(0, 0, "k^", ms=10, label="launch")
+    if land:
+        n, e = ne(*land)
+        ax.plot(e, n, "gx", ms=12, mew=2.5, label="planned touchdown")
     ax.set_xlabel("east (m)")
     ax.set_ylabel("north (m)")
     ax.set_aspect("equal")
@@ -377,14 +438,20 @@ def main() -> int:
                                                      "ardupilot", "gps_denied_failsafe.param"))
     ap.add_argument("--fault", choices=["jam", "disable"], default="jam")
     ap.add_argument("--fault-s", type=float, default=90, help="how long GPS stays bad")
-    ap.add_argument("--after-s", type=float, default=90, help="record this long after restore")
+    ap.add_argument("--mission", default=None,
+                    help="fly this .waypoints file (from the laptop planner) instead of the built-in survey")
     ap.add_argument("--trigger-m", type=float, default=700, help="fault when this far from home")
     ap.add_argument("--out-m", type=float, default=1200, help="mission's outbound distance")
+    ap.add_argument("--trigger-s", type=float, default=None,
+                    help="or fault this many seconds after start (for your own --mission)")
     ap.add_argument("--bearing", type=float, default=45)
+    ap.add_argument("--fence-m", type=float, default=1500)
+    ap.add_argument("--land-radius-m", type=float, default=150,
+                    help="pass if it touches down this close to the planned point")
     ap.add_argument("--alt", type=float, default=100)
     ap.add_argument("--wind", type=float, default=5.0, help="simulated wind m/s")
     ap.add_argument("--wind-dir", type=float, default=250.0, help="wind from, degrees")
-    ap.add_argument("--timeout-s", type=float, default=900)
+    ap.add_argument("--timeout-s", type=float, default=1500)
     ap.add_argument("--out", default="sitl_results")
     return run(ap.parse_args())
 

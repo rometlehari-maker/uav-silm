@@ -15,7 +15,8 @@ lupa = pytest.importorskip("lupa")
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "ardupilot", "scripts", "silm_gps_loss.lua")
 
 MOCKS = r"""
-sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={}}
+sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={},
+       taking_off=false, landing=false, nav_index=3, mission={16, 22, 16, 16, 16, 189, 16, 21}}
 params = {}
 
 local U32 = {}
@@ -37,6 +38,16 @@ vehicle = {}
 function vehicle:get_likely_flying() return sim.flying end
 function vehicle:get_mode() return sim.mode end
 function vehicle:set_mode(m) sim.mode = m; table.insert(sim.mode_changes, m); return true end
+function vehicle:is_taking_off() return sim.taking_off end
+function vehicle:is_landing() return sim.landing end
+
+mission = {}
+function mission:get_current_nav_index() return sim.nav_index end
+function mission:get_item(i)
+  local cmd = sim.mission[i + 1]          -- index 0 = home
+  if cmd == nil then return nil end
+  return {command = function(self) return cmd end}
+end
 
 gcs = {}
 function gcs:send_text(sev, txt) table.insert(sim.msgs, txt) end
@@ -218,4 +229,45 @@ def test_custom_timeout_param():
     sim.run_for(8)
     assert sim.mode_changes() == []
     sim.run_for(3)
+    assert sim.mode_changes() == [11]
+
+
+def test_never_interrupts_the_landing_sequence():
+    """Mission: 0 home, 1 takeoff, 2-4 survey, 5 DO_LAND_START, 6 approach,
+    7 NAV_LAND. GPS lost while flying the approach (item 6): RTL would restart
+    the landing from item 5, so the script must leave it alone."""
+    sim = Sim()
+    sim.s.nav_index = 6
+    sim.s.gps_status = 1
+    sim.run_for(10)
+    assert sim.mode_changes() == []
+    assert any("landing continues" in m for m in sim.msgs())
+
+
+def test_never_interrupts_final_approach_reported_by_vehicle():
+    sim = Sim()
+    sim.s.landing = True
+    sim.s.gps_status = 1
+    sim.run_for(10)
+    assert sim.mode_changes() == []
+
+
+def test_waits_for_takeoff_to_finish_then_acts():
+    sim = Sim()
+    sim.s.taking_off = True
+    sim.s.nav_index = 1
+    sim.s.gps_status = 1
+    sim.run_for(8)
+    assert sim.mode_changes() == []          # still climbing out
+    sim.s.taking_off = False
+    sim.s.nav_index = 2
+    sim.run_for(0.5)
+    assert sim.mode_changes() == [11]        # acts as soon as the takeoff is done
+
+
+def test_survey_leg_before_landing_start_still_triggers():
+    sim = Sim()
+    sim.s.nav_index = 4                      # last survey leg, before DO_LAND_START
+    sim.s.gps_status = 1
+    sim.run_for(6)
     assert sim.mode_changes() == [11]

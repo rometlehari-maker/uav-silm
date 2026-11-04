@@ -56,12 +56,15 @@ class GeoReferencer:
     def __init__(self, cfg: dict, image_size: tuple[int, int] | None = None):
         # Horizontal field of view of the lens, degrees (used when no
         # calibration is given).
-        self.hfov = math.radians(float(cfg.get("hfov_deg", 86.0)))
+        # Defaults describe this airframe's camera (SIYI A2 mini: 160 deg
+        # fisheye, 1920x1080) when neither the lens nor the FOV is configured.
+        a2_default = "hfov_deg" not in cfg and "lens" not in cfg and not cfg.get("calibration")
+        self.hfov = math.radians(float(cfg.get("hfov_deg", 160.0)))
 
         # Image size in pixels. Needed so vertical angles are right for
         # non-square (e.g. 16:9) frames.
         if image_size is None:
-            image_size = (int(cfg.get("image_width", 1280)), int(cfg.get("image_height", 720)))
+            image_size = (int(cfg.get("image_width", 1920)), int(cfg.get("image_height", 1080)))
         self.W, self.H = int(image_size[0]), int(image_size[1])
 
         # Intrinsics. Either from a calibration (tools/calibrate_camera.py),
@@ -72,7 +75,7 @@ class GeoReferencer:
         # Lens model: "pinhole" (normal lenses, OpenCV k1..k3 distortion) or
         # "fisheye" (wide lenses such as the SIYI A2 mini's 160 deg; OpenCV
         # fisheye model when calibrated, else an ideal equidistant fisheye).
-        self.lens = (calib or {}).get("model") or cfg.get("lens", "pinhole")
+        self.lens = (calib or {}).get("model") or cfg.get("lens", "fisheye" if a2_default else "pinhole")
         if calib:
             sx = self.W / float(calib["width"])
             sy = self.H / float(calib["height"])

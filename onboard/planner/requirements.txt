@@ -1,0 +1,10 @@
+# Laptop mission planner (Windows, macOS or Linux, Python 3.9+).
+#
+#   python -m pip install -r planner/requirements.txt
+#   python planner/app.py            # opens http://127.0.0.1:8765 in your browser
+#
+# Planning, checking and downloading .waypoints work with PyYAML alone;
+# pymavlink + pyserial are only for "Upload mission" over USB.
+PyYAML>=5.4
+pymavlink>=2.4.37
+pyserial>=3.5

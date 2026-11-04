@@ -1,31 +1,89 @@
 # ===========================================================================
-# SILM failsafe parameter set  -  ArduPlane 4.7.x (verified against 4.7.2)
+# SILM parameter set for FULLY AUTOMATIC flight, NO RC TRANSMITTER
+# ArduPlane 4.7.x (every name and range verified against 4.7.2)
 # ===========================================================================
-# Every name and range below was checked against the ArduPlane 4.7.2 source
-# with tools/check_params.py. Re-run that check if you flash another version:
+# This aircraft has no RC (ExpressLRS or other) link: nobody can take manual
+# control in the air. So the aircraft must do everything itself:
+#   launch  - hand launch in AUTO: the motor stays off until the throw is
+#             detected (TKOFF_THR_MINACC), then the mission's NAV_TAKEOFF climbs
+#   fly     - the AUTO mission planned in the laptop GUI (planner/)
+#   land    - a belly autoland: the mission ENDS with DO_LAND_START + NAV_LAND,
+#             and every failsafe (GPS loss, battery, geofence) goes there too
+#   disarm  - automatically after touchdown (LAND_DISARMDELAY)
+# The flight controller refuses to arm unless the mission has a takeoff and
+# a landing sequence (ARMING_MIS_ITEMS).
+#
+# Check against YOUR firmware version before loading:
 #   python3 tools/check_params.py --src <ardupilot checkout> ardupilot/gps_denied_failsafe.param
+# Load in Mission Planner (or QGroundControl) on the laptop over USB:
+#   CONFIG > Full Parameter List > Load from file > Write Params, then reboot.
+# Then install ardupilot/scripts/silm_gps_loss.lua (FLIGHT_READY.md A1).
+# Test in the simulator first (tools/sitl_failsafe_test.py, FLIGHT_READY.md A3).
 #
-# Load in Mission Planner: CONFIG > Full Parameter List > Load from file, then
-# Write Params and reboot. Then install ardupilot/scripts/silm_gps_loss.lua
-# (see FLIGHT_READY.md A1) - this file enables scripting for it.
-#
-# How GPS loss is handled on this aircraft (three layers, all on the H743):
-#   1. ArduPlane dead-reckons automatically on airspeed + learnt wind when GPS
-#      is lost (EKF3, with a DCM fallback). No parameter turns this on; it needs
-#      a working, calibrated airspeed sensor (ARSPD_USE=1 below).
-#   2. silm_gps_loss.lua turns the aircraft for home (RTL) after SLM_GPS_LOSS_S
-#      seconds of GPS loss in AUTO, instead of carrying on outward.
-#   3. The geofence forces RTL if the (dead-reckoned) position leaves the
-#      allowed area, bounding the worst case.
-#   EK3_OPTIONS=1 (JammingExpected) makes the EKF re-check GPS quality before
-#   trusting GPS again after a loss, so a jammer/spoofer switching off and back
-#   on with a bad signal doesn't snap the position to a wrong place.
-#
-# This is controlled recovery, not GPS-free navigation: dead-reckoning error
-# grows with time and wind-estimate error. Values are starting points for a
-# 1.4 m, ~1.6 kg hand-launched pusher (stall ~9.5 m/s). Check them in SITL
-# first (tools/sitl_failsafe_test.py, FLIGHT_READY.md A3).
+# Values are starting points for a 1.4 m, ~1.6 kg hand-launched pusher with a
+# 4S 7000 mAh battery (stall ~9.5 m/s). Read every line.
 # ---------------------------------------------------------------------------
+
+# --- No RC receiver -----------------------------------------------------------
+# RC failsafe off: with no receiver it would be permanently "in failsafe".
+THR_FAILSAFE,0
+# Skip ONLY the RC-channel arming checks (bit 6 = 64); all other checks stay.
+ARMING_SKIPCHK,64
+# Refuse to arm unless the mission contains Land (1) + DO_LAND_START (4) +
+# Takeoff (8) = 13. Without RC, a mission with no landing would circle until
+# the battery is empty.
+ARMING_MIS_ITEMS,13
+# No ground station in flight -> GCS failsafe off. If you add a 4G/telemetry
+# link for monitoring, keep this 0 so link drop-outs don't change the mission.
+FS_GCS_ENABL,0
+# Only relevant if a GCS/RC failsafe is ever enabled: in AUTO, continue.
+FS_SHORT_ACTN,0
+FS_LONG_ACTN,0
+# Boot straight into AUTO (10). ArduPilot documents this for "AUTO on boot
+# without a receiver". Harmless while disarmed; you arm from the laptop
+# planner (USB) just before the throw. ARMING_REQUIRE stays at its default
+# (1): the motor cannot run until armed.
+INITIAL_MODE,10
+
+# --- Hand launch (automatic) -------------------------------------------------
+# Motor stays stopped in AUTO until a forward acceleration of 15 m/s/s (the
+# throw), then waits TKOFF_THR_DELAY tenths of a second before starting so
+# the pusher propeller is clear of the launcher's hand (ArduPilot: >= 2 for
+# pushers). The climb angle and altitude are set by the mission's NAV_TAKEOFF.
+TKOFF_THR_MINACC,15
+TKOFF_THR_DELAY,3
+
+# --- Automatic belly landing --------------------------------------------------
+# Any RTL (GPS-loss script, geofence) goes straight to the mission's landing
+# sequence (DO_LAND_START) instead of circling over home until the battery
+# runs out: 2 = go directly to the landing sequence.
+RTL_AUTOLAND,2
+# Flare: lock heading and hold the landing pitch 2 s before touchdown, or
+# from 3 m. Slightly nose-up for a belly landing so the camera window in the
+# nose is not the first thing to touch the ground.
+LAND_FLARE_SEC,2
+LAND_FLARE_ALT,3
+LAND_PITCH_DEG,4
+# Disarm 10 s after touchdown (motor is already stopped from the flare).
+LAND_DISARMDELAY,10
+# RTL altitude above home (m) - used on the way to the landing sequence.
+RTL_ALTITUDE,100
+RTL_RADIUS,60
+
+# --- Battery failsafe: land with energy to spare -------------------------------
+# Needs a working battery monitor (BATT_MONITOR and the voltage/current
+# scaling for your power board - calibrate per the Matek docs and check the
+# readings in Mission Planner before relying on this).
+BATT_CAPACITY,7000
+# Low: 3.5 V/cell under load or 25% left -> fly the landing sequence now
+# (2 = "Land": jump to the mission's DO_LAND_START landing).
+BATT_LOW_VOLT,14.0
+BATT_LOW_MAH,1750
+BATT_FS_LOW_ACT,2
+# Critical: 3.3 V/cell or 15% left -> land (continues an ongoing landing).
+BATT_CRT_VOLT,13.2
+BATT_CRT_MAH,1050
+BATT_FS_CRT_ACT,2
 
 # --- Airspeed: required for dead reckoning without GPS -----------------------
 # 1 = use the airspeed sensor (ASPD-4525) for control and estimation.
@@ -36,6 +94,13 @@ AIRSPEED_CRUISE,19
 AIRSPEED_MAX,28
 
 # --- EKF3: GPS jamming / spoofing behaviour ----------------------------------
+# GPS loss handling (all on the flight controller):
+#   1. ArduPlane dead-reckons automatically on airspeed + learnt wind.
+#   2. silm_gps_loss.lua switches to RTL after SLM_GPS_LOSS_S seconds of bad
+#      GPS in AUTO; with RTL_AUTOLAND=2 that means "fly the landing sequence".
+#      The landing then happens on a DEAD-RECKONED position, so it can be tens
+#      of metres off: plan the landing on a large, open field.
+#   3. The geofence below bounds the worst case.
 # Bit 0 JammingExpected: after a GPS loss > 2 s, require the EK3_GPS_CHECK
 # quality checks to pass before using GPS again.
 EK3_OPTIONS,1
@@ -45,34 +110,15 @@ EK3_GPS_CHECK,31
 # --- Scripting: runs silm_gps_loss.lua on the flight controller -------------
 SCR_ENABLE,1
 
-# --- RC link (ExpressLRS) failsafe ------------------------------------------
-# Enable failsafe on loss of RC.
-THR_FAILSAFE,1
-# IMPORTANT for link-free missions: the aircraft is EXPECTED to fly out of
-# ExpressLRS range while in AUTO.
-#  FS_SHORT_ACTN=0: in AUTO no mode change on RC loss; in manual modes -> CIRCLE.
-#  FS_LONG_ACTN=0 : in AUTO continue the mission; in manual modes -> RTL.
-# (FS_LONG_ACTN=1 would abort every mission to RTL the moment it left radio
-#  range - do not use it for this aircraft.)
-FS_SHORT_ACTN,0
-FS_LONG_ACTN,0
-FS_LONG_TIMEOUT,5
-# No ground station in flight -> GCS failsafe off (default, stated explicitly).
-FS_GCS_ENABL,0
-
-# --- Return to launch --------------------------------------------------------
-# RTL altitude above home (metres) and loiter radius at home (metres).
-RTL_ALTITUDE,100
-RTL_RADIUS,60
-
 # --- Geofence: hard backstop ------------------------------------------------
 FENCE_ENABLE,1
 # Bitmask: 1 = max altitude, 2 = circle around home -> 3. Add 4 (=7) if you
-# also upload an inclusion polygon from Mission Planner.
+# also upload an inclusion polygon.
 FENCE_TYPE,3
-# 1 = RTL on breach.
+# 1 = RTL on breach (-> landing sequence, because of RTL_AUTOLAND=2).
 FENCE_ACTION,1
-# Circle radius around home (m). Must contain your whole mission + margin.
+# Circle radius around home (m). The planner GUI computes the value your
+# mission needs and warns if it is outside this.
 FENCE_RADIUS,1500
 # Max altitude (m). Check your legal ceiling (EASA open category: 120 m).
 FENCE_ALT_MAX,120

@@ -1,13 +1,15 @@
 # SILM onboard reconnaissance
 
 Link-free, fully onboard recognition for the UAV SILM airframe, for
-agriculture / forestry / wildfire survey. The aircraft flies a pre-planned
-Mission Planner route on its own, recognises ground subjects (farm machinery,
-vehicles, livestock, forest fires…) as it goes, geo-references them and saves
-tagged pictures to its own SD card — **with no radio, fibre or any other link to
-the operator** — and has a GPS-loss **failsafe** so a jammed/lost GPS brings it
-home instead of losing it. On return, the pilot takes over manually on
-ExpressLRS.
+agriculture / forestry / wildfire survey. The aircraft has **no RC receiver
+(no ExpressLRS) and no telemetry radio**: every flight is a fully automatic
+mission planned in the **laptop GUI** (`planner/`), uploaded over USB, then
+hand-launched — automatic takeoff, survey, automatic belly landing, automatic
+disarm. On the way it recognises ground subjects (farm machinery, vehicles,
+livestock, forest fires…), geo-references them and saves tagged pictures to
+its own SD card. A GPS-loss **failsafe** turns a jammed/lost GPS into a landing
+at the planned landing point instead of a lost aircraft. Nobody can take over
+in flight, so every failure path ends in an automatic landing.
 
 > **New here? Read [`FLIGHT_READY.md`](FLIGHT_READY.md)** — the rigorous,
 > step-by-step guide covering where every file goes, the GPS-loss failsafe, how
@@ -15,9 +17,14 @@ ExpressLRS.
 > checklist. This file is the component overview; FLIGHT_READY is the procedure.
 
 Key parts added beyond basic recognition:
+- **Laptop mission planner** — `planner/app.py`: draw the area, launch and
+  landing on a map; it builds the complete no-RC mission (takeoff, survey
+  lines, `DO_LAND_START`, final approach, `LAND`), checks it, and uploads it
+  over USB or saves a `.waypoints` file. See [`planner/README.md`](planner/README.md).
 - **GPS-loss failsafe** — `ardupilot/gps_denied_failsafe.param` (verified
   against ArduPlane 4.7.2) + `ardupilot/scripts/silm_gps_loss.lua` (turns for
-  home after GPS loss, jamming-proof), both on the flight controller, plus
+  the landing sequence after GPS loss, jamming-proof; never interrupts a takeoff
+  or a landing), both on the flight controller, plus
   `silm_recon/failsafe.py` (companion GPS-health monitor and optical-flow
   backup). Desk-test it with `tools/sitl_failsafe_test.py`. See FLIGHT_READY
   section A.
@@ -44,18 +51,29 @@ operator link in flight**:
 
 | Job | What does it | Needs a link? |
 |-----|--------------|---------------|
-| Fly the planned route | **ArduPilot on the Matek H743.** You draw waypoints in Mission Planner, upload them on the ground, arm, hand-launch. `AUTO` mode flies the whole route and `RTL` brings it home. | No |
+| Plan the mission | **The laptop planner** (`planner/app.py`), on the ground. Upload over USB. | USB cable, before flight only |
+| Launch, fly, land | **ArduPilot on the Matek H743.** Arm, throw: `TAKEOFF` starts the motor after the throw, `AUTO` flies the survey, the `DO_LAND_START` sequence and `LAND` bring it down into the wind and it disarms itself. Every failsafe (GPS loss, battery, fence) jumps to that same landing sequence. | No |
 | See + recognise + photograph targets | **This software on the Raspberry Pi 3.** It only *reads* GPS/attitude from the H743 and watches the camera, then saves pictures to the SD card. | No |
-| Take over on return | **You, on the ExpressLRS radio**, by switching out of `AUTO`. | Only your normal manual RC |
 
 The companion computer **never commands the aircraft** and never transmits
 anything. If the Pi crashed mid-flight, the plane would still fly its mission
 and come home — you'd just lose that flight's photos. This separation is
 deliberate: it's what makes the system safe and link-free.
 
-> The project's existing 4G/WireGuard idea is a *separate, optional* convenience
-> for live telemetry. It is **not required** by anything here and is never used
-> by this software.
+**No RC means no manual takeover, ever.** What that requires (all in
+`ardupilot/gps_denied_failsafe.param`, checked by `tools/preflight.py`):
+`INITIAL_MODE=10` (boot into AUTO), `THR_FAILSAFE=0` and `ARMING_SKIPCHK=64`
+(no receiver to wait for),
+`ARMING_MIS_ITEMS=13` (it will not arm without TAKEOFF, DO_LAND_START and LAND
+in the mission), `TKOFF_THR_MINACC=15` + `TKOFF_THR_DELAY=3` (motor starts after
+the throw), `RTL_AUTOLAND=2` (RTL flies the landing sequence instead of
+circling forever), battery failsafes = land, `LAND_DISARMDELAY=10`.
+
+> The project's existing 4G/WireGuard idea (SIM7600E) is a *separate, optional*
+> way to WATCH the flight. It is **not required** by anything here and is never
+> used by this software — but with no RC it is the only way to see what the
+> aircraft is doing, and an authority may ask for it (see *Legal* in
+> FLIGHT_READY.md).
 
 ---
 
@@ -70,7 +88,8 @@ Everything maps onto parts already on your component list:
   gimbal. See *Camera* below.
 - **M10Q GPS / compass, airspeed, battery** — unchanged; the Pi just reads the
   resulting position/attitude estimate over MAVLink.
-- **ExpressLRS** — unchanged; your manual-control path on return.
+- **No RC receiver / no ExpressLRS** — none is fitted and none is needed.
+  The laptop (USB) is the only interface, on the ground.
 
 ### Camera — SIYI A2 mini
 
@@ -177,19 +196,28 @@ journalctl -u silm-recon -f
 
 ## A mission, end to end
 
-1. **Plan** the route in Mission Planner; upload waypoints to the H743. Pre-cache
-   an offline basemap for the area if you want map context
-   (`tools/download_tiles.py`, see *legal note* below).
-2. **Launch.** Power on; the Pi service starts and sits idle (it won't save
-   anything until the plane is armed, in `AUTO`, and above `min_alt_m`). Arm and
-   hand-launch.
-3. **Fly.** ArduPilot flies the route. The Pi watches the camera, recognises
+1. **Plan** on the laptop: `python planner/app.py`, draw launch, area and
+   landing (into the wind), check the messages, plug in the H743 by USB and
+   **Upload mission** (it reads it back to verify). Pre-cache an offline
+   basemap for the Pi if you want map context (`tools/download_tiles.py`, see
+   *legal note* below).
+2. **Preflight.** Power on; the Pi service starts and sits idle (it won't save
+   anything until the plane is armed, in `AUTO`, and above `min_alt_m`). Run
+   `tools/preflight.py` once per field day: it also downloads the mission from
+   the H743 and refuses one without TAKEOFF / DO_LAND_START / LAND.
+3. **Launch.** It boots into `AUTO` (`INITIAL_MODE=10`). Press **Arm for
+   launch** in the planner (USB; it re-checks the mission first), unplug, throw
+   firmly into the wind. The motor starts only after the throw
+   (`TKOFF_THR_MINACC`, `TKOFF_THR_DELAY`).
+4. **Fly.** ArduPilot flies the survey. The Pi watches the camera, recognises
    targets, geo-references them and saves pictures to the SD card. No link is
    used. The de-dup logic stops the same combine being saved dozens of times.
-4. **Return.** `RTL` or the last waypoint brings it home. Switch out of `AUTO`
-   on ExpressLRS and land under manual control — the recon loop simply stops
-   saving when it sees you've taken over.
-5. **Review.** Pull the SD card. Run `tools/make_geojson.py detections.ndjson`
+5. **Land.** After the last line the mission flies `DO_LAND_START` → final
+   approach → `LAND`: flare, belly landing, disarm after 10 s. A GPS loss,
+   low battery or fence breach jumps straight to the same landing sequence.
+   Nobody needs to (or can) take over; the recon loop stops saving below
+   `min_alt_m` on the approach.
+6. **Review.** Pull the SD card. Run `tools/make_geojson.py detections.ndjson`
    and drop the GeoJSON onto a map to see every target and its photo.
 
 ---
@@ -221,6 +249,11 @@ Everything lives in `config.yaml`:
   was trained for. The COCO baseline is generic; custom targets need custom data.
 - **Fire heuristic** will false-alarm on sunset-coloured or bright scenes; treat
   its hits as "look at this frame", not ground truth.
+- **Automatic landing** has no pilot to correct it. Pick a landing strip much
+  larger than you think (at least 50 × 200 m, nothing tall on the approach),
+  and plan into the wind. After a GPS loss the landing is flown on dead
+  reckoning and can be tens of metres off — the simulator test
+  (`tools/sitl_failsafe_test.py`) shows how far for your wind.
 
 ## Legal note on map imagery
 
@@ -231,5 +264,11 @@ offline plan, national ortho/WMS layers, or your own imagery). The project
 brief's "Google Maps data" is satisfied by any equivalent satellite/terrain
 basemap.
 
-Also check local UAV rules (in Estonia, EASA/Transpordiamet) for autonomous/BVLOS
-flight and for photographing people or property before operating.
+**Flight without an RC link is not allowed in the EASA "open" category**: the
+remote pilot must always be able to intervene. A fully automatic flight with no
+link needs the **"specific" category** — an operational authorisation from
+Transpordiamet (an SORA-based application, or a standard scenario if one fits).
+Expect them to ask how you keep the aircraft inside the area (geofence),
+how it ends every flight (automatic landing), and how you monitor it — the
+optional 4G link is the obvious answer to the last one. Also check the rules
+for photographing people or property before operating.

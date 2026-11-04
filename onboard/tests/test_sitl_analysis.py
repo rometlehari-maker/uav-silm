@@ -9,28 +9,35 @@ from sitl_failsafe_test import MODE_AUTO, MODE_RTL, analyse, dist_m, offset  # n
 HOME = (59.40, 24.70)
 
 
-def track(segments):
-    """segments: list of (duration_s, start_n, start_e, end_n, end_e, mode, est_err_m)."""
+def track(segments, landed=True):
+    """segments: list of (duration_s, start_n, start_e, end_n, end_e, mode, est_err_m[, landing])."""
     rows, t = [], 0.0
-    for dur, n0, e0, n1, e1, mode, err in segments:
+    for seg in segments:
+        dur, n0, e0, n1, e1, mode, err = seg[:7]
+        landing = seg[7] if len(seg) > 7 else False
         steps = int(dur / 0.5)
         for i in range(steps):
             f = i / steps
             la, lo = offset(*HOME, n0 + f * (n1 - n0), e0 + f * (e1 - e0))
             ela, elo = offset(la, lo, err, 0)
             rows.append({"t": t, "true_lat": la, "true_lon": lo, "est_lat": ela,
-                         "est_lon": elo, "mode": mode})
+                         "est_lon": elo, "mode": mode, "landing": landing, "armed": True,
+                         "alt": 100.0})
             t += 0.5
+    if landed:
+        rows[-1].update(armed=False, alt=0.3)
     return rows
 
 
 def good_flight():
+    # RTL_AUTOLAND=2: RTL hands over to the mission's DO_LAND_START landing sequence.
     return track([
-        (60, 0, 0, 700, 0, MODE_AUTO, 1),       # outbound
-        (6, 700, 0, 790, 0, MODE_AUTO, 5),      # GPS lost at t=60, still AUTO 6 s
-        (84, 790, 0, 100, 0, MODE_RTL, 40),     # RTL on dead reckoning, 40 m error
-        (20, 100, 0, 30, 0, MODE_RTL, 8),       # GPS back at t=150, reconverges
-        (70, 30, 0, 50, 40, MODE_RTL, 2),       # loiter at home
+        (60, 0, 0, 700, 0, MODE_AUTO, 1),             # survey
+        (6, 700, 0, 790, 0, MODE_AUTO, 5),            # GPS lost at t=60, still AUTO 6 s
+        (2, 790, 0, 780, 0, MODE_RTL, 30),            # RTL ...
+        (82, 780, 0, 100, 0, MODE_AUTO, 40, True),    # ... -> landing sequence, dead reckoning
+        (20, 100, 0, 30, 0, MODE_AUTO, 8, True),      # GPS back at t=150, reconverges
+        (30, 30, 0, -20, 0, MODE_AUTO, 2, True),      # final approach and touchdown
     ])
 
 
@@ -43,8 +50,8 @@ def test_good_flight_passes():
 
 def test_no_rtl_fails():
     rows = good_flight()
-    for row in rows:
-        row["mode"] = MODE_AUTO
+    for row in rows:                    # neither RTL nor a jump to the landing sequence
+        row["mode"], row["landing"] = MODE_AUTO, False
     r = analyse(rows, 60, 150, HOME)
     assert not r["checks"]["rtl_in_time"] and not r["passed"]
 
@@ -54,7 +61,7 @@ def test_flying_away_while_blind_fails():
                   (60, 1400, 0, 1400, 0, MODE_RTL, 3)])
     r = analyse(rows, 60, 150, HOME, fence_radius=1500)
     assert not r["checks"]["headed_home_while_blind"]
-    assert not r["checks"]["ended_near_home"]
+    assert not r["checks"]["landed_near_touchdown"]
 
 
 def test_fence_breach_fails():
@@ -76,3 +83,51 @@ def test_estimate_never_reconverging_fails():
 def test_geometry_helpers():
     la, lo = offset(*HOME, 300, 400)
     assert abs(dist_m(*HOME, la, lo) - 500) < 0.5
+
+
+def test_failsafe_detected_when_rtl_jumps_straight_to_landing_sequence():
+    rows = track([(60, 0, 0, 700, 0, MODE_AUTO, 1), (6, 700, 0, 790, 0, MODE_AUTO, 5),
+                  (84, 790, 0, 100, 0, MODE_AUTO, 40, True), (50, 100, 0, 0, 0, MODE_AUTO, 3, True)])
+    r = analyse(rows, 60, 150, HOME)
+    assert r["checks"]["rtl_in_time"] and r["rtl_after_s"] == 6.0
+
+
+def test_circling_without_landing_fails():
+    rows = track([(60, 0, 0, 700, 0, MODE_AUTO, 1), (90, 700, 0, 50, 0, MODE_RTL, 30),
+                  (60, 50, 0, 50, 40, MODE_RTL, 2)], landed=False)
+    r = analyse(rows, 60, 150, HOME)
+    assert not r["checks"]["landed"] and not r["passed"]
+
+
+def test_landing_far_from_planned_point_fails():
+    land = offset(*HOME, -400, 0)        # planned touchdown 400 m south; it lands at home
+    r = analyse(good_flight(), 60, 150, HOME, land=land, land_radius_m=150)
+    assert r["landed"] and not r["checks"]["landed_near_touchdown"]
+    assert r["touchdown_error_m"] > 350
+
+
+def test_built_in_mission_is_a_valid_no_rc_mission():
+    from types import SimpleNamespace
+
+    from sitl_failsafe_test import build_mission
+    from silm_recon import mavmission as mm
+    args = SimpleNamespace(mission=None, bearing=45, out_m=1200, alt=100, wind_dir=250, fence_m=1500)
+    items, land, start = build_mission(args, HOME)
+    assert mm.check_mission(items, 1500)[0] == []
+    assert items[1].command == mm.NAV_TAKEOFF and items[-1].command == mm.NAV_LAND
+    assert items[start].command == mm.DO_LAND_START
+    assert dist_m(*HOME, *land) < 1
+
+
+def test_mission_file_from_the_planner_is_accepted(tmp_path):
+    from types import SimpleNamespace
+
+    from sitl_failsafe_test import build_mission
+    from silm_recon import mavmission as mm
+    args = SimpleNamespace(mission=None, bearing=0, out_m=1000, alt=90, wind_dir=0, fence_m=1500)
+    items, _, _ = build_mission(args, HOME)
+    f = tmp_path / "m.waypoints"
+    f.write_text(mm.to_wpl(items))
+    args.mission = str(f)
+    items2, land, start = build_mission(args, HOME)
+    assert len(items2) == len(items) and items2[start].command == mm.DO_LAND_START

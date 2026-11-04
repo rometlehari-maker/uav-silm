@@ -154,7 +154,7 @@ class OpticalFlowAid:
     used as a backup reference; see the safety note at the top of this file.
     """
 
-    def __init__(self, cfg: dict, hfov_deg: float = 86.0,
+    def __init__(self, cfg: dict, hfov_deg: float = 160.0,
                  fx_over_width: float | None = None):
         self.enabled = bool(cfg.get("enabled", True))
         self.send_to_fc = bool(cfg.get("send_to_fc", False))
@@ -167,8 +167,9 @@ class OpticalFlowAid:
         self.min_dt = float(cfg.get("min_dt", 0.03))
         # Focal length as a fraction of image width (resolution independent).
         # From the geo-referencer's intrinsics when available, else from HFOV.
+        # (default: equidistant fisheye, like the A2 mini's 160 deg lens)
         self.fx_over_width = (fx_over_width if fx_over_width
-                              else 0.5 / math.tan(math.radians(hfov_deg) / 2.0))
+                              else 0.5 / math.radians(hfov_deg / 2.0))
         self._prev_gray = None
         self._prev_pts = None
         self._prev_t = 0.0

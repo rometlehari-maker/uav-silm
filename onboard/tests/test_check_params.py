@@ -93,3 +93,25 @@ def test_param_file_keeps_link_free_mission_settings():
     assert vals["FS_SHORT_ACTN"] == 0
     assert vals["ARSPD_USE"] == 1, "dead reckoning needs airspeed"
     assert vals["SCR_ENABLE"] == 1, "needed for silm_gps_loss.lua"
+
+
+def test_param_file_flies_without_any_rc_receiver():
+    """There is no RC receiver (no ExpressLRS): it must arm, hand-launch, fly,
+    land and disarm by itself, and every failsafe must end in a landing."""
+    vals = {}
+    for line in open(PARAMFILE):
+        line = line.split("#", 1)[0].strip()
+        if line:
+            name, val = line.split(",")[:2]
+            vals[name] = float(val)
+    assert vals["THR_FAILSAFE"] == 0, "no receiver: an RC failsafe would trigger at once"
+    assert int(vals["ARMING_SKIPCHK"]) & 64, "RC arming check must be skipped"
+    assert vals["ARMING_MIS_ITEMS"] == 13, "require TAKEOFF + DO_LAND_START + LAND"
+    assert vals["FS_GCS_ENABL"] == 0, "no ground station link either"
+    assert vals["RTL_AUTOLAND"] == 2, "RTL must fly the landing sequence, not circle"
+    assert vals["TKOFF_THR_MINACC"] > 0, "motor must wait for the throw"
+    assert vals["TKOFF_THR_DELAY"] >= 2, "pusher prop: keep hands clear"
+    assert vals["BATT_FS_LOW_ACT"] == 2 and vals["BATT_FS_CRT_ACT"] == 2, "battery failsafe -> land"
+    assert vals["LAND_DISARMDELAY"] > 0, "disarm after touchdown"
+    assert vals["FENCE_ACTION"] == 1, "fence breach -> RTL -> landing"
+    assert vals["INITIAL_MODE"] == 10, "boot into AUTO: no receiver to select a mode"

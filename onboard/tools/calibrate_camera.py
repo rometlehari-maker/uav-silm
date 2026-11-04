@@ -7,8 +7,8 @@ checkerboard and writes a block you paste into config.yaml under `georef:`.
 
 1. Print a checkerboard (e.g. 9x6 inner corners, 25 mm squares) and tape it to
    something flat and rigid.
-2. Take 15-30 photos with the AIRCRAFT CAMERA THROUGH THE SAME CAPTURE DONGLE
-   and at the same resolution you fly with. Cover the whole frame, especially
+2. Take 15-30 photos with the AIRCRAFT CAMERA, from its live stream at the
+   same resolution you fly with. Cover the whole frame, especially
    the corners and edges, and tilt the board at different angles.
 3. Run one of:
 

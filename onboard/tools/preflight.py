@@ -10,8 +10,12 @@ change:
 Each part is checked on the real hardware and reported PASS / WARN / FAIL:
   camera   stream opens; real resolution and frame rate
   gimbal   answers; pointed down; reports its angle
-  fc       heartbeat; position/attitude message rates; GPS fix; failsafe params;
-           the silm_gps_loss.lua script is loaded (its SLM_ params exist)
+  fc       heartbeat; position/attitude message rates; GPS fix; the no-RC
+           launch / landing / failsafe params; the silm_gps_loss.lua script is
+           loaded (its SLM_ params exist)
+  mission  the mission on the flight controller can be flown with no RC:
+           TAKEOFF first, DO_LAND_START landing sequence, ends in LAND, inside
+           the fence
   model    loads; labels match; MEASURED inference speed with the configured
            detection region / tiling, against the frame rate the mission needs
            (2 sightings while an object crosses the detection region)
@@ -160,7 +164,11 @@ def check_fc(cfg, timeout=20):
                 return msg.param_value
         return None
 
-    expect = {"FS_LONG_ACTN": 0, "ARSPD_USE": 1, "SCR_ENABLE": 1, "EK3_OPTIONS": 1}
+    # No RC receiver on this aircraft: these decide whether it can arm, launch
+    # and land on its own, and whether a failsafe ends in a landing.
+    expect = {"THR_FAILSAFE": 0, "FS_LONG_ACTN": 0, "FS_GCS_ENABL": 0, "ARSPD_USE": 1,
+              "SCR_ENABLE": 1, "EK3_OPTIONS": 1, "RTL_AUTOLAND": 2, "ARMING_MIS_ITEMS": 13,
+              "BATT_FS_LOW_ACT": 2, "BATT_FS_CRT_ACT": 2, "INITIAL_MODE": 10}
     for name, want in expect.items():
         v = param(name)
         if v is None:
@@ -168,10 +176,42 @@ def check_fc(cfg, timeout=20):
         else:
             report("fc", "PASS" if int(v) == want else "FAIL",
                    f"{name} = {v:g} (gps_denied_failsafe.param sets {want})")
+    v = param("ARMING_SKIPCHK")
+    if v is not None:
+        report("fc", "PASS" if int(v) & 64 else "FAIL",
+               f"ARMING_SKIPCHK = {v:g}: " + ("RC check skipped (no receiver)" if int(v) & 64 else
+                                              "RC bit 64 not set - it will refuse to arm without a receiver"))
+    v = param("TKOFF_THR_MINACC")
+    if v is not None:
+        report("fc", "PASS" if v > 0 else "FAIL",
+               f"TKOFF_THR_MINACC = {v:g}" + ("" if v > 0 else ": 0 means the motor starts on arming, "
+                                              "not on the throw - set 15"))
     v = param("SLM_ENABLE")
     report("fc", "PASS" if v == 1 else "FAIL",
            "silm_gps_loss.lua loaded (SLM_ENABLE=1)" if v == 1 else
            "silm_gps_loss.lua NOT loaded: copy it to APM/scripts on the FC's SD card, SCR_ENABLE=1, reboot twice")
+    check_onboard_mission(m, param("FENCE_RADIUS"), param("FENCE_ALT_MAX"))
+
+
+def check_onboard_mission(m, fence_radius=None, alt_max=None):
+    """Download the mission stored on the flight controller and check it can be
+    flown with no RC: TAKEOFF first, a DO_LAND_START landing sequence, ends in LAND."""
+    from silm_recon import mavmission as mm
+    try:
+        items = mm.download(m)
+    except Exception as exc:
+        report("mission", "FAIL", f"cannot download the mission: {exc}")
+        return
+    errors, warnings = mm.check_mission(items, fence_radius or None, alt_max or None)
+    n = len(items) - 1
+    for e in errors:
+        report("mission", "FAIL", e)
+    for w in warnings:
+        report("mission", "WARN", w)
+    if not errors:
+        land = next(it for it in items if it.command == mm.NAV_LAND)
+        report("mission", "PASS", f"{n} items, takeoff -> ... -> landing sequence -> LAND at "
+               f"{land.lat:.6f}, {land.lon:.6f}. Plan it in the laptop planner (planner/app.py)")
 
 
 def check_model(cfg, frame_size, alt_m, speed_mps):

@@ -27,7 +27,7 @@ def selftest(cfg: dict) -> int:
 
     Feeds frames from the configured camera (set camera.source: file to use a
     folder of test images) and prints detections. Good for verifying the model
-    and the AHD->USB capture path on the bench before a flight.
+    and the camera's Ethernet video path on the bench before a flight.
     """
     import math
 

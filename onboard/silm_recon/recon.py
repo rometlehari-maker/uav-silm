@@ -10,9 +10,11 @@ link-free onboard behaviour:
   3. While active, grab frames, run the object detector and the fire heuristic,
      keep only the configured target classes, geo-reference each hit, de-dup,
      and save a boxed JPEG + metadata to the SD card.
-  4. When the pilot takes over on ExpressLRS (mode leaves the active set) the
-     loop simply stops saving; nothing else changes, so manual control is
-     unaffected. All captures are already on the card for post-flight review.
+  4. When the aircraft leaves the active set (an RTL failsafe, or it descends
+     below the minimum altitude on the landing approach) the loop simply stops
+     saving. There is no RC link on this aircraft, so it never waits for a
+     pilot; the autopilot lands it and disarms. All captures are already on the
+     card for post-flight review.
 
 Nothing here ever commands the aircraft.
 """

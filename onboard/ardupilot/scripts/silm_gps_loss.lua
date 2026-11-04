@@ -5,13 +5,21 @@
     ArduPlane already dead-reckons on airspeed + wind when GPS is lost, but it
     has no built-in "GPS lost -> go home" action. In AUTO it keeps flying the
     mission outward on a dead-reckoned position whose error grows every second.
-    This script turns the aircraft for home as soon as GPS has been lost for
-    SLM_GPS_LOSS_S seconds, so it spends as little time as possible flying on a
-    drifting estimate and is as close to home as possible if GPS never returns.
+    This script switches to RTL as soon as GPS has been lost for
+    SLM_GPS_LOSS_S seconds. This aircraft has no RC link, so with
+    RTL_AUTOLAND=2 (gps_denied_failsafe.param) RTL means "fly the mission's
+    landing sequence (DO_LAND_START ... NAV_LAND) and land": it spends as
+    little time as possible on a drifting estimate and lands instead of
+    circling until the battery is empty.
 
   Behaviour:
-    * Only acts when armed, flying, and in AUTO (mode 10). It never overrides a
-      pilot: manual modes are left alone.
+    * Only acts when armed, flying, and in AUTO (mode 10). Other modes (set
+      from a ground station, if one is connected) are left alone.
+    * Never interrupts a landing: if the mission is already past a
+      DO_LAND_START item (or the vehicle reports it is landing), it does
+      nothing - RTL would restart the landing sequence from its beginning.
+    * Waits for an automatic takeoff to finish before acting, rather than
+      diving into the landing sequence from a few metres after launch.
     * GPS "bad" = primary GPS has no 3D fix, OR fewer than SLM_MIN_SATS
       satellites, OR HDOP above SLM_MAX_HDOP. Under real jamming the receiver
       flickers in and out of "lock" with junk satellites, so a plain fix check
@@ -22,10 +30,9 @@
     * After SLM_GPS_LOSS_S seconds of GPS being bad within the episode -> switch
       to RTL (mode 11) once per episode, and announce it (also written to the
       onboard log).
-    * If GPS comes back, it announces recovery but does NOT switch back to AUTO
-      automatically: after a GPS loss the safe default is to come home. The
-      pilot can re-enter AUTO.
-    * If the pilot changes mode after the script switched to RTL, the script
+    * If GPS comes back, it announces recovery but does NOT resume the survey:
+      after a GPS loss the safe default is to land.
+    * If a ground station changes the mode after the script acted, the script
       respects that and does not fight it.
 
   Install: copy to the SD card at APM/scripts/silm_gps_loss.lua, set
@@ -42,6 +49,7 @@
 local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
 local MODE_AUTO = 10
 local MODE_RTL = 11
+local CMD_DO_LAND_START = 189
 local GPS_OK_FIX_3D = 3
 local RUN_MS = 200
 
@@ -74,6 +82,18 @@ local function gps_good()
   if gps:status(inst) < GPS_OK_FIX_3D then return false end
   if gps:num_sats(inst) < SLM_MIN_SATS:get() then return false end
   return gps:get_hdop(inst) <= SLM_MAX_HDOP:get() * 100   -- hdop is x100
+end
+
+-- true if the mission is already inside a landing sequence (current nav
+-- item comes after a DO_LAND_START), or the vehicle reports it is landing
+local function in_landing_sequence()
+  if vehicle:is_landing() then return true end
+  local cur = mission:get_current_nav_index()
+  for i = 1, cur - 1 do
+    local item = mission:get_item(i)
+    if item and item:command() == CMD_DO_LAND_START then return true end
+  end
+  return false
 end
 
 local function end_episode()
@@ -127,16 +147,22 @@ local function update()
   bad_ms = bad_ms + dt_ms
 
   if (not acted) and bad_ms >= SLM_GPS_LOSS_S:get() * 1000 then
-    if vehicle:get_mode() == MODE_AUTO then
+    if vehicle:get_mode() == MODE_AUTO and vehicle:is_taking_off() then
+      -- let the takeoff climb finish; act on a later update
+      return update, RUN_MS
+    end
+    if vehicle:get_mode() == MODE_AUTO and in_landing_sequence() then
+      gcs:send_text(MAV_SEVERITY.WARNING, "SILM: GPS bad during landing - landing continues")
+    elseif vehicle:get_mode() == MODE_AUTO then
       if vehicle:set_mode(MODE_RTL) then
         gcs:send_text(MAV_SEVERITY.CRITICAL,
-          string.format("SILM: GPS bad %.0fs -> RTL on dead reckoning", bad_ms / 1000))
+          string.format("SILM: GPS bad %.0fs -> RTL/landing on dead reckoning", bad_ms / 1000))
       else
         gcs:send_text(MAV_SEVERITY.ERROR, "SILM: RTL mode change refused")
       end
     end
-    -- Mark handled even if we were not in AUTO, so we never override a pilot
-    -- who is flying manually, and never re-trigger in this episode.
+    -- Mark handled whatever happened, so a mode set from a ground station is
+    -- never overridden and nothing re-triggers in this episode.
     acted = true
   end
 
