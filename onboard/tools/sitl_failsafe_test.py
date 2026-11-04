@@ -331,7 +331,9 @@ def run(args) -> int:
         landing = s.mode() == MODE_AUTO and seq is not None and seq >= land_start
         armed = s.armed()
         flew = flew or ep[2] > 20
-        if now - last_log >= 0.2:
+        # Log every 0.2 s, and always on an arm/disarm change: the loop stops
+        # right after disarm, and grading reads the last row's armed state.
+        if now - last_log >= 0.2 or (rows and rows[-1]["armed"] != armed):
             rows.append({"t": round(now, 2), "phase": phase, "mode": s.mode(), "seq": seq,
                          "landing": landing, "armed": armed,
                          "true_lat": tp[0], "true_lon": tp[1], "est_lat": ep[0], "est_lon": ep[1],
