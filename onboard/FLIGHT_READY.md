@@ -44,6 +44,7 @@ onboard/
     scripts/silm_gps_loss.lua GPS-loss -> RTL script     <-- copy to the H743 SD card
   training/
     ADDING_OBJECTS.md         tutorial: add a new object and train on it
+    objects/TEMPLATE.md       object card to fill in per new object (deer.md = example)
     classes.yaml              the class list
     make_synthetic.py         synthetic bootstrap / practice dataset
     prelabel.py               draft labels with the current model
@@ -56,6 +57,7 @@ onboard/
     sitl_failsafe_test.py     fly + grade a GPS-loss/jamming test in the simulator
     calibrate_camera.py       measure the lens from checkerboard photos
     pixels_on_target.py       is an object big enough to detect at an altitude?
+    threshold_sweep.py        precision / recall per class at each threshold
     make_review.py            post-flight map page with every detection + photo
     eval_model.py             run a model over images (onboard code path)
     make_geojson.py           turn a flight log into a map layer

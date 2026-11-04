@@ -8,6 +8,13 @@ the current model, check that it learnt, and put the new model on the aircraft.
 This guide walks through that end to end. Every command below was run while
 writing it; the outputs shown are real.
 
+> **Keep an object card for each new object.** Copy
+> [`objects/TEMPLATE.md`](objects/TEMPLATE.md) to `objects/your_class.md` and
+> fill it in as you go: definition, the can-the-camera-see-it check, labelling
+> rules, data plan, pass/fail criteria decided before training, the commands,
+> and a results log. [`objects/deer.md`](objects/deer.md) is a filled-in
+> example with measured numbers.
+
 | Step | What you do | Tool |
 |---|---|---|
 | 0 | Practise the whole loop on synthetic data (10 minutes, no photos needed) | all of the below |
@@ -85,12 +92,17 @@ What happened when this guide was written:
                   deer         16         48      0.748      0.938       0.92       0.71
   ```
   The new class reached mAP50 0.92 and the old ones stayed at ~0.97.
-* **Export:** printed `NOTE: this model's classes differ from
-  training/classes.yaml` (expected here: the practice used a copy of the class
-  list) and wrote a 16-name labels file from the model.
+* **Export:** calibrated on the training data (`Exporting INT8 TFLite,
+  calibrating on .../merged/data.yaml`), printed `confidence check on 12
+  images: top score original 0.81, exported 0.84`, and `NOTE: this model's
+  classes differ from training/classes.yaml` (expected here: the practice used
+  a copy of the class list). The labels file has 16 names, from the model.
 * **Onboard check:** through the aircraft's own detector code, deer were found
-  in all 16 deer validation images (43 detections for 48 labelled deer), with
+  in all 16 deer validation images (47 detections for 48 labelled deer), with
   no other class reported.
+* **What it got wrong:** on 70 images with no deer it still reported 12 deer at
+  threshold 0.55; they were really combines and harvesters. How that was found
+  and what to do about it is in `objects/deer.md`, section 7.
 
 Synthetic shapes are much easier than real deer in grass: expect real numbers
 to be lower and to need far more data. The point of the practice run is that
@@ -351,17 +363,39 @@ In `runs/detect/farm_v2/` also open:
   falls means overfitting: more data, fewer epochs.
 
 The validation set comes from the same sources as the training data. The
-honest test is **a flight the model has never seen**:
+honest test is **a flight the model has never seen**. Label one flight fully
+and put it under a folder named `test` before merging
+(`to_label/test/flight_1120/`); it then lands in the merged dataset's `test`
+split, is never trained on, and can be scored exactly:
+
+```bash
+yolo val model=runs/detect/farm_v2/weights/best.pt \
+    data=datasets/merged/data.yaml split=test imgsz=320
+```
+
+Then choose each new class's threshold from measured precision and recall,
+running the exported model through the aircraft's own detector code:
 
 ```bash
 cd ..   # onboard/
-python3 tools/eval_model.py --model models/farm_v2.tflite \
-    --labels models/farm_v2_labels.txt --format yolo \
-    --images /path/to/a_new_flight/frames --out /tmp/check_v2 --score 0.3
+python3 tools/threshold_sweep.py --model models/farm_v2.tflite \
+    --labels models/farm_v2_labels.txt --data training/datasets/merged/data.yaml \
+    --split test --classes deer
 ```
 
-Look through `/tmp/check_v2/`. Note the score of right and wrong detections
-for the new class: that tells you its threshold for step 9.
+It prints precision, recall and false alarms at thresholds 0.25-0.75. Pick
+the threshold that gives the recall you need with false alarms you can accept
+(the worked example is in `objects/deer.md`, section 7). Finally, look at what
+it does on a flight without the object, to see the false alarms:
+
+```bash
+python3 tools/eval_model.py --model models/farm_v2.tflite \
+    --labels models/farm_v2_labels.txt --format yolo \
+    --images /path/to/a_flight_without_it/frames --out /tmp/check_v2 --score 0.55
+```
+
+Look through `/tmp/check_v2/`: every box of the new class there is a false
+alarm, and the boxes show what it mistakes for your object.
 
 ## 9. Export and put it on the aircraft
 
@@ -372,7 +406,15 @@ python3 export.py --weights runs/detect/farm_v2/weights/best.pt \
 
 This writes `models/farm_v2.tflite` and `models/farm_v2_labels.txt`. The labels
 come from the model itself, so they always match it, even if `classes.yaml`
-has changed since. Keep the previous model's files: use a new name per version
+has changed since.
+
+INT8 export measures the range of values inside the network on sample images,
+so they must look like the real data. `export.py` uses the dataset the model
+was trained on (found from the training run; override with `--data`). Then
+it compares the exported model's confidence with the original's and warns if
+quantization lowered it. Without the right calibration data, Ultralytics falls
+back to a few COCO street photos: when this guide was written, that pinned
+every detection's score at 0.50, which quietly breaks any threshold. Keep the previous model's files: use a new name per version
 so you can switch back by editing one line.
 
 Copy both files to the Pi (`onboard/models/`) and edit `config.yaml`:
@@ -424,9 +466,10 @@ fixes some:
 | Many false alarms of the new class | No look-alike images without it | Add background images; raise its `class_thresholds` |
 | Good validation score, poor in flight | Train and val too similar (frames from one flight in both); different altitude/season | Keep flights in subfolders; collect from your real flights |
 | `merge_datasets` stops listing names | A source uses a name not in `classes.yaml` | Add the class, `--alias`, or `--drop-unknown` |
-| `class index 3 but the source only declares 1 classes` | The `.txt` files and `classes.txt` don't belong together | Re-export from the labelling tool |
+| `class index 3 but its class list declares only 1 classes` | The `.txt` files and their `classes.txt` don't belong together | Re-export from the labelling tool |
 | Boxes in the preview are offset or the wrong size | Labels in pixels or as corners instead of YOLO's normalised centre/size | Export as YOLO format |
 | `[detector] WARNING: model has N classes...` on the Pi | Wrong labels file next to the model | Use the `_labels.txt` that `export.py` wrote with that model |
+| Every detection scores about 0.50; thresholds above 0.5 find nothing | INT8 export calibrated on the wrong images | Re-export with `export.py` (it calibrates on the training data); check its "confidence check" line |
 | Detected but never saved | Not in `targets`, below its threshold, or seen in only one frame | Add to `targets`; check `class_thresholds`; `confirm.frames` |
 
 ## Files used in this guide
@@ -439,7 +482,9 @@ fixes some:
 | `training/merge_datasets.py` | Combine datasets, remapping classes by name |
 | `training/check_dataset.py` | Find label problems; preview boxes |
 | `training/train.py` | Train or fine-tune |
-| `training/export.py` | Export `.tflite` + matching labels |
+| `training/export.py` | Export `.tflite` + matching labels, calibrated on the training data |
+| `tools/threshold_sweep.py` | Precision / recall per class at each threshold |
+| `training/objects/TEMPLATE.md` | Object card to fill in per new object (`deer.md` = example) |
 | `tools/eval_model.py` | Run a model through the onboard code on any photos |
 | `training/make_synthetic.py` | Practice data (step 0) |
 | `config.yaml` | `detector.*`, `targets`, `class_thresholds` on the aircraft |

@@ -38,6 +38,13 @@ def pixels(object_m, alt_m, fx, frame_w, imgsz, tiles=1):
     return px_frame, px_model
 
 
+def time_in_view(alt_m, fy, frame_h, speed_mps):
+    """(along-track ground footprint in m, seconds a point stays in view) for a
+    straight-down camera with the image top towards the nose."""
+    footprint = 2.0 * alt_m * (frame_h / 2.0) / fy
+    return footprint, footprint / speed_mps
+
+
 def max_altitude(object_m, fx, frame_w, imgsz, tiles=1, min_px=10.0):
     return object_m * fx * imgsz / (frame_w / tiles) / min_px
 
@@ -54,6 +61,10 @@ def main(argv=None) -> int:
     ap.add_argument("--imgsz", type=int, default=320, help="model input size")
     ap.add_argument("--tiles", type=int, default=1, help="tile grid side (detector.tile_grid), 1 = off")
     ap.add_argument("--min-px", type=float, default=10.0)
+    ap.add_argument("--frame-height", type=int, default=720)
+    ap.add_argument("--speed-mps", type=float, default=19.0, help="ground speed, m/s")
+    ap.add_argument("--fps", type=float, default=None,
+                    help="detection frames per second you expect (prints frames per object)")
     a = ap.parse_args(argv)
 
     calib, hfov = None, a.hfov_deg
@@ -75,6 +86,15 @@ def main(argv=None) -> int:
         print(f"{a.object_m} m object: {pf:.1f} px in the {a.frame_width}-px frame, "
               f"{pm:.1f} px at the {a.imgsz}-px model input{tiles_txt}")
     print(f"verdict: {verdict}")
+    fy = fx  # square pixels (calibrated fy is within a few % of fx)
+    foot, secs = time_in_view(a.alt_m, fy, a.frame_height, a.speed_mps)
+    line = (f"in view for ~{secs:.1f} s at {a.speed_mps:.0f} m/s "
+            f"({foot:.0f} m of ground along track)")
+    if a.fps:
+        line += f": ~{secs * a.fps:.1f} detection frames at {a.fps:g} fps"
+        if secs * a.fps < 2:
+            line += " - fewer than 2, so multi-frame confirmation (confirm.frames: 2) will miss it"
+    print(line)
     if pm < a.min_px:
         print("\nto reach ~%.0f px at the model input:" % a.min_px)
         opts = []

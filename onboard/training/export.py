@@ -53,6 +53,58 @@ def check_against_classes_yaml(names) -> None:
         print("  The labels file is written from the MODEL (correct for this model).")
 
 
+def find_training_data(weights: str, model) -> str | None:
+    """The data.yaml the weights were trained on: from the training run's
+    args.yaml (runs/detect/NAME/args.yaml), else from the checkpoint."""
+    run_dir = os.path.dirname(os.path.dirname(os.path.abspath(weights)))
+    cand = None
+    args_yaml = os.path.join(run_dir, "args.yaml")
+    if os.path.exists(args_yaml):
+        cand = (yaml.safe_load(open(args_yaml)) or {}).get("data")
+    if not cand:
+        cand = (getattr(model, "ckpt", None) or {}).get("train_args", {}).get("data")
+    return cand if cand and os.path.exists(cand) else None
+
+
+def confidence_check(model, tflite_path, labels_path, data_yaml, imgsz, n=12) -> None:
+    """Compare the exported model's confidence with the original's on a few
+    images. INT8 export with poor calibration data squashes the scores (e.g.
+    every detection at ~0.5), which silently breaks thresholds."""
+    import statistics
+    import sys
+    try:
+        import cv2
+        sys.path.insert(0, os.path.join(HERE, ".."))
+        from check_dataset import split_images
+        from silm_recon.detector import ObjectDetector
+        _, splits = split_images(data_yaml)
+        imgs = (splits.get("val") or splits.get("train") or [])[:n]
+        det = ObjectDetector(tflite_path, labels_path, 0.05, fmt="yolo")
+    except Exception as exc:  # the check is advisory
+        print(f"(confidence check skipped: {exc})")
+        return
+    ratios, pt_max, tf_max = [], [], []
+    for p in imgs:
+        r = model.predict(p, imgsz=imgsz, conf=0.05, verbose=False)[0]
+        a = max(r.boxes.conf.tolist(), default=0.0)
+        b = max((d.score for d in det.detect(cv2.imread(p))), default=0.0)
+        if a >= 0.3:
+            ratios.append(b / a)
+            pt_max.append(a)
+            tf_max.append(b)
+    if not ratios:
+        print("(confidence check: no confident detections on the sample images)")
+        return
+    med = statistics.median(ratios)
+    print(f"confidence check on {len(ratios)} images: top score original "
+          f"{statistics.median(pt_max):.2f}, exported {statistics.median(tf_max):.2f} "
+          f"(ratio {med:.2f})")
+    if med < 0.85:
+        print("WARNING: the exported model is much less confident than the original. "
+              "Calibration data probably doesn't match the model (check --data), or INT8 "
+              "quantization hurts this model. Thresholds tuned on the original won't transfer.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--weights", required=True)
@@ -60,15 +112,26 @@ def main() -> int:
     ap.add_argument("--edgetpu", action="store_true")
     ap.add_argument("--out", default=os.path.join(HERE, "..", "models"))
     ap.add_argument("--model-name", default="silm_farm")
+    ap.add_argument("--data", default=None,
+                    help="data.yaml for INT8 calibration (default: the one the weights were "
+                         "trained on). Must contain images like those the model will see.")
     args = ap.parse_args()
 
     from ultralytics import YOLO
 
     model = YOLO(args.weights)
-    # INT8 TFLite needs a representative dataset; Ultralytics uses the data.yaml
-    # recorded in the weights. fraction keeps calibration quick.
-    print("Exporting INT8 TFLite ...")
-    model.export(format="tflite", int8=True, imgsz=args.imgsz)
+    # INT8 quantization measures the range of every layer's values on sample
+    # images. If Ultralytics isn't given data it silently falls back to a few
+    # COCO street photos, on which farm classes never fire, and the class
+    # scores get clipped (we saw every detection pinned at 0.50). So always
+    # calibrate on the model's own training data.
+    data = args.data or find_training_data(args.weights, model)
+    if not data or not os.path.exists(data):
+        print("ERROR: can't find the training data.yaml for INT8 calibration. "
+              "Pass --data path/to/data.yaml (the dataset the model was trained on).")
+        return 2
+    print(f"Exporting INT8 TFLite, calibrating on {data} ...")
+    model.export(format="tflite", int8=True, imgsz=args.imgsz, data=data)
 
     weights_dir = os.path.dirname(os.path.abspath(args.weights))
     stem = os.path.splitext(os.path.basename(args.weights))[0]
@@ -96,13 +159,14 @@ def main() -> int:
     labels = os.path.join(os.path.abspath(args.out), args.model_name + "_labels.txt")
     write_labels(labels, model.names)
     check_against_classes_yaml(model.names)
+    confidence_check(model, dst, labels, data, args.imgsz)
     print(f"\nCPU model  -> {dst}")
     print(f"labels     -> {labels}")
 
     if args.edgetpu:
         print("\nExporting Edge-TPU model ...")
         try:
-            model.export(format="edgetpu", imgsz=args.imgsz)
+            model.export(format="edgetpu", imgsz=args.imgsz, data=data)
             etpu = []
             for d in search_dirs:
                 if os.path.isdir(d):

@@ -3,7 +3,9 @@
 > **Adding a new object (e.g. deer, excavators, irrigation pivots)?** Follow
 > [`ADDING_OBJECTS.md`](ADDING_OBJECTS.md): a step-by-step tutorial covering
 > whether the camera can see it, labelling, merging datasets, retraining,
-> checking the results and deploying, with a 10-minute practice run.
+> checking the results and deploying, with a 10-minute practice run. Keep an
+> object card per object: [`objects/TEMPLATE.md`](objects/TEMPLATE.md)
+> (filled-in example: [`objects/deer.md`](objects/deer.md)).
 
 This folder trains the object detector that runs on the aircraft. The pipeline
 is: **get labelled data → `train.py` → `export.py` → drop the `.tflite` into

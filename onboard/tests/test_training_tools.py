@@ -286,3 +286,68 @@ def test_pixels_on_target_numbers_and_verdicts():
     assert pot.focal_px(1280, calibration=cal) == pytest.approx(1000 * 1280 / 1920)
     assert pot.main(["--object-m", "3.5", "--alt-m", "60", "--tiles", "2"]) == 0   # combine: ok
     assert pot.main(["--object-m", "0.5", "--alt-m", "100"]) == 1                  # deer: no
+
+
+def test_merge_per_flight_class_lists_and_test_folder(tmp_path, classes):
+    """Each flight exported separately with its own classes.txt in a different
+    order; one fully labelled flight held out under test/."""
+    src = tmp_path / "labelled"
+    flat_folder(src / "flight_a", ["deer", "tractor"], {"a.jpg": ["0 .5 .5 .1 .1", "1 .2 .2 .1 .1"]})
+    flat_folder(src / "flight_b", ["tractor", "deer"], {"b.jpg": ["0 .5 .5 .1 .1", "1 .2 .2 .1 .1"]})
+    flat_folder(src / "test" / "flight_c", ["deer"], {"c.jpg": ["0 .5 .5 .1 .1"]})
+    out = tmp_path / "m"
+    assert merge_datasets.main([str(src), "--out", str(out), "--classes", str(classes),
+                                "--val-frac", "0"]) == 0
+    tr = read_rows(out, "train")
+    assert [r[0] for r in tr["labelled__flight_a__a.txt"]] == ["3", "0"]   # deer, tractor
+    assert [r[0] for r in tr["labelled__flight_b__b.txt"]] == ["0", "3"]   # tractor, deer
+    assert [r[0] for r in read_rows(out, "test")["labelled__test__flight_c__c.txt"]] == ["3"]
+
+
+def test_merge_errors_when_labels_have_no_class_list(tmp_path, classes):
+    d = tmp_path / "nolist"
+    write_img(d / "x.jpg")
+    (d / "x.txt").write_text("0 .5 .5 .1 .1\n")
+    with pytest.raises(SystemExit):
+        merge_datasets.main([str(d), "--out", str(tmp_path / "m"), "--classes", str(classes)])
+
+
+def test_time_in_view():
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+    import pixels_on_target as pot
+    fx = pot.focal_px(1280, 86.0)
+    foot, secs = pot.time_in_view(100.0, fx, 720, 19.0)
+    assert foot == pytest.approx(2 * 100 * 360 / fx) and secs == pytest.approx(foot / 19.0)
+
+
+# --------------------------------------------------------- threshold sweep --
+
+def test_threshold_sweep_precision_recall():
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+    from threshold_sweep import sweep
+    gts = {"a": [("deer", None, (0.1, 0.1, 0.2, 0.2)), ("deer", None, (0.5, 0.5, 0.6, 0.6))],
+           "b": []}
+    dets = {"a": [("deer", 0.9, (0.1, 0.1, 0.2, 0.2)),      # correct
+                  ("deer", 0.4, (0.5, 0.5, 0.6, 0.6)),      # correct, low score
+                  ("deer", 0.8, (0.11, 0.1, 0.21, 0.2))],   # duplicate of the first
+            "b": [("deer", 0.6, (0.3, 0.3, 0.4, 0.4))]}     # false alarm
+    r = sweep(dets, gts, [0.3, 0.5, 0.95])["deer"]
+    assert (r[0.3]["tp"], r[0.3]["fp"], r[0.3]["fn"]) == (2, 2, 0)
+    assert r[0.3]["precision"] == 0.5 and r[0.3]["recall"] == 1.0
+    assert (r[0.5]["tp"], r[0.5]["fp"], r[0.5]["fn"]) == (1, 2, 1)
+    assert r[0.95]["precision"] is None and r[0.95]["recall"] == 0.0
+    assert r[0.3]["fp_per_img"] == 1.0
+
+
+def test_export_finds_training_data_from_run_args(tmp_path):
+    import export
+    run = tmp_path / "runs" / "detect" / "farm_v2"
+    (run / "weights").mkdir(parents=True)
+    data = tmp_path / "data.yaml"
+    data.write_text("names: {0: a}\n")
+    (run / "args.yaml").write_text(yaml.safe_dump({"data": str(data), "imgsz": 320}))
+    w = run / "weights" / "best.pt"
+    w.write_text("")
+    assert export.find_training_data(str(w), None) == str(data)
+    (run / "args.yaml").write_text(yaml.safe_dump({"data": str(tmp_path / "gone.yaml")}))
+    assert export.find_training_data(str(w), None) is None

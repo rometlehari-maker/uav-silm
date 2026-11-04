@@ -15,7 +15,8 @@ Accepted sources (any mix):
   * a YOLO dataset folder (or its data.yaml): images/{train,val} + labels/...,
     or Roboflow-style {train,valid,test}/images + .../labels
   * a "flat" labelling-tool folder: images with a .txt beside each and a
-    classes.txt (subfolders allowed - see splitting below)
+    classes.txt. Subfolders are fine (see splitting below), each may have its
+    own classes.txt: an image uses the nearest one above it.
 
 Class names are matched case-insensitively, with spaces and hyphens treated as
 underscores ("Combine-Harvester" == "combine_harvester"). Names that still
@@ -24,7 +25,9 @@ don't match stop the merge and are listed, so nothing is silently mislabelled:
   --drop-unknown                        drop boxes of unmatched classes
                                         (their images become background)
 
-Splitting: images in a source's train/val/test folders keep that split.
+Splitting: images in a source's train/val/test folders keep that split, so to
+hold a fully labelled flight out as a TEST set, put it under a folder named
+`test` (e.g. to_label/test/flight_1120/).
 Images with no split folder are assigned to val by --val-frac, per SUBFOLDER:
 put each flight's frames in its own subfolder so a whole flight lands in train
 or val. Consecutive frames from one flight are nearly identical; splitting them
@@ -69,32 +72,49 @@ def label_path_for(img: str) -> str:
     return os.path.join(os.path.dirname(img), stem)
 
 
-def source_names(root: str, yaml_path: str | None) -> list[str]:
-    if yaml_path and os.path.exists(yaml_path):
-        with open(yaml_path) as fh:
-            d = yaml.safe_load(fh) or {}
-        names = d.get("names")
-        if isinstance(names, dict):
-            return [names[i] for i in sorted(names)]
-        if isinstance(names, list):
-            return names
-    ct = os.path.join(root, "classes.txt")
-    if os.path.exists(ct):
-        return [ln.strip() for ln in open(ct) if ln.strip()]
-    raise SystemExit(f"{root}: no data.yaml with names and no classes.txt - "
-                     "can't tell which class each label index means")
+def yaml_names(yaml_path: str | None):
+    if not (yaml_path and os.path.exists(yaml_path)):
+        return None
+    with open(yaml_path) as fh:
+        d = yaml.safe_load(fh) or {}
+    names = d.get("names")
+    if isinstance(names, dict):
+        return tuple(names[i] for i in sorted(names))
+    if isinstance(names, list):
+        return tuple(names)
+    return None
 
 
 def discover(src: str):
-    """Return (root, names, items); items = (img, label_or_None, split_or_None, group)."""
+    """Return (root, items); items = (img, label_or_None, split_or_None, group, names).
+
+    `names` is the class list that image's label indices refer to: the
+    classes.txt in the image's folder or the nearest folder above it (labelling
+    tools often export each flight with its own), otherwise the source's
+    data.yaml."""
     if os.path.isfile(src):
         root, yaml_path = os.path.dirname(os.path.abspath(src)), src
     else:
         root = os.path.abspath(src)
         yaml_path = next((os.path.join(root, f) for f in ("data.yaml", "dataset.yaml")
                           if os.path.exists(os.path.join(root, f))), None)
-    names = source_names(root, yaml_path)
-    items = []
+    root_names = yaml_names(yaml_path)
+    cache: dict[str, tuple | None] = {}
+
+    def names_for(d: str):
+        if d in cache:
+            return cache[d]
+        ct = os.path.join(d, "classes.txt")
+        if os.path.exists(ct):
+            res = tuple(ln.strip() for ln in open(ct) if ln.strip())
+        elif os.path.normpath(d) == os.path.normpath(root) or os.path.dirname(d) == d:
+            res = root_names
+        else:
+            res = names_for(os.path.dirname(d))
+        cache[d] = res
+        return res
+
+    items, missing = [], set()
     for dirpath, dirnames, files in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d != "runs")
         for f in sorted(files):
@@ -105,9 +125,16 @@ def discover(src: str):
             split = next((SPLIT_WORDS[p.lower()] for p in rel_parts[:-1]
                           if p.lower() in SPLIT_WORDS), None)
             lbl = label_path_for(img)
+            lbl = lbl if os.path.exists(lbl) else None
+            names = names_for(dirpath)
+            if lbl and names is None:
+                missing.add(os.path.relpath(dirpath, root))
             group = os.path.dirname(os.path.relpath(img, root)) or f  # subfolder, else per image
-            items.append((img, lbl if os.path.exists(lbl) else None, split, group))
-    return root, names, items
+            items.append((img, lbl, split, group, names))
+    if missing:
+        raise SystemExit(f"{root}: no classes.txt or data.yaml names for labels in "
+                         f"{sorted(missing)} - can't tell which class each label index means")
+    return root, items
 
 
 def parse_label(path: str):
@@ -172,20 +199,26 @@ def main(argv=None) -> int:
     sources, unknown = [], defaultdict(set)
     used_keys: set[str] = set()
     for src in args.sources:
-        root, names, items = discover(src)
+        root, items = discover(src)
         key = os.path.basename(root.rstrip(os.sep)) or "src"
         base, k = key, 2
         while key in used_keys:
             key, k = f"{base}{k}", k + 1
         used_keys.add(key)
-        mapping = {}
-        for i, n in enumerate(names):
-            t = aliases.get(norm(n), tindex.get(norm(n)))
-            mapping[i] = t
-            if t is None:
-                unknown[n].add(key)
-        sources.append((key, root, names, items, mapping))
-        print(f"source {key}: {len(items)} images, classes {names}")
+        mappings = {}  # one mapping per distinct class list in this source
+        for names in {it[4] for it in items if it[4] is not None}:
+            mapping = {}
+            for i, n in enumerate(names):
+                t = aliases.get(norm(n), tindex.get(norm(n)))
+                mapping[i] = t
+                if t is None:
+                    unknown[n].add(key)
+            mappings[names] = mapping
+        sources.append((key, root, items, mappings))
+        lists = sorted(mappings, key=len)
+        desc = (f"classes {list(lists[0])}" if len(lists) == 1 else
+                f"{len(lists)} class lists: " + "; ".join(str(list(n)) for n in lists))
+        print(f"source {key}: {len(items)} images, {desc if lists else 'no labels'}")
 
     if unknown and not args.drop_unknown:
         print("\nThese source class names don't match training/classes.yaml:")
@@ -200,16 +233,17 @@ def main(argv=None) -> int:
     n_imgs = defaultdict(int)
     n_bg = dropped = 0
     errors = []
-    for key, root, names, items, mapping in sources:
-        for img, lbl, split, group in items:
+    for key, root, items, mappings in sources:
+        for img, lbl, split, group, names in items:
             split = split or ("val" if in_val(args.seed, key, group, args.val_frac) else "train")
             rows = []
+            mapping = mappings.get(names, {})
             if lbl:
                 try:
                     for c, x, y, w, h in parse_label(lbl):
                         if c not in mapping:
-                            raise ValueError(f"{lbl}: class index {c} but the source only "
-                                             f"declares {len(names)} classes")
+                            raise ValueError(f"{lbl}: class index {c} but its class list "
+                                             f"declares only {len(names)} classes")
                         t = mapping[c]
                         if t is None:
                             dropped += 1
