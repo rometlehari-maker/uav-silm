@@ -16,6 +16,7 @@ SCRIPT = os.path.join(os.path.dirname(__file__), "..", "ardupilot", "scripts", "
 
 MOCKS = r"""
 sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={},
+       src_set=0, src_changes={},
        taking_off=false, landing=false, nav_index=3, mission={16, 22, 16, 16, 16, 189, 16, 21}}
 params = {}
 
@@ -48,6 +49,9 @@ function mission:get_item(i)
   if cmd == nil then return nil end
   return {command = function(self) return cmd end}
 end
+
+ahrs = {}
+function ahrs:set_posvelyaw_source_set(i) sim.src_set = i; table.insert(sim.src_changes, i) end
 
 gcs = {}
 function gcs:send_text(sev, txt) table.insert(sim.msgs, txt) end
@@ -96,6 +100,9 @@ class Sim:
     def msgs(self):
         return list(self.s.msgs.values())
 
+    def src_changes(self):
+        return list(self.s.src_changes.values())
+
 
 def test_compiles_and_creates_params():
     sim = Sim()
@@ -104,6 +111,7 @@ def test_compiles_and_creates_params():
     assert sim.g.params["SLM_GPS_OK_S"] == 10
     assert sim.g.params["SLM_MIN_SATS"] == 6
     assert sim.g.params["SLM_MAX_HDOP"] == 2.5
+    assert sim.g.params["SLM_SRC_SW"] == 1
     assert any("loaded" in m for m in sim.msgs())
 
 
@@ -271,3 +279,58 @@ def test_survey_leg_before_landing_start_still_triggers():
     sim.s.gps_status = 1
     sim.run_for(6)
     assert sim.mode_changes() == [11]
+
+
+# ---- EKF source-set switching (stop fusing a jammed receiver) -------------
+
+def test_ekf_stops_using_gps_at_once_and_resumes_after_recovery():
+    sim = Sim()
+    sim.run_for(2)
+    assert sim.src_changes() == []           # healthy: never touched
+    sim.s.gps_status = 1
+    sim.run_for(0.5)
+    assert sim.s.src_set == 1                 # set 2 (no GPS) from the first bad sample
+    sim.s.gps_status = 3
+    sim.run_for(5)
+    assert sim.s.src_set == 1                 # still in the episode (< SLM_GPS_OK_S)
+    sim.run_for(6)
+    assert sim.s.src_set == 0                 # GPS good 10 s: back to set 1
+    assert sim.src_changes() == [1, 0]
+
+
+def test_flickering_lock_does_not_toggle_sources():
+    sim = Sim()
+    for _ in range(15):
+        sim.s.gps_status = 1
+        sim.run_for(0.6)
+        sim.s.gps_status = 3
+        sim.run_for(0.4)
+    assert sim.src_changes() == [1]           # switched once, stays on no-GPS
+
+
+def test_sources_restored_after_landing_while_gps_bad():
+    sim = Sim()
+    sim.s.gps_status = 1
+    sim.run_for(6)
+    sim.s.flying = False
+    sim.s.armed = False
+    sim.run_for(1)
+    assert sim.s.src_set == 0
+
+
+def test_source_switch_can_be_disabled():
+    sim = Sim()
+    sim.g.params["SLM_SRC_SW"] = 0
+    sim.s.gps_status = 1
+    sim.run_for(10)
+    assert sim.src_changes() == []
+    assert sim.mode_changes() == [11]         # the RTL failsafe still works
+
+
+def test_disabling_script_mid_episode_restores_sources():
+    sim = Sim()
+    sim.s.gps_status = 1
+    sim.run_for(2)
+    sim.g.params["SLM_ENABLE"] = 0
+    sim.run_for(2)
+    assert sim.s.src_set == 0

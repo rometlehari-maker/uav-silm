@@ -115,3 +115,21 @@ def test_param_file_flies_without_any_rc_receiver():
     assert vals["LAND_DISARMDELAY"] > 0, "disarm after touchdown"
     assert vals["FENCE_ACTION"] == 1, "fence breach -> RTL -> landing"
     assert vals["INITIAL_MODE"] == 10, "boot into AUTO: no receiver to select a mode"
+
+
+def test_param_file_never_navigates_on_a_jammed_gps():
+    """GPS loss: no DCM fallback (DCM steers on the raw GPS position) and an
+    EKF source set 2 without GPS for silm_gps_loss.lua to switch to."""
+    vals = {}
+    for line in open(PARAMFILE):
+        line = line.split("#", 1)[0].strip()
+        if line:
+            name, val = line.split(",")[:2]
+            assert name not in vals, f"{name} set twice"
+            vals[name] = float(val)
+    assert int(vals["AHRS_OPTIONS"]) & 1, "DisableDCMFallbackFW"
+    assert vals["EK3_SRC2_POSXY"] == 0, "set 2: no GPS position"
+    assert vals["EK3_SRC2_VELXY"] in (0, 6), "set 2: no GPS velocity (6 = optional Pi flow)"
+    assert vals["EK3_SRC2_VELZ"] == 0, "set 2: no GPS vertical velocity"
+    assert vals["EK3_SRC2_POSZ"] == 1, "set 2: baro height"
+    assert vals["EK3_SRC2_YAW"] == 1, "set 2: compass yaw (default NONE would lose heading)"

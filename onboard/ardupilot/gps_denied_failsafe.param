@@ -107,6 +107,25 @@ EK3_OPTIONS,1
 # Full GPS quality check set (nsats, HDoP, speed/pos/yaw error, drift).
 EK3_GPS_CHECK,31
 
+# No DCM fallback in forward flight. When the EKF rejects GPS but the receiver
+# still reports a (jammed, flickering) 3D fix, the AHRS would otherwise switch
+# to DCM, which navigates on the RAW GPS position - i.e. straight to wherever
+# the jammer says. In SITL that flew the aircraft out of the fence.
+AHRS_OPTIONS,1
+
+# EKF source set 2 = "no GPS". silm_gps_loss.lua switches the EKF to it for
+# the whole GPS-loss episode (from the first bad sample) and back to set 1
+# once GPS has been good for SLM_GPS_OK_S. Without this, the EKF kept fusing
+# the jammed receiver's vertical velocity; in SITL that made the landing flare
+# fire 20-90 m up and the aircraft touch down hundreds of metres short.
+# Height stays on the barometer, yaw on the compass. (Set 1 = ArduPilot
+# defaults: GPS position/velocity, baro height, compass yaw.)
+EK3_SRC2_POSXY,0
+EK3_SRC2_VELXY,0
+EK3_SRC2_POSZ,1
+EK3_SRC2_VELZ,0
+EK3_SRC2_YAW,1
+
 # --- Scripting: runs silm_gps_loss.lua on the flight controller -------------
 SCR_ENABLE,1
 
@@ -128,4 +147,7 @@ FENCE_MARGIN,10
 # --- Optional, OFF by default: optical-flow velocity from the Pi ------------
 # Only after the bench check in FLIGHT_READY.md B6, and only if you understand
 # EKF source sets. Flight safety must never depend on the Pi.
+# Source set 2 is the GPS-loss set above (silm_gps_loss.lua switches to it), so
+# enabling this means CHANGING the EK3_SRC2_VELXY,0 line above to 6 (don't add
+# a second line) - then re-run the SITL tests.
 # EK3_SRC2_VELXY,6

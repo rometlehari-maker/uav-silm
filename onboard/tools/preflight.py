@@ -168,7 +168,11 @@ def check_fc(cfg, timeout=20):
     # and land on its own, and whether a failsafe ends in a landing.
     expect = {"THR_FAILSAFE": 0, "FS_LONG_ACTN": 0, "FS_GCS_ENABL": 0, "ARSPD_USE": 1,
               "SCR_ENABLE": 1, "EK3_OPTIONS": 1, "RTL_AUTOLAND": 2, "ARMING_MIS_ITEMS": 13,
-              "BATT_FS_LOW_ACT": 2, "BATT_FS_CRT_ACT": 2, "INITIAL_MODE": 10}
+              "BATT_FS_LOW_ACT": 2, "BATT_FS_CRT_ACT": 2, "INITIAL_MODE": 10,
+              # GPS-loss source set (silm_gps_loss.lua switches to it) and no
+              # DCM fallback: without these a jammed GPS steers the aircraft.
+              "AHRS_OPTIONS": 1, "EK3_SRC2_POSXY": 0, "EK3_SRC2_POSZ": 1,
+              "EK3_SRC2_VELZ": 0, "EK3_SRC2_YAW": 1}
     for name, want in expect.items():
         v = param(name)
         if v is None:

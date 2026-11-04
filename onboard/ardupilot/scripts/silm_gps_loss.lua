@@ -30,6 +30,15 @@
     * After SLM_GPS_LOSS_S seconds of GPS being bad within the episode -> switch
       to RTL (mode 11) once per episode, and announce it (also written to the
       onboard log).
+    * While a loss episode lasts, the EKF is switched to source set 2
+      (EK3_SRC2_*: no GPS position/velocity, baro height, compass yaw) so it
+      dead-reckons on airspeed instead of fusing a jammed receiver's fake
+      positions and vertical velocity; it is switched back to source set 1
+      when the episode ends (GPS good for SLM_GPS_OK_S, or landed). Under
+      jamming the receiver still reports a flickering "3D fix", and fusing
+      that corrupted the height rate enough to trigger the landing flare
+      tens of metres up (SITL). Needs AHRS_OPTIONS=1 so the AHRS doesn't fall
+      back to DCM, which navigates on raw GPS. SLM_SRC_SW=0 disables this.
     * If GPS comes back, it announces recovery but does NOT resume the survey:
       after a GPS loss the safe default is to land.
     * If a ground station changes the mode after the script acted, the script
@@ -44,6 +53,7 @@
     SLM_GPS_OK_S    seconds of continuously good GPS that end an episode (default 10)
     SLM_MIN_SATS    minimum satellites for GPS to count as good (default 6)
     SLM_MAX_HDOP    maximum HDOP for GPS to count as good (default 2.5)
+    SLM_SRC_SW      1 = use EKF source set 2 (no GPS) during an episode (default 1)
 --]]
 
 local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7}
@@ -70,6 +80,23 @@ local SLM_GPS_LOSS_S = bind_add_param("GPS_LOSS_S", 2, 5)
 local SLM_GPS_OK_S   = bind_add_param("GPS_OK_S", 3, 10)
 local SLM_MIN_SATS   = bind_add_param("MIN_SATS", 4, 6)
 local SLM_MAX_HDOP   = bind_add_param("MAX_HDOP", 5, 2.5)
+local SLM_SRC_SW     = bind_add_param("SRC_SW", 6, 1)
+
+local SRC_SET_GPS = 0         -- EK3_SRC1_*: normal, with GPS
+local SRC_SET_NO_GPS = 1      -- EK3_SRC2_*: no GPS (dead reckoning)
+local on_no_gps_src = false   -- we switched the EKF to SRC_SET_NO_GPS
+
+local function use_no_gps_sources(want)
+  if want and SLM_SRC_SW:get() ~= 1 then want = false end
+  if want == on_no_gps_src then return end
+  ahrs:set_posvelyaw_source_set(want and SRC_SET_NO_GPS or SRC_SET_GPS)
+  on_no_gps_src = want
+  if want then
+    gcs:send_text(MAV_SEVERITY.WARNING, "SILM: EKF ignoring GPS (source set 2)")
+  else
+    gcs:send_text(MAV_SEVERITY.NOTICE, "SILM: EKF using GPS again (source set 1)")
+  end
+end
 
 local in_episode = false      -- inside a GPS-loss episode
 local bad_ms = 0              -- accumulated bad-GPS time in this episode (ms)
@@ -97,6 +124,7 @@ local function in_landing_sequence()
 end
 
 local function end_episode()
+  use_no_gps_sources(false)
   in_episode = false
   bad_ms = 0
   good_since_ms = nil
@@ -126,6 +154,7 @@ local function update()
     bad_ms = 0
     good_since_ms = nil
     gcs:send_text(MAV_SEVERITY.WARNING, "SILM: GPS lost/degraded, dead reckoning")
+    use_no_gps_sources(true)
   end
 
   -- inside an episode
