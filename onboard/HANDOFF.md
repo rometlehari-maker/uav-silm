@@ -74,6 +74,36 @@ User's answers to questions asked:
 - Earlier 8-scenario SITL matrix (before the GUI work): 7/8 pass; FAIL =
   wind 10 m/s, blind touchdown 160 m long (limit 150).
 
+## Progress log (newest last - updated as work goes on)
+
+- **Environment:** a personal cloud environment **`uav-silm`** now exists for
+  this repo: its setup script installs the Python test tools, builds ArduPlane
+  SITL into `ardupilot/` next to the repo and downloads the detection model
+  (~5 min at session start). Allowed hosts added: `github.com`,
+  `release-assets.githubusercontent.com`, `objects.githubusercontent.com`
+  (needed for Ultralytics' pretrained weights `yolo11n.pt`, which otherwise
+  answer 504). Pick this environment for a new session.
+- **Docs (task 6) mostly done and pushed:** new `GROUND_STATION.md` (every tab,
+  transfer laptop <-> aircraft: FC USB / Pi Wi-Fi / USB stick / SD card,
+  troubleshooting); `FLIGHT_READY.md`, `README.md` rewritten for Pi 4 +
+  Ground Station; `SITL_HOWTO.md` (Ground Station shortcut, battery step now
+  automatic); `models/README.md`; `planner/README.md` (superseded note).
+  Still to update after results: wind numbers in FLIGHT_READY 2.4 /
+  SITL_HOWTO E1, and `training/README.md` (Open Images + Ground Station tab).
+- **Training data (task 7):** `training/openimages_dataset.py` (committed) built
+  `training/datasets/openimages/` (git-ignored): 1800 photos - tractor 450 photos
+  / 719 boxes, car 626 / 1582, truck 466 / 668, livestock 452 / 989. Visual
+  check: tractor boxes ~8 in 10 correct; Open Images "Harvester" photos are
+  mostly NOT combines, so `combine` is excluded by default (`--combine` to add).
+  Ultralytics 8.4 + torch installed system-wide; `yolo11n.pt` downloaded.
+  NEXT: train yolo11n imgsz 320 on CPU (after SITL runs - training uses all
+  cores and would slow the real-time simulator), export, evaluate with
+  `tools/eval_model.py` on the val split through the onboard detector, write
+  results into training/README.md, add a regression test.
+- **Strong wind (task 4):** experiment running: Ground Station mission, 10 m/s
+  from 250°, GPS jammed until after touchdown, approach A 300 m/30 m, B 200 m/25 m,
+  C 150 m/20 m (script: scratchpad `wind_exp.py`, uses `groundstation.sim.SimRunner`).
+
 ## Still to do (in this order)
 
 1. **Strong-wind landing** (task 4): try shorter/steeper final approach

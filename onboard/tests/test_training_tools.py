@@ -351,3 +351,33 @@ def test_export_finds_training_data_from_run_args(tmp_path):
     assert export.find_training_data(str(w), None) == str(data)
     (run / "args.yaml").write_text(yaml.safe_dump({"data": str(tmp_path / "gone.yaml")}))
     assert export.find_training_data(str(w), None) is None
+
+
+# ---- Open Images dataset builder: which photos and boxes it takes ---------
+
+def test_openimages_selection_rules():
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "training"))
+    import openimages_dataset as oi
+    T, H, LV, V = oi.TRACTOR_IMG, oi.HARVESTER_IMG, oi.LAND_VEHICLE, oi.VEHICLE
+    verified = {"trac1": {T}, "trac_with_car": {T}, "harv": {H}, "trac_harv": {T, H},
+                "trac_nobox": {T}}
+    boxes = {
+        "trac1": [(LV, .1, .1, .5, .5), (oi.CATTLE, .6, .6, .8, .8)],
+        "trac_with_car": [(V, .1, .1, .5, .5), (oi.CAR, .6, .6, .9, .9)],   # ambiguous
+        "harv": [(LV, .2, .2, .6, .6)],
+        "trac_harv": [(LV, .2, .2, .6, .6)],                               # tractor or combine?
+        "car1": [(oi.CAR, .1, .1, .4, .4), (oi.TRUCK, .5, .5, .9, .9)],
+        "car_unnamed": [(oi.CAR, .1, .1, .4, .4), (V, .5, .5, .9, .9)],     # unnamed vehicle
+        "speck": [(oi.CAR, .1, .1, .12, .12)],                              # too small
+        "sheep": [(oi.SHEEP, .1, .1, .5, .5)],
+    }
+    p = oi.choose(verified, boxes, per_class=10)
+    assert p["trac1"] == [("tractor", .1, .1, .5, .5), ("livestock", .6, .6, .8, .8)]
+    assert "trac_with_car" not in p and "harv" not in p and "trac_harv" not in p
+    assert "trac_nobox" not in p and "car_unnamed" not in p and "speck" not in p
+    assert sorted(c for c, *_ in p["car1"]) == ["car", "truck"]
+    assert p["sheep"] == [("livestock", .1, .1, .5, .5)]
+    with_combine = oi.choose(verified, boxes, per_class=10, combine=True)
+    assert with_combine["harv"] == [("combine", .2, .2, .6, .6)]
+    names = oi.silm_classes()
+    assert {"tractor", "car", "truck", "livestock", "combine"} <= set(names)
