@@ -119,7 +119,7 @@ will be at your height, and the highest altitude that still gives ~10 pixels.
 Questions on this tab: smallest object, survey height, line overlap and
 direction, takeoff height, final approach length and start height, the
 legal height limit, and **today's wind** (speed and where it comes FROM).
-**Above 8 m/s the Ground Station refuses to launch**: in the simulator, a
+**Above 10 m/s the Ground Station refuses to launch** (enter the gusts): in the simulator, a
 landing without GPS in stronger wind could miss the strip.
 
 ### 4 · Camera

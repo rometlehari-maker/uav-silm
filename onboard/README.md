@@ -100,8 +100,8 @@ Pi-health and optional ordinary pictures every few seconds (`frames/`).
 - **Recognition** is only as good as the model and the pictures it was trained
   on; ground-level training photos recognise objects from above less well
   than aerial ones.
-- **A landing without GPS lands long** (55-95 m past the planned point in 4-8
-  m/s wind in the simulator). Above 8 m/s wind the Ground Station refuses to
+- **A landing without GPS lands long** (55-107 m past the planned point in 4-10
+  m/s wind in the simulator). Above 10 m/s wind the Ground Station refuses to
   launch. See [`FLIGHT_READY.md` 2.4](FLIGHT_READY.md#24-honest-limits).
 - **Not yet flown on the real aircraft**: everything is tested in software and
   in ArduPilot's simulator (`tests/`, [`FLIGHT_READY.md` §9](FLIGHT_READY.md#9-automated-tests)).

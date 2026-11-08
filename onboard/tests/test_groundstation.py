@@ -80,7 +80,7 @@ def test_default_project_needs_only_the_cg_and_wind():
     ({"aircraft__has_airspeed_sensor": False}, "airspeed sensor is required"),
     ({"aircraft__battery_cells": 1}, "below the minimum"),
     ({"aircraft__launch": "slingshot"}, "not one of the choices"),
-    ({"wind__speed_mps": 11}, "above the 8 m/s limit"),
+    ({"wind__speed_mps": 11}, "above the 10 m/s limit"),
     ({"recognition__min_alt_m": 150}, "never take any"),
     ({"mission__alt_m": 150}, "above the 120 m limit"),
     ({"aircraft__weight_g": "heavy"}, "is not a number"),
@@ -280,7 +280,7 @@ def test_fc_params_mission_arm_disarm(station, vehicle):
     p2 = full_project()
     p2["wind"] = {"speed_mps": 12, "from_deg": 250}
     r = station.fc_action("arm", {"port": url, "project": p2, "checklist_done": True})
-    assert not r["ok"] and "8 m/s limit" in r["message"]
+    assert not r["ok"] and "10 m/s limit" in r["message"]
     r = station.fc_action("arm", {"port": url, "project": p, "checklist_done": True})
     assert r["ok"] and v.armed and v.mode == mm.MODE_AUTO
     with pytest.raises(fc.FCError, match="ARMED"):
@@ -498,7 +498,7 @@ def test_http_pages_and_meta(http):
     assert "function renderForm" in js and hdr["Content-Type"] == "text/javascript"
     assert call(url + "/static/vendor/leaflet/leaflet.js")[1]["Content-Type"] == "text/javascript"
     meta, _ = call(url + "/api/meta")
-    assert meta["max_wind_mps"] == 8.0 and len(meta["questions"]) == len(P.QUESTIONS)
+    assert meta["max_wind_mps"] == P.MAX_WIND_MPS == 10.0 and len(meta["questions"]) == len(P.QUESTIONS)
     with pytest.raises(urllib.error.HTTPError):
         call(url + "/static/../../config.yaml")
 

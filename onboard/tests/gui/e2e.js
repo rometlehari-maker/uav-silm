@@ -69,7 +69,7 @@ let PAGE = null;
   // too much wind is refused
   await page.fill("#f-wind-speed_mps", "12");
   await page.waitForTimeout(800);
-  assert((await problems()).some((x) => x.includes("above the 8 m/s limit")), "strong wind refused");
+  assert((await problems()).some((x) => x.includes("above the 10 m/s limit")), "strong wind refused");
   await page.fill("#f-wind-speed_mps", "5");
   await page.waitForTimeout(800);
 

@@ -165,10 +165,12 @@ matched to your cell count automatically (simulator only).
 
 - **A landing without GPS lands long.** Without GPS the aircraft can't re-measure
   the wind; near the ground the real wind is weaker than the wind it learnt at
-  height, so it travels further than it thinks. In the simulator, blind
-  landings into 4-8 m/s wind touched down 55-95 m past the planned point and up
-  to ~26 m to the side. **Keep at least 150 m of clear, flat ground beyond the
-  touchdown point.** **Above 8 m/s wind the Ground Station refuses to launch.**
+  height, so it travels further than it thinks. In the simulator, landings
+  into 4-10 m/s wind touched down 55-107 m past the planned point (blind
+  landings: 85 m at 8 m/s, 107 m at 10 m/s) and up to ~26 m to the side; at
+  12 m/s it was 151 m, too far. **Keep at least 150 m of clear, flat ground
+  beyond the touchdown point.** **Above 10 m/s wind (enter the gusts) the
+  Ground Station refuses to launch.**
 - **The simulator flies a generic 2 kg model**, not your airframe: it proves the
   logic, not your exact numbers.
 - **No RC means no tuning flights with a pilot.** Start from good defaults for
@@ -327,7 +329,7 @@ including GPU training and evaluating a model with the onboard code:
 
 **At the field:**
 1. Enter **today's wind** (Mission tab) and press **Land into the wind**. Above
-   8 m/s: don't fly.
+   10 m/s (gusts): don't fly.
 2. Walk the landing strip and the approach: clear, flat, nobody on it.
 3. Power the aircraft. Send everything (tab 5, A then B or C) if anything changed.
 4. Wait for GPS: tab 5, **Check connection**: GPS fix, no `PreArm` message.

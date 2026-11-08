@@ -28,7 +28,7 @@ BASE_CONFIG = os.path.join(ONBOARD, "config.yaml")
 
 # Blind (GPS-denied) landings were flown in the simulator up to this wind and
 # landed inside the planned margin; above it they did not (SITL_HOWTO.md E1).
-MAX_WIND_MPS = 8.0
+MAX_WIND_MPS = 10.0
 
 # Typical size of each class's SMALLER side seen from above, in metres.
 TARGET_SIZES = {
@@ -135,8 +135,9 @@ QUESTIONS = [
       unit="m", min=30, max=500, step=10, tab="mission", group="Limits"),
     # ------------------------------------------------------------- wind
     Q("wind.speed_mps", "How strong is the wind at the field today?",
-      f"From the forecast or a wind meter. Above {MAX_WIND_MPS:g} m/s the aircraft must "
-      "not be launched: a landing without GPS could miss the strip.", unit="m/s",
+      f"Enter the GUSTS (the strongest wind), from the forecast or a wind meter. Above "
+      f"{MAX_WIND_MPS:g} m/s the aircraft must not be launched: in the simulator a landing "
+      "without GPS then missed the planned point by more than 150 m.", unit="m/s",
       min=0, max=30, step=0.5, required=False, tab="mission", group="Wind today"),
     Q("wind.from_deg", "Where is the wind coming FROM?",
       "Compass direction: 0 = from the north, 90 = from the east. The landing is "

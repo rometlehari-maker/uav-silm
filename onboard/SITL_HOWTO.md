@@ -643,7 +643,21 @@ python3 -c "import json; print('\n'.join(json.load(open('sitl_jam/result.json'))
 
 ### E1. Expected results (current files, ArduPilot master, Nov 2026)
 
-8 scenarios flown in SITL, one at a time, all with `--fault jam` except the last:
+**Latest matrix** - the Ground Station's own mission (final approach 200 m long from 25 m, the default since Nov 2026), flown in SITL one at a time. "blind" means GPS stayed jammed until after touchdown, so the whole landing was flown without GPS.
+
+| Scenario | Touchdown error | Armed on the ground | Result |
+|---|---|---|---|
+| jam, 4 m/s from the east | 60 m | - | PASS |
+| jam, 6 m/s | 55 m | - | PASS |
+| jam, 8 m/s from the north-west | 72 m | - | PASS |
+| jam, 8 m/s, blind landing | 85 m | - | PASS |
+| jam, 10 m/s, blind landing | 107 m | 17 s | PASS |
+| GPS switched off, 6 m/s | 55 m | 14 s | PASS |
+| jam, **12 m/s**, blind landing | **151 m** | 18 s | **FAIL** (limit 150 m) |
+
+Because of that last row the Ground Station **refuses to launch above 10 m/s** (enter the gusts, not the average).
+
+Earlier matrix (standard `silmtest` mission, older 300 m / 30 m approach), for comparison:
 
 | Scenario | Failsafe after | Flare at | Touchdown error | Result |
 |---|---|---|---|---|
@@ -659,8 +673,9 @@ python3 -c "import json; print('\n'.join(json.load(open('sitl_jam/result.json'))
 Your numbers will differ a little. The jamming simulation is random, but repeatable for the same settings on the same ArduPilot version.
 
 - **Failsafe ~5 s, flare at ~3 m** in every run: those are the parts the fixes below made reliable.
-- **Touchdowns 70-95 m long** (past the planned point, along the landing direction), only 1-26 m sideways. Without GPS the EKF can't re-measure the wind, so it keeps the wind it learned at 100 m. Near the ground the wind is weaker (SITL simulates wind shear, like real air), so on the final approach the aircraft goes further than it thinks. The position error stays under ~7 m down to 30 m height, then grows. The simulated belly landing also slides on: with working GPS it stopped 10-30 m long.
-- **The 10 m/s FAIL is a real limit, not a bug.** That wind is over half the aircraft's airspeed. See FLIGHT_READY.md A4: keep ≥ 150 m of clear ground beyond the touchdown point, and don't rely on blind landings above ~8 m/s.
+- **Touchdowns 55-107 m long** (past the planned point, along the landing direction), only 1-26 m sideways. Without GPS the EKF can't re-measure the wind, so it keeps the wind it learned at 100 m. Near the ground the wind is weaker (SITL simulates wind shear, like real air), so on the final approach the aircraft goes further than it thinks. The position error stays under ~7 m down to 30 m height, then grows. The simulated belly landing also slides on: with working GPS it stopped 10-30 m long. The shorter, lower final approach (200 m from 25 m instead of 300 m from 30 m) cut the 10 m/s overshoot from 160 m to 107 m.
+- **The 12 m/s FAIL is a real limit, not a bug.** That wind is well over half the aircraft's airspeed. See FLIGHT_READY.md 2.4: keep ≥ 150 m of clear ground beyond the touchdown point; the Ground Station refuses wind above 10 m/s.
+- **"Armed on the ground"** is the seventh check (`disarmed_soon_after_landing`, at most 30 s). After a blind landing the Lua script disarms the aircraft itself after 15 s of standing still on the landing item.
 
 ### E2. What was wrong before (fixed, but good to recognise in old results)
 

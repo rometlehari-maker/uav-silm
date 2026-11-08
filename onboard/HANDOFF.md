@@ -25,8 +25,8 @@ User's answers to questions asked:
 - Laptop <-> Pi transfer: **both** Wi-Fi (Pi hotspot) and USB stick.
 - The 10 m/s-wind blind-landing FAIL: **try to improve it first, then turn
   what's left into a hard limit** (GUI refuses to launch above the limit; the
-  test suite covers exactly that envelope). Current limit in code: 8 m/s
-  (`groundstation/project.py` MAX_WIND_MPS).
+  test suite covers exactly that envelope). **Current limit in code: 10 m/s**
+  (`groundstation/project.py` MAX_WIND_MPS), decided from the final matrix below.
 
 ## Done (committed)
 
@@ -125,19 +125,21 @@ User's answers to questions asked:
   `SLM_LAND_DIS_S` (15 s) of: armed, AUTO, LAND item, airspeed < 0.8 x stall
   (AIRSPEED_MIN/1.3), gyros quiet (< 0.1 rad/s), < 5 m above home. 8 new Lua
   tests incl. the never-disarm-in-flight cases (44 Lua tests pass).
-- **Running now:** final SITL matrix on the Ground Station mission
-  (scratchpad `matrix_gs.py`): w10 blind, w12 blind, w6, w4 from E, w8 from NW,
-  GPS-off w6, w8 blind. Use it to set MAX_WIND_MPS (keep margin) and update the
-  wind numbers in FLIGHT_READY 2.4, README, GROUND_STATION, SITL_HOWTO E1.
+- **Final SITL matrix (Ground Station mission, 200 m/25 m approach):** w4 from E
+  PASS 60 m; w6 PASS 55 m; w8 from NW PASS 72 m; w8 blind PASS 85 m; w10 blind
+  PASS 107 m (armed on ground 17 s); GPS-off w6 PASS 55 m (14 s); **w12 blind
+  FAIL 151 m** (limit 150). => MAX_WIND_MPS = 10 (question asks for gusts).
+  Docs updated (FLIGHT_READY 2.4, README, GROUND_STATION, SITL_HOWTO E1).
+- **Running now:** YOLO training `training/runs/oi_v1` (yolo11n, imgsz 320,
+  40 epochs, CPU, ~1 min/epoch; log in the scratchpad `train_oi.log`).
+  `training/runs/` is git-ignored. Next: export (`training/export.py --weights
+  runs/oi_v1/weights/best.pt --imgsz 320 --model-name silm_oi --data
+  datasets/openimages/data.yaml`), evaluate via `tools/threshold_sweep.py`
+  on the val split, write results into training/README.md, regression test.
 
 ## Still to do (in this order)
 
-1. **Strong-wind landing** (task 4): try shorter/steeper final approach
-   (mission `approach_len_m` / `approach_alt_m`, e.g. 200 m from 25 m) in
-   10 m/s wind via the SITL runner; if it passes keep it as the default,
-   otherwise keep MAX_WIND_MPS = 8 and make the scenario list = envelope.
-   Then re-run the full SITL scenario matrix one at a time (sim_vehicle kills
-   other SITL instances - never run two in parallel).
+1. ~~Strong-wind landing~~ (done: 200 m/25 m approach, limit 10 m/s).
 2. **Training on real images** (task 7): Open Images is reachable
    (storage.googleapis.com + open-images-dataset.s3.amazonaws.com); Hugging
    Face, LVIS and download.pytorch.org are BLOCKED by the network policy.
@@ -154,7 +156,7 @@ User's answers to questions asked:
    (`tools/eval_model.py`), add tests, report precision/recall honestly and
    the viewpoint gap (ground-level photos vs aerial). `pip install ultralytics`
    was being installed system-wide.
-3. **Docs** (task 6): rewrite `README.md`, `FLIGHT_READY.md`, `SITL_HOWTO.md`
+3. ~~Docs~~ (done except training/README results). Was: rewrite `README.md`, `FLIGHT_READY.md`, `SITL_HOWTO.md`
    for the Pi 4 + Ground Station; new `GROUND_STATION.md` (every tab) and a
    clear "Transfer" section: FC over USB (params, Lua, mission), Pi over Wi-Fi
    hotspot (join SILM-..., 10.42.0.1:8080), Pi over USB stick (label SILM,
