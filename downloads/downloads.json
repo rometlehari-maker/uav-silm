@@ -1,13 +1,13 @@
 {
-  "version": "2.1.1",
-  "commit": "d092ace3bb3bad3b8ac60b0c39c79aa2bb5d2310",
-  "commit_short": "d092ace3bb",
+  "version": "2.2.0",
+  "commit": "56004359ce0d99b88e156a54d67302f4f1c8502c",
+  "commit_short": "56004359ce",
   "date": "2026-11-08",
   "files": [
     {
       "name": "gps_denied_failsafe.param",
       "kind": "param",
-      "version": "2.1.1",
+      "version": "2.2.0",
       "bytes": 7630,
       "sha256": "137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d",
       "what": "ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.",
@@ -16,7 +16,7 @@
     {
       "name": "silm_gps_loss.lua",
       "kind": "lua",
-      "version": "2.1.1",
+      "version": "2.2.0",
       "bytes": 13595,
       "sha256": "84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315",
       "what": "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.",
