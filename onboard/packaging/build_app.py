@@ -67,7 +67,8 @@ def pyinstaller_args() -> list[str]:
             "--specpath", OUT, "--paths", ONBOARD, "--paths", os.path.join(ONBOARD, "planner")]
     for m in ("groundstation.app", "groundstation.desktop", "groundstation.fc", "groundstation.flights",
               "groundstation.pilink", "groundstation.project", "groundstation.sim",
-              "groundstation.training", "groundstation.runtime", "survey", "silm_recon.mavmission",
+              "groundstation.training", "groundstation.runtime", "groundstation.fctools",
+              "groundstation.vendor.ardupilot_uploader", "survey", "silm_recon.mavmission",
               "silm_recon.config", "pymavlink.mavutil", "pymavlink.mavftp",
               "pymavlink.dialects.v20.ardupilotmega", "pymavlink.dialects.v10.ardupilotmega",
               "serial.tools.list_ports") + (("webview.platforms.edgechromium",) if SYSTEM == "windows" else

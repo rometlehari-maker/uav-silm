@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, flights, pilink, training  # noqa: E402
+from groundstation import fc, fctools, flights, pilink, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -79,6 +79,7 @@ class Station:
         self.camera = camera_from_config()
         self.sim = sim or SimRunner()
         self.dataset = training.Dataset(self.training_root)
+        self.fcjobs = fctools.FCJobs(log_dir=os.path.join(os.path.dirname(self.projects), "fc_logs"))
         self.trainer = training.Trainer(os.path.join(self.training_root, "models"),
                                         bundled_dirs=(os.path.join(ONBOARD, "models"),))
 
@@ -382,6 +383,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.load_project(urllib.parse.unquote(path[14:])))
             if path == "/api/setup":
                 return self._send(200, st.setup_state())
+            if path == "/api/fc/job":
+                return self._send(200, st.fcjobs.status())
+            if path == "/api/fc/firmware":
+                return self._send(200, {"files": fctools.firmware_files(), "boards": fctools.BOARDS})
             if path == "/api/pi/camera.jpg":
                 try:
                     jpg = pilink.camera_jpg((qs.get("address") or [""])[0])
@@ -455,6 +460,34 @@ class Handler(BaseHTTPRequestHandler):
                 text, fname, ctype = st.file(body.get("project") or {}, m.group(1))
                 return self._send(200, text, ctype,
                                   {"Content-Disposition": f'attachment; filename="{fname}"'})
+            port, baud = body.get("port") or "", int(body.get("baud") or 115200)
+            if path == "/api/fc/servos":
+                return self._send(200, fctools.servos(port, baud))
+            if path == "/api/fc/servo_reverse":
+                return self._send(200, fctools.set_reversed(port, int(body.get("n", 0)),
+                                                            bool(body.get("reversed")), baud))
+            if path == "/api/fc/battery":
+                return self._send(200, fctools.battery(port, baud))
+            if path == "/api/fc/battery_cal":
+                return self._send(200, fctools.battery_cal(port, float(body.get("measured_v") or 0), baud))
+            if path == "/api/fc/logs":
+                return self._send(200, fctools.log_list(port, baud))
+            if path == "/api/fc/job/start":
+                kw = {k: body[k] for k in ("log_id", "size", "file") if k in body}
+                if body.get("kind") == "firmware":
+                    kw["ports"] = [p["device"] for p in fc.list_ports() if p.get("usb", True)]
+                return self._send(200, st.fcjobs.start(body.get("kind", ""), port, baud, **kw))
+            if path == "/api/fc/job/answer":
+                return self._send(200, st.fcjobs.answer(True))
+            if path == "/api/fc/job/cancel":
+                return self._send(200, st.fcjobs.cancel())
+            if path == "/api/fc/firmware/upload":
+                import base64
+                return self._send(200, fctools.save_firmware(body.get("name", ""),
+                                                             base64.b64decode(body.get("data_b64") or "")))
+            if path == "/api/fc/firmware/download":
+                return self._send(200, fctools.download_firmware(body.get("board", "MatekH743"),
+                                                                 body.get("release", "stable")))
             m = re.match(r"^/api/fc/(info|params|script|mission|arm|disarm)$", path)
             if m:
                 return self._send(200, st.fc_action(m.group(1), body))

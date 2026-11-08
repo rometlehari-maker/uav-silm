@@ -279,6 +279,23 @@ User's answers to questions asked:
     (static/tools.js), calibration stored in project camera.calibration and
     sent as georef.calibration. Bug caught by tests: capture result's "ok"
     was overwritten by the state's "ok": True.
+  - (13) flight-controller tools done (Tools tab, `groundstation/fctools.py`):
+    servo outputs + reversing (SERVOn_REVERSED), battery voltage calibration
+    (BATT_VOLT_MULT from a multimeter reading), log list + download
+    (LOG_REQUEST_LIST/DATA), and background jobs (`FCJobs`, one at a time,
+    polled via GET /api/fc/job): level (PREFLIGHT_CALIBRATION p5=2),
+    airspeed+baro (p3=1), 6-position accel (p5=1 + ACCELCAL_VEHICLE_POS
+    handshake, "Done, it's in place" button), compass (DO_START_MAG_CAL,
+    MAG_CAL_PROGRESS/REPORT), firmware update (ArduPilot's BSD-3 uploader
+    vendored in groundstation/vendor/, run as its own process; the packaged
+    app runs itself with --ardupilot-uploader; firmware from
+    firmware.ardupilot.org/Plane/stable/<board>/arduplane.apj or a chosen
+    .apj; stops at once on "not suitable for this board").
+    Tests: test_fctools.py (fake bootloader on a pty: real upload, wrong
+    board refused; scripted-FC job logic), test_fctools_sitl.py (6 tests vs
+    real ArduPlane SITL, all pass), and the UI was driven against SITL.
+    NOT possible from the app: the first ArduPilot install on a new board
+    (DFU) -> explained in task 14's guides.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

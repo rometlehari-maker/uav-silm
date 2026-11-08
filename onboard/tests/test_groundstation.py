@@ -835,3 +835,32 @@ def test_camera_picture_calibration_and_check_through_the_ground_station(pi, htt
     with pytest.raises(urllib.error.HTTPError) as e:                  # the Pi is not there
         call(url + "/api/pi/camera.jpg?address=127.0.0.1:9")
     assert e.value.code == 502
+
+
+# ------------------------------------------------------------ Tools tab: the flight controller
+def test_flight_controller_tool_routes(http, tmp_path, monkeypatch):
+    from groundstation import fctools
+    url, st = http
+    monkeypatch.setattr(fctools, "firmware_dir", lambda: str(tmp_path))
+    r, _ = call(url + "/api/fc/servos", {"port": ""})
+    assert not r["ok"] and "choose the flight controller's port" in r["message"]
+    assert call(url + "/api/fc/job")[0]["state"] == "idle"
+    r, _ = call(url + "/api/fc/job/start", {"kind": "level", "port": ""})
+    assert r["ok"]
+    t0 = time.time()
+    while call(url + "/api/fc/job")[0]["state"] == "running" and time.time() - t0 < 10:
+        time.sleep(0.1)
+    j = call(url + "/api/fc/job")[0]
+    assert j["state"] == "failed" and "port" in j["result"]
+    assert not call(url + "/api/fc/job/answer", {})[0]["ok"]          # nothing waiting
+    import base64
+    import json as js
+    import zlib
+    apj = js.dumps({"board_id": 1013, "image_size": 4,
+                    "image": base64.b64encode(zlib.compress(b"abcd")).decode()}).encode()
+    r, _ = call(url + "/api/fc/firmware/upload", {"name": "plane.apj", "data_b64": base64.b64encode(apj).decode()})
+    assert r["ok"] and r["board_id"] == 1013
+    fw, _ = call(url + "/api/fc/firmware")
+    assert [f["file"] for f in fw["files"]] == ["plane.apj"] and "MatekH743" in fw["boards"]
+    r, _ = call(url + "/api/fc/firmware/upload", {"name": "x.apj", "data_b64": base64.b64encode(b"junk").decode()})
+    assert not r["ok"] and "not an ArduPilot firmware" in r["message"]

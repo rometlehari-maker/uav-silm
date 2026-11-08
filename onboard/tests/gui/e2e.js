@@ -190,6 +190,18 @@ let PAGE = null;
   assert((await page.textContent("#lc-current")).includes("No lens calibration yet"), "calibration status");
   await step("11-tools");
   await page.click("#cam-toggle");
+  // flight controller tools: boards listed; no flight controller plugged in -> a clear message
+  await page.waitForFunction(() => document.querySelectorAll("#fw-board option").length >= 3, null, { timeout: 10000 });
+  await page.fill("#tl-port", "");
+  await page.dispatchEvent("#tl-port", "change");
+  await page.click("#sv-read");
+  await resultOf("sv-result", "✗|✓", 15000);
+  assert((await page.textContent("#sv-result")).includes("choose the flight controller's port"), "no port: explained");
+  await page.click('[data-fcjob="level"]');
+  await page.waitForTimeout(800);
+  assert(await page.isVisible("#fc-job-card"), "job panel shown");
+  await resultOf("fcj-result", "✗|✓", 15000);
+  assert((await page.textContent("#fcj-result")).includes("choose the flight controller's port"), "job without a port fails clearly");
 
   // ---------------- saved missions
   await tab("start");

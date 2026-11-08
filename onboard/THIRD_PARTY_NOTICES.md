@@ -10,6 +10,7 @@ them.
 | What | Where | Made by | Licence |
 |---|---|---|---|
 | **Leaflet 1.9.4** (the map in the Ground Station) | `groundstation/static/vendor/leaflet/` | Volodymyr Agafonkin, CloudMade and contributors | BSD-2-Clause, text in `vendor/leaflet/LICENSE` |
+| **ArduPilot firmware uploader** (`uploader.py`, used for "Update ArduPlane") | `groundstation/vendor/ardupilot_uploader.py` | PX4 Development Team; from the ArduPilot project | BSD-3-Clause, notice at the top of the file |
 | **Bricolage Grotesque** font | `groundstation/static/fonts/bricolage-*.woff2` | The Bricolage Grotesque Project Authors (Mathieu Triay) | SIL Open Font License 1.1, text in `fonts/OFL-BricolageGrotesque.txt` |
 | **IBM Plex Mono** font | `groundstation/static/fonts/plex-mono-*.woff2` | IBM Corp. | SIL Open Font License 1.1, text in `fonts/OFL-IBMPlexMono.txt` |
 | **Ready-made model `silm_oi`** (tractor, car, truck, livestock) | `models/silm_oi.tflite`, `_labels.txt`, `.json` | UAV SILM team, fine-tuned from **Ultralytics YOLO11n** (© Ultralytics) | **AGPL-3.0** (inherited from YOLO11n), text in `models/LICENSE-silm_oi-AGPL-3.0.txt`. Its source: `training/` (`openimages_dataset.py`, `train.py`, `export.py`) and the steps in `training/README.md` |

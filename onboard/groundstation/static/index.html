@@ -411,6 +411,78 @@
         <div class="result" id="lc-result" role="status"></div>
         <div id="lc-current" class="help"></div>
       </div>
+
+      <h2 class="sub">Flight controller (USB cable)</h2>
+      <div class="card tight">
+        <div class="q small">Which USB port is the flight controller plugged into?</div>
+        <div class="inline"><input id="tl-port" list="port-list" placeholder="COM3 or /dev/ttyACM0" aria-label="Flight controller port">
+          <button class="btn ghost" id="tl-ports">Find ports</button></div>
+        <p class="help">Battery in, USB cable plugged in, Mission Planner closed.</p>
+      </div>
+
+      <div class="card" id="fc-job-card" hidden>
+        <h2 id="fcj-title">Working…</h2>
+        <div class="fcj-prompt" id="fcj-prompt"></div>
+        <div class="wz-bar fcj-bar"><i id="fcj-bar"></i></div>
+        <div class="help" id="fcj-step"></div>
+        <div class="row-btns"><button class="btn primary big" id="fcj-done" hidden>Done, it's in place</button>
+          <button class="btn ghost" id="fcj-cancel">Stop</button></div>
+        <div class="result" id="fcj-result" role="status"></div>
+        <details><summary>Messages</summary><pre class="log" id="fcj-log"></pre></details>
+      </div>
+
+      <div class="card">
+        <h2>Calibrate the sensors</h2>
+        <p class="help">Do these once on a new aircraft (and the compass again after moving the GPS or
+          changing wiring). Each step tells you what to do with the aircraft.</p>
+        <div class="cal-grid">
+          <div><b>Accelerometers</b><p class="help">You put the aircraft in 6 positions (level, on each side, nose down, nose up, upside down). Most important.</p><button class="btn" data-fcjob="accel">Start</button></div>
+          <div><b>Level</b><p class="help">Sit the aircraft on a table in its flying attitude (wings level, nose at its cruise angle). It remembers that as "level".</p><button class="btn" data-fcjob="level">Start</button></div>
+          <div><b>Compass</b><p class="help">Outdoors or away from metal: turn the aircraft through every direction until the bar is full.</p><button class="btn" data-fcjob="compass">Start</button></div>
+          <div><b>Airspeed sensor</b><p class="help">Cover the pitot tube with a cup or your fingers (no wind on it), then start. Also zeroes the barometer.</p><button class="btn" data-fcjob="airspeed">Start</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Control surface directions</h2>
+        <p class="help">If a surface moves the wrong way in the bench check (Setup, step 6), reverse its output here.</p>
+        <div class="row-btns"><button class="btn" id="sv-read">Read the outputs</button></div>
+        <div class="result" id="sv-result" role="status"></div>
+        <table class="cls" id="sv-table" hidden><thead><tr><th>Output</th><th>Drives</th><th>Direction</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Battery voltage</h2>
+        <p class="help">The low-battery landing depends on the voltage being right. Measure the battery with a multimeter and enter what it shows.</p>
+        <div class="row-btns"><button class="btn" id="bt-read">What does the aircraft measure?</button></div>
+        <div class="q">What does your multimeter show across the battery?</div>
+        <div class="inline"><input type="number" id="bt-meas" min="3" max="60" step="0.01" aria-label="Measured voltage"> <span class="unit">V</span>
+          <button class="btn primary" id="bt-cal">Calibrate</button></div>
+        <div class="result" id="bt-result" role="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Flight logs</h2>
+        <p class="help">The flight controller's own detailed logs (for checking a flight, tuning, or asking for help). Saved on this laptop in <code>SILM/fc_logs</code>.</p>
+        <div class="row-btns"><button class="btn" id="lg-list">List the logs</button></div>
+        <div class="result" id="lg-result" role="status"></div>
+        <table class="cls" id="lg-table" hidden><thead><tr><th>Log</th><th>Date (UTC)</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Update ArduPlane (firmware)</h2>
+        <p class="help">For a board that <b>already runs ArduPilot</b>. A brand-new board (or one with
+          Betaflight / INAV) needs the first install done differently: see
+          <a href="#tools" data-guide="firmware-first">how to install ArduPilot the first time</a>.</p>
+        <div class="q">Which flight controller is it?</div>
+        <div class="inline"><select id="fw-board" aria-label="Board"></select>
+          <button class="btn" id="fw-download">Download the latest ArduPlane</button></div>
+        <div class="q small">Or use a firmware file (.apj) you already have:</div>
+        <div class="inline"><input type="file" id="fw-file" accept=".apj"></div>
+        <div class="result" id="fw-result" role="status"></div>
+        <ul class="list" id="fw-files"></ul>
+        <p class="help">During the update: <b>don't unplug it</b>. It takes about a minute; your settings are kept.</p>
+      </div>
     </section>
   </main>
 
