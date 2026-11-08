@@ -243,17 +243,19 @@ class Dataset:
 # ---------------------------------------------------------------- training
 
 def tools_available() -> dict:
-    if runtime.python_cmd() is None:
-        return {"available": False,
-                "why": "training needs Python 3 on this laptop (python.org; on Windows tick "
-                       "'Add python.exe to PATH'), then the training tools: python -m pip "
-                       "install ultralytics litert-torch"}
-    if runtime.has_module("ultralytics"):
-        return {"available": True, "why": None}
-    return {"available": False,
-            "why": "the training tools are not installed on this laptop. Install them once "
-                   "(about 2 GB): python -m pip install ultralytics litert-torch  "
-                   "- a computer with an NVIDIA graphics card trains 10-50x faster."}
+    """Can this laptop train? With what to do if not (the tab offers to install them)."""
+    py = runtime.training_python()
+    if py is None:
+        return {"available": False, "can_install": False,
+                "why": "training needs Python 3 on this laptop first - see the guide 'Installing "
+                       "Python' (python.org; on Windows tick 'Add python.exe to PATH'). Then press "
+                       "'Install the training tools' here."}
+    if runtime.has_module("ultralytics", py):
+        return {"available": True, "can_install": True, "why": None}
+    return {"available": False, "can_install": True,
+            "why": "the training tools are not installed on this laptop yet. Press 'Install the "
+                   "training tools' (about 2 GB, once; internet needed). A computer with an NVIDIA "
+                   "graphics card trains 10-50x faster."}
 
 
 PRESETS = {
@@ -350,7 +352,7 @@ class Trainer:
         j = self.job
         try:
             runs = os.path.join(os.path.dirname(data_yaml), "runs")
-            code = self._cmd([*runtime.python_cmd(), "-u", os.path.join(TRAIN_DIR, "train.py"),
+            code = self._cmd([*runtime.training_python(), "-u", os.path.join(TRAIN_DIR, "train.py"),
                               "--data", data_yaml, "--model", base_model, "--epochs",
                               str(pr["epochs"]), "--imgsz", str(pr["imgsz"]), "--device", device,
                               "--name", name, "--batch", "8", "--project", runs], TRAIN_DIR)
@@ -358,7 +360,7 @@ class Trainer:
             if code != 0 or not os.path.isfile(best):
                 raise RuntimeError("training failed - see the log")
             j["step"] = "converting for the Raspberry Pi"
-            code = self._cmd([*runtime.python_cmd(), "-u", os.path.join(TRAIN_DIR, "export.py"),
+            code = self._cmd([*runtime.training_python(), "-u", os.path.join(TRAIN_DIR, "export.py"),
                               "--weights", best, "--imgsz", str(pr["imgsz"]), "--out",
                               self.models_dir, "--model-name", name, "--data", data_yaml], TRAIN_DIR)
             tfl = os.path.join(self.models_dir, name + ".tflite")

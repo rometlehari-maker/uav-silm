@@ -176,6 +176,84 @@ let PAGE = null;
   assert(/^4\/10$/.test((await page.textContent("#setup-badge")).trim()), "progress badge 4/10: " + await page.textContent("#setup-badge"));
   await step("10-setup");
 
+  // ---------------- tools: the aircraft computer
+  await tab("tools");
+  await page.click("#pf-run");
+  await resultOf("pf-result", "FAIL|WARN|✗", 20000);
+  assert((await page.textContent("#pf-result")).includes("0 FAIL, 1 WARN"), "check summary");
+  assert((await page.$$("#pf-table tbody tr")).length === 2, "check results listed");
+  await page.click("#cam-toggle");
+  await page.waitForFunction(() => { const i = document.getElementById("cam-img"); return !i.hidden && i.naturalWidth > 0; }, null, { timeout: 15000 });
+  await page.click("#lc-capture");
+  await resultOf("lc-result", "not fully in the picture|kept|✗", 15000);
+  assert((await page.textContent("#lc-result")).includes("not fully in the picture"), "no board: picture not kept");
+  assert((await page.textContent("#lc-current")).includes("No lens calibration yet"), "calibration status");
+  await step("11-tools");
+  await page.click("#cam-toggle");
+  // install the Pi over SSH: the form is there, and a missing password is explained
+  await page.waitForSelector("#pin-tools .pin-form");
+  await page.fill("#pin-tools .pin-user", "pi");
+  await page.click("#pin-tools .pin-start");
+  await page.waitForFunction(() => /✗/.test(document.querySelector("#pin-tools .pin-result").textContent), null, { timeout: 10000 });
+  assert((await page.textContent("#pin-tools .pin-result")).includes("user name and password"), "install needs the Pi's password");
+  assert(!(await page.isDisabled("#pin-tools .pin-start")), "install button usable again");
+  // aircraft software: compare, write to the stick, update over Wi-Fi
+  await page.waitForFunction(() => /\d/.test(document.getElementById("sw-app").textContent), null, { timeout: 10000 });
+  await page.click("#sw-info");
+  await resultOf("sw-result", "✗|✓", 15000);
+  assert(/this app's software|carries/.test(await page.textContent("#sw-result")), "versions compared: " + await page.textContent("#sw-result"));
+  await page.click("#sw-usb");
+  await resultOf("sw-result", "✗|✓", 15000);
+  assert((await page.textContent("#sw-result")).includes("silm-pi-software.zip"), "written to the stick: " + await page.textContent("#sw-result"));
+  await page.click("#sw-wifi");                                // confirm() accepted
+  await resultOf("sw-result", "✗|✓", 30000);
+  assert((await page.textContent("#sw-result")).includes("0.9.0 -> "), "installed over Wi-Fi: " + await page.textContent("#sw-result"));
+  // aircraft Wi-Fi: list, a bad password refused here, rename, country, forget a home network
+  await page.click("#wf-list");
+  await resultOf("wf-result", "✗|✓", 15000);
+  assert((await page.$$("#wf-nets li")).length === 2 && (await page.textContent("#wf-nets")).includes("home Wi-Fi"), "networks listed");
+  await page.fill("#wf-hs-name", "SILM-Tartu");
+  await page.fill("#wf-hs-pass", "short");
+  await page.click("#wf-hs-set");
+  assert((await page.textContent("#wf-result")).includes("8 to 63"), "short password refused in the app");
+  await page.fill("#wf-hs-pass", "a long password");
+  await page.click("#wf-hs-set");
+  await resultOf("wf-result", "✗|✓", 15000);
+  assert((await page.inputValue("#wf-hs-pass")) === "", "password cleared after use");
+  await page.fill("#wf-cc", "fi");
+  await page.click("#wf-cc-set");
+  await resultOf("wf-result", "✗|✓", 15000);
+  await page.click('[data-wfrm="Farm"]');
+  await resultOf("wf-result", "✗|✓", 15000);
+  await step("12-tools-software-wifi");
+  // flight controller tools: boards listed; no flight controller plugged in -> a clear message
+  await page.waitForFunction(() => document.querySelectorAll("#fw-board option").length >= 3, null, { timeout: 10000 });
+  await page.fill("#tl-port", "");
+  await page.dispatchEvent("#tl-port", "change");
+  await page.click("#sv-read");
+  await resultOf("sv-result", "✗|✓", 15000);
+  assert((await page.textContent("#sv-result")).includes("choose the flight controller's port"), "no port: explained");
+  await page.click('[data-fcjob="level"]');
+  await page.waitForTimeout(800);
+  assert(await page.isVisible("#fc-job-card"), "job panel shown");
+  await resultOf("fcj-result", "✗|✓", 15000);
+  assert((await page.textContent("#fcj-result")).includes("choose the flight controller's port"), "job without a port fails clearly");
+
+  // ---------------- guides: from a link in the Tools tab, and the list
+  await tab("tools");
+  await page.click('#tab-tools [data-guide="firmware-first"]');
+  await page.waitForFunction(() => document.getElementById("tab-guides").classList.contains("active")
+    && /_with_bl\.hex/.test(document.getElementById("gd-body").textContent), null, { timeout: 10000 });
+  assert((await page.$$("#gd-list .gd-item")).length >= 12, "guides listed");
+  await page.click('#gd-list [data-gd="wiring"]');
+  await page.waitForFunction(() => /RX1/.test(document.getElementById("gd-body").textContent), null, { timeout: 5000 });
+  assert((await page.$$("#gd-body table")).length >= 2, "wiring tables shown");
+  assert(page.url().endsWith("#guides/wiring"), "guide in the address: " + page.url());
+  await step("13-guides");
+  await tab("aircraft");
+  await page.click('[data-qid="aircraft.cg_mm"] [data-guide="cg"]');
+  await page.waitForFunction(() => /Balance point/.test(document.getElementById("gd-body").textContent), null, { timeout: 5000 });
+
   // ---------------- saved missions
   await tab("start");
   await page.click("#save");

@@ -64,7 +64,7 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **411 passed**, 2 skipped (ArduPilot
+- `python3 -m pytest -q` in `onboard/`: **455 passed**, 10 skipped (after task 14; skips include the real-SSH test without SILM_SSH_TEST) (ArduPilot
   source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
   `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
@@ -246,6 +246,9 @@ User's answers to questions asked:
     history). Now `downloads/` holds only the .param and .lua (+ sums), and the
     release job runs `build_downloads.py --release` to attach both zips to each
     GitHub release. VERSION 2.1.1 so main publishes a complete release.
+    **Done:** PR rometlehari-maker/uav-silm#3 merged (3e5fbcd); release
+    gs-v2.1.1 published with installers + uav-silm-software-2.1.1.zip +
+    silm-oi-farm-model-v1.zip + SHA256SUMS.txt; website live with 2 cards.
     The old zips are still in git history (51 MB); removing them needs a
     history rewrite of main + force push - only if the user asks.
   - **User said yes** to publishing the release and putting the site live.
@@ -259,6 +262,139 @@ User's answers to questions asked:
     test_groundstation.py, once in the full suite), never reproduced in 8+
     runs, also not under full CPU load. Name not captured yet; if it shows up
     again, run with `-rf` and note it here.
+- **"Absolutely everything from the app"** (latest request; tasks 10-14):
+  plan = (10) Pi tools: preflight, live camera, lens calibration [DONE];
+  (11) Pi software update + Wi-Fi settings from the app; (12) Pi install over
+  SSH; (13) flight-controller tools: servo reversing, level/accel/compass/
+  airspeed calibration, battery voltage calibration, log download, firmware
+  update via bootloader; (14) training-tools installer + detailed in-app
+  guides for what can't be done from an app (hardware, first firmware flash
+  via DFU, Pi card, simulator on Windows, Python, legal).
+  - (10) done: agent `/api/camera.jpg` (recon writes preview.jpg next to the
+    status file, 1/s, only on the ground, only while the agent's
+    preview_request is <15 s old), `/api/calibration{,/capture,/compute,/reset}`
+    (uses tools/calibrate_camera.py; shots in ~/silm-settings/calibration),
+    `/api/preflight` (stops silm-recon, runs preflight.py --json, restarts it;
+    new sudo rules stop/start). Ground Station: new tab "10 Tools"
+    (static/tools.js), calibration stored in project camera.calibration and
+    sent as georef.calibration. Bug caught by tests: capture result's "ok"
+    was overwritten by the state's "ok": True.
+  - (13) flight-controller tools done (Tools tab, `groundstation/fctools.py`):
+    servo outputs + reversing (SERVOn_REVERSED), battery voltage calibration
+    (BATT_VOLT_MULT from a multimeter reading), log list + download
+    (LOG_REQUEST_LIST/DATA), and background jobs (`FCJobs`, one at a time,
+    polled via GET /api/fc/job): level (PREFLIGHT_CALIBRATION p5=2),
+    airspeed+baro (p3=1), 6-position accel (p5=1 + ACCELCAL_VEHICLE_POS
+    handshake, "Done, it's in place" button), compass (DO_START_MAG_CAL,
+    MAG_CAL_PROGRESS/REPORT), firmware update (ArduPilot's BSD-3 uploader
+    vendored in groundstation/vendor/, run as its own process; the packaged
+    app runs itself with --ardupilot-uploader; firmware from
+    firmware.ardupilot.org/Plane/stable/<board>/arduplane.apj or a chosen
+    .apj; stops at once on "not suitable for this board").
+    Tests: test_fctools.py (fake bootloader on a pty: real upload, wrong
+    board refused; scripted-FC job logic), test_fctools_sitl.py (6 tests vs
+    real ArduPlane SITL, all pass), and the UI was driven against SITL.
+    NOT possible from the app: the first ArduPilot install on a new board
+    (DFU) -> explained in task 14's guides.
+  - (11) done: Pi software update + Wi-Fi from the app.
+    `groundstation/pisoftware.py` makes a reproducible zip of what the Pi runs
+    (PI_FILES/PI_DIRS; the packaged app carries it prebuilt as
+    `pi_software.zip`, made by `packaging/build_app.py prebuild_pi_package()`).
+    Agent `POST /api/software` {zip_b64} -> `install_software`: refuses while
+    armed, rejects unsafe/incomplete zips, unpacks to `onboard.new`, copies
+    models the package lacks (the downloaded COCO model), runs the NEW
+    `run.py --check` with the Pi's settings, swaps (old kept as `onboard.old`),
+    restarts silm-recon and exits (systemd restarts the agent). USB: stick
+    `SILM_TRANSFER/to_aircraft/software/silm-pi-software.zip`, installed once
+    (sha marker), result in `aircraft_status.json` -> shown by the Send tab's
+    "Read the stick's answer". Wi-Fi: root helper `pi/silm-wifi` (installed
+    to /usr/local/sbin, sudoers allows only it; every value validated) with
+    list / hotspot NAME PASS / home-add / home-remove / country CC; agent
+    `GET/POST /api/wifi`. Ground Station: `POST /api/pi/software`
+    {how: info|wifi|usb}, `POST /api/pi/wifi`; Tools-tab cards "Aircraft
+    software" and "Aircraft Wi-Fi". Docs: GROUND_STATION.md got a "10 · Tools"
+    section (it had none), FLIGHT_READY 3.2 update notes + roll-back command.
+    Bug found by the browser test: the agent reported its module's VERSION,
+    not its software folder's -> `software_version(self.root)`.
+    **Verified for real (not only fakes):** a real agent process started from
+    a folder unpacked from the real package (VERSION set to 0.9.0) was updated
+    through the Ground Station's HTTP route: the real `run.py --check` ran,
+    the agent exited 0, restarted (as systemd would) reporting 2.1.1, `.old`
+    kept, downloaded model kept; a package with a broken config.yaml was
+    refused by its own check and nothing changed (script:
+    scratchpad real_update.py, not committed). The exact nmcli commands of
+    install.sh and silm-wifi were run through real nmcli 1.46 `--offline`
+    (apt network-manager): accepted, keyfiles right (AP, 10.42.0.1/24
+    shared, priority -10 hotspot / 0 home -> home preferred in range). A real
+    PyInstaller build (`packaging/build_app.py --smoke`) passes its self-test,
+    which now also checks the bundled Pi package. Full suite 439 passed,
+    8 skipped.
+  - (12) done: install the Pi from the app over SSH (`groundstation/piinstall.py`,
+    paramiko). Job `PiInstall` (one at a time, polled `GET /api/pi/install`,
+    `POST /api/pi/install/{start,cancel}`): connect (key remembered in
+    ~/SILM/known_hosts, changed key refused with an explanation), `sudo -v`
+    (answers sudo's password prompt on a pty), internet check (pypi.org),
+    SFTP the app's Pi package, unpack + swap with a python3 snippet (UNPACK;
+    keeps downloaded models, old -> onboard.old), `bash pi/install.sh
+    --password/--ssid/--country [--no-hotspot] [--no-camera-net]`, progress
+    from its "==> N/9" lines, passwords masked in the log, reboot. Host field
+    accepts name:port. UI: one shared form (`piInstallForm/piInstallBind` in
+    tools.js) in Setup step 7 (marks the step done) and the Tools tab.
+    install.sh now also checks the SHA-256 of an already-present model
+    (re-downloads a damaged one; SHA of detect.tflite e4b118e5...).
+    `setResult` no longer wipes an element's own classes (bug found while
+    driving the new form in a browser).
+    **Verified for real:** sshd in this container (user silmpi, sudo asks
+    for the password): wrong password explained; dry-run install all 9 steps
+    via the Ground Station HTTP route and via the browser UI; a REAL install
+    ran apt, the venv + pip, the model download+check, and stopped at step 4
+    only because the container has no systemd (shown clearly in the UI);
+    re-install keeps the model and onboard.old; cancel works. CI now starts
+    an sshd on 127.0.0.1:2222 with a throw-away sudo user and runs
+    `test_install_over_a_real_ssh_server` (SILM_SSH_TEST). paramiko added to
+    groundstation/requirements.txt, build_app hidden imports, the desktop
+    self-test, THIRD_PARTY_NOTICES (also a new section listing what the
+    desktop installers bundle - that was missing). Full suite 447 passed.
+  - (14) done: training-tools installer + guides.
+    `groundstation/toolsetup.py` `ToolInstall`: makes ~/SILM/training-venv with
+    the found Python, pip-installs ultralytics litert-torch ai-edge-litert
+    ai-edge-quantizer (on Linux without nvidia-smi first CPU-only torch from
+    download.pytorch.org, tolerated if unreachable), verifies the imports;
+    `runtime.training_python()` prefers that venv; routes GET /api/train/tools,
+    POST /api/train/tools/{install,cancel}; Teach tab "Install the training
+    tools" box. Tests: real venv + pip install of a small package, re-use,
+    cancel. The FULL install was run for real here in the background (see the
+    progress log below for the result).
+    `GUIDES.md` (12 guides: parts, wiring with the H743-WING SERIAL map from
+    ArduPilot's hwdef, firmware-first via STM32CubeProgrammer + _with_bl.hex,
+    sd-card, usb-stick, python, simulator, camera, servos-esc, cg, airspeed,
+    legal/Transpordiamet) is the one source: `groundstation/guides.py`
+    converts its Markdown subset (escaped) for the new **Guides** tab;
+    `data-guide="<id>"` links anywhere open a guide (wizard steps, Tools,
+    Teach, Send C, Launch, question help via Q(..., guide=)). Test: every
+    data-guide id exists. Facts checked: SIYI A2 mini 12 V (web), DFU
+    procedure (web search; ardupilot.org itself is blocked here),
+    Transpordiamet routes + 10 EUR yearly operator registration (web search;
+    transpordiamet.ee blocked here), ARSPD_TUBE_ORDR and I2C bus order from
+    the ArduPilot source.
+    Also new in Tools (the guides promised them): each output's job
+    (SERVOn_FUNCTION select; Throttle sets 1000-2000/trim 1000) and an
+    Airspeed sensor card (ARSPD_TYPE/ARSPD_BUS, found/healthy from SYS_STATUS
+    bit 0x20, VFR_HUD airspeed). Both verified against ArduPlane SITL
+    (test_fctools_sitl.py 7/7). Wizard fc_connect text no longer sends people
+    to Mission Planner. Full suite 455 passed, 10 skipped.
+  - **CI was red from a0af800 to dde6144** (4 pushes, unnoticed at the time):
+    `onboard tests` installed a hand-written package list without pyserial,
+    which test_fctools.py imports. Now it installs `groundstation/requirements.txt`
+    plus the test extras. Reproduced and verified in a clean venv with exactly
+    CI's packages: 456 passed (incl. the real-SSH install test). Check CI
+    after every push.
+  - CI after the fix (509d7bf): **green** (onboard tests run 69 incl. the
+    real-SSH install test; app build green). Full real training-tools
+    install (started 20:35 into scratchpad/training-venv): download.pytorch.org
+    is blocked here, so pip fell back to the standard CUDA torch 2.14.1
+    (pinned via litert-torch) + nvidia libs, ~1 MB/s here; at 21:01 still
+    downloading nvidia_cudnn. Result to be recorded when it ends.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

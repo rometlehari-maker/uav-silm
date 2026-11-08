@@ -14,7 +14,7 @@ const WZ_STEPS = [
   { id: "fc_connect", title: "Connect the flight controller", sub: "USB cable" },
   { id: "fc_setup", title: "Set up the flight controller", sub: "One button" },
   { id: "bench", title: "Check the controls", sub: "On the bench" },
-  { id: "pi_install", title: "Prepare the Raspberry Pi", sub: "Copy one command" },
+  { id: "pi_install", title: "Prepare the Raspberry Pi", sub: "Memory card, then install" },
   { id: "pi_connect", title: "Connect to the Pi", sub: "Its own Wi-Fi" },
   { id: "pi_check", title: "Camera and link", sub: "Then send the settings" },
   { id: "sim", title: "Test in the simulator", sub: "Before the first flight" },
@@ -33,7 +33,7 @@ const BENCH = [
   "Battery in, the aircraft level on the table. It starts in AUTO by itself.",
   "Tilt it with the RIGHT wing down: the right aileron goes DOWN and the left one UP (it tries to lift the right wing).",
   "Tilt the nose DOWN: the elevator (or both V-tail halves) goes UP (it tries to lift the nose).",
-  "If anything moved the wrong way: reverse that servo (SERVOn_REVERSED in Mission Planner), then come back here.",
+  "If anything moved the wrong way: Tools tab → Servos and motor → set that output to Reversed, then come back here.",
 ];
 
 /* ---------------------------------------------------------------- state */
@@ -159,6 +159,7 @@ function wzRenderStep() {
 
 const WZ_RENDER = {
   need: () => `<p class="wz-lead">Tick what you have. Everything is needed before the first flight, but you can start with the laptop part now.</p>${ticks(NEED, "need")}
+    <p class="help">What exactly to buy, and how to connect it: <a href="#guides" data-guide="parts">Shopping list</a> · <a href="#guides" data-guide="wiring">Wiring</a> · <a href="#guides" data-guide="legal">Permission to fly</a></p>
     <p class="help">Quadcopters, DJI, PX4 or iNav flight controllers, and planes without an airspeed sensor will not work with this software.</p>`,
   aircraft: () => {
     const ok = wzAircraftOK();
@@ -174,7 +175,7 @@ const WZ_RENDER = {
       <div class="wz-status">${ok ? chip(true, "Mission is valid") : chip(false, "No valid mission yet")}</div>
       <button class="btn ${ok ? "" : "primary"} big" data-go="mission">${ok ? "Open the map" : "Draw it on the map"}</button>`;
   },
-  fc_connect: () => `<p class="wz-lead">Once, in Mission Planner: <b>Setup → Install Firmware → ArduPlane</b>, then calibrate the accelerometer, compass and airspeed sensor there. Close Mission Planner afterwards (it would hold the USB port).</p>
+  fc_connect: () => `<p class="wz-lead">The flight controller must run ArduPlane. A board that already has ArduPilot is updated from this app (Tools tab, <b>Update ArduPlane</b>). A brand-new board, or one with Betaflight / INAV, needs the first install done once with another program: <a href="#guides" data-guide="firmware-first">how to install ArduPilot the first time</a>. Not wired yet? <a href="#guides" data-guide="wiring">Wiring guide</a>.</p>
     <ol class="wz-howto"><li>Plug the battery into the aircraft.</li><li>Connect the flight controller to this laptop with the USB cable.</li><li>Wait: it is found by itself.</li></ol>
     <div class="wz-live" id="wz-fc-live"><span class="wz-spin"></span> Looking for the flight controller…</div>
     <div class="inline"><select id="wz-port" aria-label="USB port"></select><button class="btn ghost" id="wz-fc-retry">Check again</button></div>`,
@@ -188,15 +189,21 @@ const WZ_RENDER = {
     </ul>
     <div class="result" id="wz-fc-result"></div>
     <button class="btn primary big" id="wz-fc-go" ${wzMissionOK() ? "" : "disabled"}>Set up the flight controller</button>`,
-  bench: () => `<p class="wz-lead">With no pilot to correct it, a control surface that moves the wrong way would crash the first flight. Check it now, on the table.</p>${ticks(BENCH, "bench")}`,
-  pi_install: () => `<p class="wz-lead">The Pi needs a prepared memory card and one command. About 20 minutes, mostly waiting.</p>
+  bench: () => `<p class="wz-lead">With no pilot to correct it, a control surface that moves the wrong way would crash the first flight. Check it now, on the table.</p>
+    <p class="help">First, once, in the <a href="#tools" data-go-tab="tools">Tools tab</a>: tell it what each output drives (<b>Servos and motor</b>), set the <b>Airspeed sensor</b>, and run the <b>calibrations</b> (accelerometers, level, compass, airspeed). <a href="#guides" data-guide="servos-esc">ESC and servos guide</a> · <a href="#guides" data-guide="cg">Balance point</a></p>
+    ${ticks(BENCH, "bench")}`,
+  pi_install: () => `<p class="wz-lead">The Pi needs a prepared memory card, then this app installs everything on it. About 20 minutes, mostly waiting.</p>
     <ol class="wz-howto">
-      <li>Install <b>Raspberry Pi Imager</b> on this laptop (raspberrypi.com/software). Choose <b>Raspberry Pi 4</b> and <b>Raspberry Pi OS Lite (64-bit)</b>.</li>
-      <li>When it asks about settings, choose <b>Edit settings</b>: hostname <code>silm</code>, a username and password, <b>your home Wi-Fi</b> with its country, and under Services <b>enable SSH</b>. Write the card.</li>
-      <li>Put the card in the Pi and power it. Wait two minutes.</li>
-      <li>On this laptop open a terminal (Windows: <b>PowerShell</b>) and connect to the Pi with your username:${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}</li>
-      <li>Paste this one line into it and press Enter. It asks you to choose a password for the aircraft's own Wi-Fi, installs everything (about 15 minutes) and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</li>
+      <li>(<a href="#guides" data-guide="sd-card">Step-by-step guide with every setting</a>) Install <b>Raspberry Pi Imager</b> on this laptop (raspberrypi.com/software). Choose <b>Raspberry Pi 4</b> and <b>Raspberry Pi OS Lite (64-bit)</b>.</li>
+      <li>When it asks about settings, choose <b>Edit settings</b>: hostname <code>silm</code>, a username and password, <b>your home Wi-Fi</b> with its country, and under Services <b>enable SSH</b> (password). Write the card.</li>
+      <li>Put the card in the Pi and power it. Wait two minutes. This laptop must be on the same home Wi-Fi.</li>
+      <li>Fill in and press <b>Install</b>:</li>
     </ol>
+    ${piInstallForm()}
+    <details class="wz-byhand"><summary>Or install by hand in a terminal</summary>
+      <p>Connect to the Pi (Windows: <b>PowerShell</b>):${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
+      then paste this line. It asks for a password for the aircraft's own Wi-Fi, installs everything and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</p>
+    </details>
     <label class="wz-confirm"><input type="checkbox" id="wz-pi-installed" ${wzIsDone("pi_install") ? "checked" : ""}> The installer finished and the Pi restarted</label>`,
   pi_connect: () => `<p class="wz-lead">After the restart, the Pi makes its own Wi-Fi network named <b>SILM-silm</b> whenever your home Wi-Fi is out of reach (at the field, or with the aircraft away from home).</p>
     <ol class="wz-howto"><li>Join this laptop to the Wi-Fi <b>SILM-…</b> with the password you chose. (No internet while joined: that is normal.)</li><li>Wait: the Pi is found by itself.</li></ol>
@@ -212,6 +219,7 @@ const WZ_RENDER = {
        <div class="wz-status">${wzIsDone("sim") ? chip(true, "Passed") : chip(false, "Not passed yet")}</div>
        <button class="btn primary big" data-go="sim">Open the simulator</button>`
     : `<p class="wz-lead">The simulator flies your exact mission with the GPS jammed halfway, before you risk the real aircraft. It runs on Linux: on Windows, inside <b>Ubuntu (WSL2)</b>.</p>
+       <p class="help"><a href="#guides" data-guide="simulator">How to set up the simulator</a></p>
        <ol class="wz-howto"><li>Set it up once: follow <b>SITL_HOWTO.md</b> in the software folder (part A, about 30 minutes, mostly waiting).</li><li>Start the Ground Station inside Ubuntu and open the <b>Simulator</b> tab, or run the commands it shows.</li><li>All seven checks must say PASS.</li></ol>
        <label class="wz-confirm"><input type="checkbox" id="wz-sim-ok" ${wzIsDone("sim") ? "checked" : ""}> I flew this mission in the simulator and every check passed</label>`,
 };
@@ -225,7 +233,10 @@ const WZ_BIND = {
     el.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => wzGo(b.dataset.go)));
     const c = $("wz-sim-ok"); if (c) c.addEventListener("change", () => { wzMark("sim", c.checked); wzRenderStep(); });
   },
-  pi_install: () => $("wz-pi-installed").addEventListener("change", (e) => { wzMark("pi_install", e.target.checked); wzNextLabel(); }),
+  pi_install: (el) => {
+    $("wz-pi-installed").addEventListener("change", (e) => { wzMark("pi_install", e.target.checked); wzNextLabel(); });
+    piInstallBind(el);
+  },
   fc_connect: () => {
     $("wz-fc-retry").addEventListener("click", () => { WZ.fc = null; wzFcPoll(true); });
     $("wz-port").addEventListener("change", () => { P.link.fc_port = $("wz-port").value; $("fc-port").value = $("fc-port-2").value = P.link.fc_port; changed(); WZ.fc = null; wzFcPoll(true); });

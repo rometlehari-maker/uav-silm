@@ -294,6 +294,7 @@ def main(argv=None) -> int:
     ap.add_argument("--skip", default="", help="comma list: camera,gimbal,fc,model,system")
     ap.add_argument("--settings", default=None,
                     help="Ground Station settings file (default ~/silm-settings/settings.yaml)")
+    ap.add_argument("--json", default=None, help="also write the results to this JSON file")
     a = ap.parse_args(argv)
     # the same configuration the flight program uses: config.yaml + settings.yaml
     import run as run_mod  # noqa: E402
@@ -330,6 +331,11 @@ def main(argv=None) -> int:
     fails = [r for r in RESULTS if r[1] == "FAIL"]
     warns = [r for r in RESULTS if r[1] == "WARN"]
     print(f"\n{len(fails)} FAIL, {len(warns)} WARN" + ("  -> fix the FAILs before flying" if fails else ""))
+    if a.json:
+        import json
+        with open(a.json, "w", encoding="utf-8") as fh:
+            json.dump({"results": [{"part": p, "status": st, "message": m} for p, st, m in RESULTS],
+                       "fails": len(fails), "warns": len(warns)}, fh, indent=1)
     return 1 if fails else 0
 
 

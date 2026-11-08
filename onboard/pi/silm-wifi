@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# =============================================================================
+# silm-wifi - the only Wi-Fi changes the SILM ground agent may make.
+# Installed as /usr/local/sbin/silm-wifi (root) by pi/install.sh; the agent
+# may run exactly this with sudo, nothing else. Every value is checked.
+#
+#   silm-wifi list                         known Wi-Fi networks (name:type:autoconnect)
+#   silm-wifi hotspot NAME PASSWORD        rename / re-key the aircraft's own Wi-Fi
+#   silm-wifi home-add NAME PASSWORD       add a home Wi-Fi (for updates; preferred in range)
+#   silm-wifi home-remove NAME             forget a home Wi-Fi added this way
+#   silm-wifi country CC                   Wi-Fi country, two letters (e.g. EE)
+#
+# Changes to the aircraft's own Wi-Fi take effect at the next start.
+# =============================================================================
+set -euo pipefail
+
+NMCLI="${SILM_NMCLI:-nmcli}"
+RASPI="${SILM_RASPI_CONFIG:-raspi-config}"
+
+die() { echo "silm-wifi: $*" >&2; exit 2; }
+valid_name() {
+  [ "${#1}" -ge 1 ] && [ "${#1}" -le 32 ] || die "network name must be 1-32 characters"
+  [[ "$1" =~ ^[A-Za-z0-9\ ._-]+$ ]] || die "network name may contain letters, digits, space . _ - only"
+}
+valid_password() {
+  [ "${#1}" -ge 8 ] && [ "${#1}" -le 63 ] || die "password must be 8-63 characters"
+  [[ "$1" =~ ^[[:print:]]+$ ]] || die "password must be printable characters"
+}
+
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  list)
+    [ $# -eq 0 ] || die "list takes no values"
+    "$NMCLI" -t -f NAME,TYPE,AUTOCONNECT con show
+    ;;
+  hotspot)
+    [ $# -eq 2 ] || die "hotspot NAME PASSWORD"
+    valid_name "$1"; valid_password "$2"
+    "$NMCLI" con modify silm-hotspot 802-11-wireless.ssid "$1" wifi-sec.psk "$2"
+    echo "aircraft Wi-Fi is now '$1' (from the next start)"
+    ;;
+  home-add)
+    [ $# -eq 2 ] || die "home-add NAME PASSWORD"
+    valid_name "$1"; valid_password "$2"
+    "$NMCLI" con delete "home-$1" >/dev/null 2>&1 || true
+    "$NMCLI" con add type wifi ifname wlan0 con-name "home-$1" ssid "$1" autoconnect yes \
+      wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$2" connection.autoconnect-priority 0
+    echo "home Wi-Fi '$1' added"
+    ;;
+  home-remove)
+    [ $# -eq 1 ] || die "home-remove NAME"
+    valid_name "$1"
+    "$NMCLI" con delete "home-$1"
+    echo "home Wi-Fi '$1' removed"
+    ;;
+  country)
+    [ $# -eq 1 ] || die "country CC"
+    [[ "$1" =~ ^[A-Z]{2}$ ]] || die "country must be two capital letters, e.g. EE"
+    "$RASPI" nonint do_wifi_country "$1"
+    echo "Wi-Fi country $1"
+    ;;
+  *)
+    die "unknown command '$cmd' (list, hotspot, home-add, home-remove, country)"
+    ;;
+esac

@@ -60,6 +60,75 @@ def status(address: str) -> dict:
     return _request(address, "/api/status")
 
 
+def camera_jpg(address: str) -> bytes | None:
+    """The camera's newest picture (None while the Pi has none yet)."""
+    try:
+        with urllib.request.urlopen(_url(address, "/api/camera.jpg"), timeout=6) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 503:
+            return None
+        raise PiError(f"the Pi answered with error {e.code}") from e
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        raise PiError(f"no answer from the Pi ({getattr(e, 'reason', e)})") from e
+
+
+def calibration(address: str, action: str, body: dict | None = None) -> dict:
+    """Lens calibration on the Pi: action = state | capture | compute | reset."""
+    if action == "state":
+        return _request(address, "/api/calibration")
+    if action not in ("capture", "compute", "reset"):
+        raise ValueError(f"unknown calibration action {action!r}")
+    return _request(address, f"/api/calibration/{action}", body or {},
+                    timeout=240 if action == "compute" else 15)
+
+
+def preflight(address: str, alt_m: float, speed_mps: float) -> dict:
+    """The full hardware check on the Pi (takes up to a few minutes)."""
+    return _request(address, "/api/preflight", {"alt_m": alt_m, "speed_mps": speed_mps}, timeout=360)
+
+
+def software_update(address: str, zip_bytes: bytes) -> dict:
+    """Send a software update package; the Pi checks it, swaps it in and restarts."""
+    import base64
+    return _request(address, "/api/software", {"zip_b64": base64.b64encode(zip_bytes).decode()},
+                    timeout=300)
+
+
+WIFI_ACTIONS = ("list", "hotspot", "home-add", "home-remove", "country")
+
+
+def wifi(address: str, action: str = "list", **kw) -> dict:
+    """The Pi's Wi-Fi: list | hotspot(name, password) | home-add(name, password)
+    | home-remove(name) | country(country)."""
+    if action not in WIFI_ACTIONS:
+        raise ValueError(f"unknown Wi-Fi action {action!r}")
+    if action == "list":
+        return _request(address, "/api/wifi")
+    body = {"action": action, **{k: kw[k] for k in ("name", "password", "country") if k in kw}}
+    return _request(address, "/api/wifi", body, timeout=30)
+
+
+SOFTWARE_ON_STICK = "software/silm-pi-software.zip"
+
+
+def usb_write_software(stick: str, zip_bytes: bytes) -> dict:
+    """Put a software update package on the stick, where the Pi installs it from."""
+    if not stick or not os.path.isdir(stick):
+        raise PiError(f"the USB stick folder {stick!r} does not exist - plug it in and pick it")
+    dst = os.path.join(stick, TRANSFER_DIR, "to_aircraft", *SOFTWARE_ON_STICK.split("/"))
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    with open(dst + ".part", "wb") as fh:
+        fh.write(zip_bytes)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(dst + ".part", dst)
+    return {"ok": True, "file": dst,
+            "message": f"written to {dst}. Safely eject the stick, plug it into the aircraft's Pi "
+                       "(on the ground, disarmed) and power on: the Pi checks and installs it within "
+                       "a minute, then restarts its programs. Plug the stick back in here to see the result."}
+
+
 def send_settings(address: str, settings_text: str, project: dict, mission_wpl: str | None) -> dict:
     payload = {"settings_yaml": settings_text, "project": project, "sender": "ground-station"}
     if mission_wpl:

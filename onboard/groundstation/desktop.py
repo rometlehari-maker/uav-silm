@@ -126,6 +126,12 @@ def selftest() -> int:
         _mavlink_loopback()
         lua = os.path.join(ONBOARD, "ardupilot", "scripts", "silm_gps_loss.lua")
         assert os.path.getsize(lua) > 1000, "GPS-loss script"
+        sw = _get(url + "api/pi/software", {"how": "info"})
+        assert sw.get("ok") and sw["app_version"] == software_version() and sw["size"] > 100_000, "Pi software"
+        assert _get(url + "api/pi/install")["state"] == "idle", "Pi install"
+        assert len(_get(url + "api/guides")["guides"]) >= 10, "guides"
+        assert "tools" in _get(url + "api/train/tools"), "training tools"
+        import paramiko  # noqa: F401  - installing the Pi over SSH needs it
     except Exception as exc:  # noqa: BLE001
         print(f"SELFTEST FAILED: {exc!r}")
         return 1

@@ -36,6 +36,20 @@ OUT = os.path.join(HERE, "out")
 SYSTEM = {"Windows": "windows", "Darwin": "macos"}.get(platform.system(), "linux")
 
 
+PI_PACKAGE = os.path.join(OUT, "pi_software.zip")
+
+
+def prebuild_pi_package() -> str:
+    """The aircraft computer's software as one update package, carried inside
+    the app (so the Pi can be updated from it without internet)."""
+    sys.path.insert(0, ONBOARD)
+    from groundstation import pisoftware
+    os.makedirs(OUT, exist_ok=True)
+    with open(PI_PACKAGE, "wb") as fh:
+        fh.write(pisoftware.build_package(ONBOARD))
+    return PI_PACKAGE
+
+
 def version() -> str:
     return open(os.path.join(ONBOARD, "VERSION")).read().strip()
 
@@ -45,7 +59,7 @@ def data_files() -> list[tuple[str, str]]:
     Ground Station reads at run time, nothing it doesn't."""
     d = [("groundstation/static", "groundstation/static"), ("ardupilot", "ardupilot")]
     for f in ("config.yaml", "VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md",
-              "GROUND_STATION.md", "FLIGHT_READY.md", "SITL_HOWTO.md"):
+              "GROUND_STATION.md", "FLIGHT_READY.md", "SITL_HOWTO.md", "GUIDES.md"):
         d.append((f, "."))
     for f in ("silm_oi.tflite", "silm_oi_labels.txt", "silm_oi.json", "LICENSE-silm_oi-AGPL-3.0.txt",
               "coco_labels.txt", "README.md"):
@@ -67,7 +81,8 @@ def pyinstaller_args() -> list[str]:
             "--specpath", OUT, "--paths", ONBOARD, "--paths", os.path.join(ONBOARD, "planner")]
     for m in ("groundstation.app", "groundstation.desktop", "groundstation.fc", "groundstation.flights",
               "groundstation.pilink", "groundstation.project", "groundstation.sim",
-              "groundstation.training", "groundstation.runtime", "survey", "silm_recon.mavmission",
+              "groundstation.training", "groundstation.runtime", "groundstation.fctools",
+              "groundstation.vendor.ardupilot_uploader", "groundstation.pisoftware", "groundstation.piinstall", "groundstation.guides", "groundstation.toolsetup", "paramiko", "survey", "silm_recon.mavmission",
               "silm_recon.config", "pymavlink.mavutil", "pymavlink.mavftp",
               "pymavlink.dialects.v20.ardupilotmega", "pymavlink.dialects.v10.ardupilotmega",
               "serial.tools.list_ports") + (("webview.platforms.edgechromium",) if SYSTEM == "windows" else
@@ -78,6 +93,7 @@ def pyinstaller_args() -> list[str]:
         args += ["--exclude-module", m]
     for src, dst in data_files():
         args += ["--add-data", f"{os.path.join(ONBOARD, src)}{sep}{dst}"]
+    args += ["--add-data", f"{PI_PACKAGE}{sep}."]               # made by prebuild_pi_package()
     if SYSTEM == "windows":
         args += ["--windowed", "--icon", os.path.join(HERE, "icons", "icon.ico")]
     elif SYSTEM == "macos":
@@ -147,6 +163,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if not a.smoke_only:
         os.makedirs(OUT, exist_ok=True)
+        prebuild_pi_package()
         import PyInstaller.__main__
         PyInstaller.__main__.run(pyinstaller_args())
         for f in package():

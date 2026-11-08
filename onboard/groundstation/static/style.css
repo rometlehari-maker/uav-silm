@@ -126,7 +126,7 @@ li.ok { background: var(--okbg); color: var(--cyan); border-color: color-mix(in 
 .q .req, .q-req { color: var(--amber); font-weight: 700; margin-left: 4px; }
 .inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .unit { color: var(--faint); font-family: var(--mono); font-size: 13px; }
-input[type=text], input[type=number], input:not([type]), select {
+input[type=text], input[type=password], input[type=number], input:not([type]), select {
   padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--text);
   min-width: 0; transition: border-color .25s, box-shadow .25s; }
 input::placeholder { color: var(--faint); opacity: .8; }
@@ -402,3 +402,68 @@ table.cls td + td { font-family: var(--mono); font-size: 13px; }
   .wz-steps span { display: none; }
   .wz-card { padding: 22px 18px; }
 }
+
+/* ---------- tools */
+.cam-view { position: relative; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  background: var(--deep); min-height: 200px; display: grid; place-items: center; }
+.cam-view img { width: 100%; display: block; }
+.cam-msg { color: var(--faint); padding: 30px 20px; text-align: center; font-size: 14px; }
+.pf-table td:nth-child(2) b { font-family: var(--mono); font-size: 12.5px; }
+tr.pf-pass td:nth-child(2) b { color: var(--cyan); } tr.pf-warn td:nth-child(2) b { color: var(--amber); }
+tr.pf-fail td:nth-child(2) b { color: var(--red); } tr.pf-skip td:nth-child(2) b { color: var(--faint); }
+.lc-inputs { gap: 22px; margin: 6px 0 4px; color: var(--dim); font-size: 14px; }
+.lc-inputs label { display: inline-flex; align-items: center; gap: 8px; }
+.lc-inputs input[type=number] { width: 84px; }
+.result .btn { margin-top: 10px; }
+.cal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cal-grid > div { border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px 16px; }
+.cal-grid b { font-weight: 640; }
+.cal-grid .help { min-height: 3.2em; }
+.fcj-prompt { font-size: 18px; font-weight: 620; color: var(--amber); margin: 6px 0 12px; }
+.fcj-bar { margin: 6px 0; }
+#fc-job-card { border-color: var(--cyan); }
+@media (max-width: 760px) { .cal-grid { grid-template-columns: 1fr; } }
+.sw-versions { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0 4px; }
+.sw-versions > div { border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px 16px; min-width: 180px; }
+.sw-versions span { display: block; color: var(--faint); font-size: 13px; }
+.sw-versions b { font-family: var(--mono); font-size: 15px; }
+.sw-versions b.old { color: var(--amber); }
+h3.q.small { margin-top: 16px; }
+.wf-inputs input:not(.wf-cc) { flex: 1 1 200px; min-width: 0; }
+.wf-cc { width: 5em; text-transform: uppercase; }
+
+/* ---------- install the Pi over SSH (wizard + Tools) */
+.pin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 16px; margin: 10px 0; }
+.pin-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--dim); }
+.pin-grid .unit { font-size: 12px; }
+.pin-grid input { width: 100%; min-width: 0; }
+.pin-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--dim); margin: 4px 0 8px; }
+.pin-job { margin-top: 10px; }
+.pin-log { max-height: 260px; overflow: auto; }
+.wz-byhand { margin: 14px 0; color: var(--dim); }
+.wz-byhand summary { cursor: pointer; font-weight: 560; }
+
+/* ---------- training tools install (Teach tab) */
+.tt-box { border: 1px solid var(--amber); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.tt-box > b { color: var(--amber); }
+#tt-job { margin-top: 10px; }
+tr.sv-off td:first-child { color: var(--faint); }
+.as-inputs { gap: 18px; margin: 10px 0 4px; color: var(--dim); font-size: 14px; }
+.as-inputs label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---------- guides */
+.gd-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; align-items: start; }
+.gd-list { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 80px; }
+.gd-item { text-align: left; background: none; border: 1px solid transparent; border-radius: 10px; padding: 8px 12px;
+  color: var(--dim); font: inherit; font-size: 14px; cursor: pointer; }
+.gd-item:hover { border-color: var(--line); color: var(--text); }
+.gd-item.on { border-color: var(--cyan); color: var(--text); background: var(--okbg); }
+.gd-body { line-height: 1.6; }
+.gd-body h3 { margin: 20px 0 6px; font-size: 16px; }
+.gd-body li { margin: 4px 0; }
+.gd-body code { font-family: var(--mono); font-size: 13px; background: var(--deep); padding: 1px 5px; border-radius: 5px; }
+.gd-table { overflow-x: auto; margin: 10px 0; }
+.gd-table table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.gd-table th, .gd-table td { border-bottom: 1px solid var(--line-soft); padding: 7px 10px; text-align: left; vertical-align: top; }
+.gd-table th { color: var(--faint); font-weight: 560; }
+@media (max-width: 900px) { .gd-layout { grid-template-columns: 1fr; } .gd-list { position: static; flex-direction: row; flex-wrap: wrap; } }

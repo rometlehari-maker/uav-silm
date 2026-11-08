@@ -201,6 +201,10 @@ class Recon:
                 if not self._active(st):
                     # Idle: don't spend the Pi's CPU (and heat) on inference pre-launch.
                     self.health.maybe_sample()
+                    try:
+                        self.maybe_preview(st)
+                    except Exception as exc:  # the preview must never stop the program
+                        print(f"[recon] preview error: {exc}")
                     now = time.time()
                     if now - last_status > 5.0:
                         print(f"[recon] idle mode={st.mode} armed={st.armed} "
@@ -232,6 +236,35 @@ class Recon:
             except Exception:
                 pass
             self._shutdown()
+
+    def maybe_preview(self, st, now: float | None = None) -> bool:
+        """On the ground, while the Ground Station asks for it (the agent touches
+        preview_request next to the status file), save the newest camera frame
+        as preview.jpg once a second: the live view and lens calibration."""
+        now = time.time() if now is None else now
+        if st.armed:
+            return False
+        folder = os.path.dirname(self._status_path) or "."
+        try:
+            if now - os.path.getmtime(os.path.join(folder, "preview_request")) > 15.0:
+                return False
+        except OSError:
+            return False
+        if now - getattr(self, "_last_preview", 0.0) < 1.0:
+            return False
+        frame, _ = self.camera.read_with_time()
+        if frame is None:
+            return False
+        import cv2
+        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        if not ok:
+            return False
+        tmp = os.path.join(folder, ".preview.jpg.tmp")
+        with open(tmp, "wb") as fh:
+            fh.write(buf.tobytes())
+        os.replace(tmp, os.path.join(folder, "preview.jpg"))
+        self._last_preview = now
+        return True
 
     def write_status(self, st, now: float | None = None) -> None:
         """~1 Hz status for the ground agent (never raises)."""

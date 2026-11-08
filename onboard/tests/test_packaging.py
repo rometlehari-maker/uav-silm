@@ -20,7 +20,7 @@ def test_every_file_the_app_needs_is_packed():
     srcs = {s for s, _ in files}
     for must in ("groundstation/static", "ardupilot", "config.yaml", "VERSION", "LICENSE",
                  "THIRD_PARTY_NOTICES.md", "models/silm_oi.tflite", "models/LICENSE-silm_oi-AGPL-3.0.txt",
-                 "tools/sitl_failsafe_test.py", "training/train.py", "training/classes.yaml"):
+                 "tools/sitl_failsafe_test.py", "training/train.py", "training/classes.yaml", "GUIDES.md"):
         assert must in srcs, must
     assert not any(s.startswith(("training/datasets", "training/runs")) for s in srcs)
 
@@ -30,7 +30,9 @@ def test_build_options():
     assert args[0].endswith("app_entry.py") and "--name" in args
     hidden = {args[i + 1] for i, a in enumerate(args) if a == "--hidden-import"}
     assert {"groundstation.desktop", "survey", "pymavlink.dialects.v20.ardupilotmega",
-            "serial.tools.list_ports"} <= hidden
+            "serial.tools.list_ports", "groundstation.pisoftware", "groundstation.piinstall", "groundstation.guides", "groundstation.toolsetup", "paramiko"} <= hidden
+    data = [args[i + 1] for i, a in enumerate(args) if a == "--add-data"]
+    assert any(d.startswith(build_app.PI_PACKAGE + os.pathsep) for d in data)   # the Pi's software rides along
     excluded = {args[i + 1] for i, a in enumerate(args) if a == "--exclude-module"}
     assert {"torch", "cv2", "numpy"} <= excluded
     for f in ("icon.ico", "icon.icns", "icon_512.png"):

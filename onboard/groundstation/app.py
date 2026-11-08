@@ -6,8 +6,8 @@
     or:             python -m groundstation          (from the onboard folder)
 
 It opens in your web browser (http://127.0.0.1:8765) but runs only on this
-computer. Tabs: Start, Aircraft, Mission, Camera, Send to aircraft, Launch,
-Simulator, Flights & pictures.
+computer. Tabs: Setup, Start, Aircraft, Mission, Camera, Send to aircraft, Launch,
+Simulator, Flights & pictures, Teach new objects, Tools.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, flights, pilink, training  # noqa: E402
+from groundstation import fc, fctools, flights, guides, piinstall, pilink, pisoftware, toolsetup, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -79,6 +79,9 @@ class Station:
         self.camera = camera_from_config()
         self.sim = sim or SimRunner()
         self.dataset = training.Dataset(self.training_root)
+        self.piinstall = piinstall.PiInstall()
+        self.toolinstall = toolsetup.ToolInstall()
+        self.fcjobs = fctools.FCJobs(log_dir=os.path.join(os.path.dirname(self.projects), "fc_logs"))
         self.trainer = training.Trainer(os.path.join(self.training_root, "models"),
                                         bundled_dirs=(os.path.join(ONBOARD, "models"),))
 
@@ -315,6 +318,24 @@ class Station:
         return pilink.usb_write(body.get("path"), o["settings_text"], o["project"],
                                 o["mission_wpl"], extra_files=files)
 
+    def pi_software(self, body: dict) -> dict:
+        """The aircraft's software update: info | wifi (send it) | usb (write it to the stick)."""
+        how = body.get("how", "info")
+        data, version = pisoftware.package()
+        if how == "info":
+            out = {"ok": True, "app_version": version, "size": len(data), "pi_version": None}
+            if body.get("address"):
+                try:
+                    out["pi_version"] = pilink.status(body["address"]).get("software")
+                except pilink.PiError as exc:
+                    out["pi_message"] = str(exc)
+            return out
+        if how == "wifi":
+            return pilink.software_update(body.get("address"), data)
+        if how == "usb":
+            return pilink.usb_write_software(body.get("path"), data)
+        raise ValueError(f"unknown way {how!r}")
+
     # ---------------------------------------------------------- simulator
     def sim_start(self, body: dict) -> dict:
         o = self.outputs(body.get("project") or {})
@@ -382,6 +403,22 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.load_project(urllib.parse.unquote(path[14:])))
             if path == "/api/setup":
                 return self._send(200, st.setup_state())
+            if path == "/api/guides":
+                return self._send(200, guides.load())
+            if path == "/api/fc/job":
+                return self._send(200, st.fcjobs.status())
+            if path == "/api/pi/install":
+                return self._send(200, st.piinstall.status())
+            if path == "/api/fc/firmware":
+                return self._send(200, {"files": fctools.firmware_files(), "boards": fctools.BOARDS})
+            if path == "/api/pi/camera.jpg":
+                try:
+                    jpg = pilink.camera_jpg((qs.get("address") or [""])[0])
+                except pilink.PiError as exc:
+                    return self._send(502, {"ok": False, "message": str(exc)})
+                if jpg is None:
+                    return self._send(503, {"ok": False, "message": "waiting for a picture from the camera"})
+                return self._send(200, jpg, "image/jpeg")
             if path == "/api/ports":
                 return self._send(200, fc.list_ports())
             if path == "/api/drives":
@@ -406,6 +443,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.train_state())
             if path == "/api/train/status":
                 return self._send(200, st.trainer.status())
+            if path == "/api/train/tools":
+                return self._send(200, {**st.toolinstall.status(), "tools": training.tools_available()})
             if path == "/api/train/img":
                 try:
                     return self._file(st.dataset.image_path((qs.get("n") or [""])[0]))
@@ -447,6 +486,42 @@ class Handler(BaseHTTPRequestHandler):
                 text, fname, ctype = st.file(body.get("project") or {}, m.group(1))
                 return self._send(200, text, ctype,
                                   {"Content-Disposition": f'attachment; filename="{fname}"'})
+            port, baud = body.get("port") or "", int(body.get("baud") or 115200)
+            if path == "/api/fc/servos":
+                return self._send(200, fctools.servos(port, baud))
+            if path == "/api/fc/servo_reverse":
+                return self._send(200, fctools.set_reversed(port, int(body.get("n", 0)),
+                                                            bool(body.get("reversed")), baud))
+            if path == "/api/fc/servo_function":
+                return self._send(200, fctools.set_function(port, int(body.get("n", 0)),
+                                                            int(body.get("function", -1)), baud))
+            if path == "/api/fc/airspeed":
+                return self._send(200, {**fctools.airspeed(port, baud), "types": fctools.AIRSPEED_TYPES})
+            if path == "/api/fc/airspeed_set":
+                return self._send(200, fctools.set_airspeed(port, int(body.get("type", -1)),
+                                                            int(body.get("bus", 1)), baud))
+            if path == "/api/fc/battery":
+                return self._send(200, fctools.battery(port, baud))
+            if path == "/api/fc/battery_cal":
+                return self._send(200, fctools.battery_cal(port, float(body.get("measured_v") or 0), baud))
+            if path == "/api/fc/logs":
+                return self._send(200, fctools.log_list(port, baud))
+            if path == "/api/fc/job/start":
+                kw = {k: body[k] for k in ("log_id", "size", "file") if k in body}
+                if body.get("kind") == "firmware":
+                    kw["ports"] = [p["device"] for p in fc.list_ports() if p.get("usb", True)]
+                return self._send(200, st.fcjobs.start(body.get("kind", ""), port, baud, **kw))
+            if path == "/api/fc/job/answer":
+                return self._send(200, st.fcjobs.answer(True))
+            if path == "/api/fc/job/cancel":
+                return self._send(200, st.fcjobs.cancel())
+            if path == "/api/fc/firmware/upload":
+                import base64
+                return self._send(200, fctools.save_firmware(body.get("name", ""),
+                                                             base64.b64decode(body.get("data_b64") or "")))
+            if path == "/api/fc/firmware/download":
+                return self._send(200, fctools.download_firmware(body.get("board", "MatekH743"),
+                                                                 body.get("release", "stable")))
             m = re.match(r"^/api/fc/(info|params|script|mission|arm|disarm)$", path)
             if m:
                 return self._send(200, st.fc_action(m.group(1), body))
@@ -460,6 +535,26 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "flights": pilink.flights(body.get("address"))})
             if path == "/api/pi/log":
                 return self._send(200, {"ok": True, "log": pilink.recent_log(body.get("address"))})
+            if path == "/api/pi/calibration":
+                return self._send(200, pilink.calibration(body.get("address"), body.get("action", "state"),
+                                                          {k: body[k] for k in ("cols", "rows", "square_mm", "fisheye")
+                                                           if k in body}))
+            if path == "/api/pi/preflight":
+                pr = P.merge_defaults(body.get("project") or {})
+                return self._send(200, pilink.preflight(body.get("address"), float(pr["mission"].get("alt_m") or 100),
+                                                        float(pr["aircraft"].get("cruise_mps") or 19)))
+            if path == "/api/pi/install/start":
+                kw = {k: body[k] for k in ("host", "user", "password", "hotspot_password", "ssid", "country",
+                                           "hotspot", "camera_net", "reboot", "port", "dry_run") if k in body}
+                return self._send(200, st.piinstall.start(**kw))
+            if path == "/api/pi/install/cancel":
+                return self._send(200, st.piinstall.cancel())
+            if path == "/api/pi/software":
+                return self._send(200, st.pi_software(body))
+            if path == "/api/pi/wifi":
+                return self._send(200, pilink.wifi(body.get("address"), body.get("action", "list"),
+                                                   **{k: body[k] for k in ("name", "password", "country")
+                                                      if k in body}))
             if path == "/api/pi/download":
                 d = pilink.download_flight(body.get("address"), body.get("name"), st.library)
                 return self._send(200, {"ok": True, "message": f"downloaded to {d}",
@@ -476,6 +571,10 @@ class Handler(BaseHTTPRequestHandler):
                 names = pilink.import_folder(body.get("folder"), st.library)
                 return self._send(200, {"ok": True, "names": names,
                                         "message": f"imported {len(names)} flight(s)"})
+            if path == "/api/train/tools/install":
+                return self._send(200, st.toolinstall.start())
+            if path == "/api/train/tools/cancel":
+                return self._send(200, st.toolinstall.cancel())
             if path == "/api/train/upload":
                 return self._send(200, st.train_upload(body.get("files")))
             if path == "/api/train/class":

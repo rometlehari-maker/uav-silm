@@ -29,6 +29,8 @@
     <button data-tab="sim" class="tab"><b>7</b> Simulator</button>
     <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
     <button data-tab="train" class="tab"><b>9</b> Teach new objects</button>
+    <button data-tab="tools" class="tab"><b>10</b> Tools</button>
+    <button data-tab="guides" class="tab tab-guides"><b>?</b> Guides</button>
   </nav>
 
   <main>
@@ -201,7 +203,7 @@
         <h2>C · Aircraft computer with a USB stick (no Wi-Fi)</h2>
         <p class="help">Use a USB stick named <b>SILM</b> (FAT32 or exFAT). Write to it here, plug it
           into the aircraft's Pi and power on; after 10 seconds plug it back in here and press
-          "Read the stick".</p>
+          "Read the stick". <a href="#guides" data-guide="usb-stick">How to name a stick SILM</a></p>
         <div class="q">Where is the USB stick on this laptop?</div>
         <div class="inline">
           <input id="usb-path" list="drive-list" placeholder="E:\  or  /Volumes/SILM" aria-label="USB stick folder">
@@ -219,7 +221,8 @@
       <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>6 · Launch</span></div>
       <h1>Launch</h1>
       <p class="lead">There is no pilot link: once launched it flies the whole mission, lands
-        and switches itself off. Arm only with the aircraft in your hand, ready to go.</p>
+        and switches itself off. Arm only with the aircraft in your hand, ready to go.
+        Flying it needs an authorisation: <a href="#guides" data-guide="legal">permission to fly</a>.</p>
       <div class="card" id="wind-recap"></div>
       <div class="card">
         <h2>Checklist - tick every line</h2>
@@ -348,6 +351,16 @@
           <div class="card">
             <h2>4 · Train and send to the aircraft</h2>
             <div id="tr-stats"></div>
+            <div class="tt-box" id="tt-box" hidden>
+              <b>The training tools are needed once.</b>
+              <p class="help" id="tt-why"></p>
+              <p class="help">No Python on this laptop yet? <a href="#guides" data-guide="python">Installing Python</a></p>
+              <div class="row-btns"><button class="btn primary" id="tt-install">Install the training tools</button>
+                <button class="btn ghost" id="tt-cancel" hidden>Stop</button></div>
+              <div id="tt-job" hidden><div class="wz-bar"><i id="tt-bar"></i></div><div class="help" id="tt-step"></div>
+                <details><summary>Messages</summary><pre class="log" id="tt-log"></pre></details></div>
+              <div class="result" id="tt-result" role="status"></div>
+            </div>
             <div class="q">How thoroughly should it train?</div>
             <select id="tr-preset" aria-label="Training length"></select>
             <div class="row-btns"><button class="btn primary" id="tr-start">Start training</button><button class="btn ghost" id="tr-stop">Stop</button></div>
@@ -357,6 +370,221 @@
             <ul class="list" id="tr-models"></ul>
           </div>
         </div>
+      </div>
+    </section>
+    <!-- ======================================================== GUIDES -->
+    <section id="tab-guides" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>Guides</span></div>
+      <h1>Guides</h1>
+      <div class="lead" id="gd-intro"></div>
+      <div class="gd-layout">
+        <nav class="gd-list" id="gd-list" aria-label="Guides"></nav>
+        <article class="card gd-body" id="gd-body"></article>
+      </div>
+    </section>
+    <!-- ======================================================== TOOLS -->
+    <section id="tab-tools" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>10 · Tools</span></div>
+      <h1>Tools</h1>
+      <p class="lead">Check, calibrate and look after the aircraft from here. For the aircraft
+        computer, join this laptop to the aircraft's Wi-Fi (<b>SILM-…</b>); for the flight
+        controller, plug in its USB cable. The aircraft must be on the ground and disarmed.</p>
+
+      <h2 class="sub">Aircraft computer (Raspberry Pi)</h2>
+      <div class="card" id="pin-tools">
+        <h2>Install the aircraft computer (first time)</h2>
+        <p class="help">For a new or rewritten memory card. Write the card with <b>Raspberry Pi
+          Imager</b> first (Raspberry Pi OS Lite 64-bit; in its settings: hostname <code>silm</code>,
+          a username and password, your home Wi-Fi and country, SSH on), start the Pi and wait two
+          minutes; this laptop on the same Wi-Fi. Then this installs everything over the network.
+          Running it again on an installed Pi is safe (it updates it).</p>
+      </div>
+      <div class="card">
+        <h2>Check everything</h2>
+        <p class="help">Tests the camera, gimbal, the link to the flight controller (GPS, failsafe
+          settings, GPS-loss script, the mission on board), the recognition speed against your
+          height and speed, storage, temperature and clock. About a minute; the Pi stops taking
+          pictures meanwhile.</p>
+        <div class="row-btns"><button class="btn primary" id="pf-run">Check everything</button></div>
+        <div class="result" id="pf-result" role="status"></div>
+        <table class="cls pf-table" id="pf-table" hidden><thead><tr><th>Part</th><th>Result</th><th>Details</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Camera</h2>
+        <p class="help">The camera's live picture, about once a second, straight from the aircraft computer.
+          <a href="#guides" data-guide="camera">Camera setup and firmware</a></p>
+        <div class="row-btns"><button class="btn" id="cam-toggle">Show the live picture</button></div>
+        <div class="cam-view" id="cam-view" hidden><img id="cam-img" alt="Camera picture"><div class="cam-msg" id="cam-msg">Waiting for a picture…</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Lens calibration</h2>
+        <p class="help">The 160° lens bends straight lines; measuring it makes the coordinates of
+          objects near the picture edges right. You need a printed checkerboard, flat on something
+          stiff (a clipboard or board).</p>
+        <ol class="steps">
+          <li><b>Print</b> a checkerboard with 10 × 7 squares (it has 9 × 6 inner corners), squares about 35 mm, and <b>measure one square</b> with a ruler.</li>
+          <li><b>Show the live picture</b> above. Hold the board in front of the camera, 0.5 to 1.5 m away, the <b>whole board</b> visible.</li>
+          <li>Press <b>Take this picture</b>. Move the board and repeat: <b>20 to 30 pictures</b>, with the board in the middle, near every edge and in every corner, and tilted different ways.</li>
+          <li><b>Calculate</b>, then <b>Use this calibration</b>, then send the settings to the aircraft (Send tab).</li>
+        </ol>
+        <div class="inline lc-inputs">
+          <label>Inner corners <input type="number" id="lc-cols" value="9" min="3" max="30" aria-label="Inner corners across"> ×
+            <input type="number" id="lc-rows" value="6" min="3" max="30" aria-label="Inner corners down"></label>
+          <label>Square size <input type="number" id="lc-sq" value="35" min="5" max="200" step="0.5" aria-label="Square size in millimetres"> <span class="unit">mm</span></label>
+        </div>
+        <div class="row-btns">
+          <button class="btn primary" id="lc-capture">Take this picture</button>
+          <button class="btn" id="lc-compute">Calculate</button>
+          <button class="btn ghost" id="lc-reset">Start again</button>
+        </div>
+        <div class="result" id="lc-result" role="status"></div>
+        <div id="lc-current" class="help"></div>
+      </div>
+
+      <div class="card">
+        <h2>Aircraft software</h2>
+        <p class="help">This app carries the aircraft computer's software. Put it on the Pi
+          without internet: over the aircraft's Wi-Fi, or with the USB stick. The Pi checks the
+          new software with its own settings first and keeps the old one, so a bad update
+          changes nothing. Your settings, models and flights stay.</p>
+        <div class="sw-versions" id="sw-versions">
+          <div><span>In this app</span><b id="sw-app">…</b></div>
+          <div><span>On the aircraft</span><b id="sw-pi">press "Compare"</b></div>
+        </div>
+        <div class="row-btns">
+          <button class="btn ghost" id="sw-info">Compare</button>
+          <button class="btn primary" id="sw-wifi">Update over Wi-Fi</button>
+          <button class="btn" id="sw-usb">Write it to the USB stick</button>
+        </div>
+        <div class="result" id="sw-result" role="status"></div>
+        <p class="help">USB stick: the stick chosen on the Send tab (C). Plug it into the Pi on the
+          ground, disarmed; it installs within a minute. Then plug it back in here and press
+          "Read the stick's answer" on the Send tab.</p>
+      </div>
+
+      <div class="card">
+        <h2>Aircraft Wi-Fi</h2>
+        <p class="help">The aircraft makes its own Wi-Fi so this laptop can reach it. Give it your
+          own name and password here; it changes at the aircraft's next start (then join the new
+          name). You can also add your home or workshop Wi-Fi: when it is in range the Pi joins it
+          instead and has internet, for installing Python packages.</p>
+        <div class="row-btns"><button class="btn ghost" id="wf-list">Show the aircraft's networks</button></div>
+        <ul class="list" id="wf-nets"></ul>
+        <h3 class="q small">Aircraft's own Wi-Fi</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-hs-name" maxlength="32" placeholder="New name, e.g. SILM-Tartu" aria-label="Aircraft Wi-Fi name">
+          <input id="wf-hs-pass" type="password" maxlength="63" placeholder="Password, 8 or more characters" aria-label="Aircraft Wi-Fi password">
+          <button class="btn" id="wf-hs-set">Change</button>
+        </div>
+        <h3 class="q small">Home or workshop Wi-Fi (for updates)</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-home-name" maxlength="32" placeholder="Network name" aria-label="Home Wi-Fi name">
+          <input id="wf-home-pass" type="password" maxlength="63" placeholder="Its password" aria-label="Home Wi-Fi password">
+          <button class="btn" id="wf-home-add">Add</button>
+        </div>
+        <h3 class="q small">Country (Wi-Fi channels allowed by law)</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-cc" class="wf-cc" maxlength="2" value="EE" aria-label="Wi-Fi country code">
+          <button class="btn" id="wf-cc-set">Set</button>
+        </div>
+        <div class="result" id="wf-result" role="status"></div>
+        <p class="help">Names may use letters, digits, spaces and . _ - (no other characters).
+          If you forget the new password: plug a keyboard and screen into the Pi and run
+          <code>sudo /usr/local/sbin/silm-wifi hotspot SILM-new NEWPASSWORD</code>, or write the
+          SD card again.</p>
+      </div>
+
+      <h2 class="sub">Flight controller (USB cable)</h2>
+      <div class="card tight">
+        <div class="q small">Which USB port is the flight controller plugged into?</div>
+        <div class="inline"><input id="tl-port" list="port-list" placeholder="COM3 or /dev/ttyACM0" aria-label="Flight controller port">
+          <button class="btn ghost" id="tl-ports">Find ports</button></div>
+        <p class="help">Battery in, USB cable plugged in, Mission Planner closed.</p>
+      </div>
+
+      <div class="card" id="fc-job-card" hidden>
+        <h2 id="fcj-title">Working…</h2>
+        <div class="fcj-prompt" id="fcj-prompt"></div>
+        <div class="wz-bar fcj-bar"><i id="fcj-bar"></i></div>
+        <div class="help" id="fcj-step"></div>
+        <div class="row-btns"><button class="btn primary big" id="fcj-done" hidden>Done, it's in place</button>
+          <button class="btn ghost" id="fcj-cancel">Stop</button></div>
+        <div class="result" id="fcj-result" role="status"></div>
+        <details><summary>Messages</summary><pre class="log" id="fcj-log"></pre></details>
+      </div>
+
+      <div class="card">
+        <h2>Calibrate the sensors</h2>
+        <p class="help">Do these once on a new aircraft (and the compass again after moving the GPS or
+          changing wiring). Each step tells you what to do with the aircraft.</p>
+        <div class="cal-grid">
+          <div><b>Accelerometers</b><p class="help">You put the aircraft in 6 positions (level, on each side, nose down, nose up, upside down). Most important.</p><button class="btn" data-fcjob="accel">Start</button></div>
+          <div><b>Level</b><p class="help">Sit the aircraft on a table in its flying attitude (wings level, nose at its cruise angle). It remembers that as "level".</p><button class="btn" data-fcjob="level">Start</button></div>
+          <div><b>Compass</b><p class="help">Outdoors or away from metal: turn the aircraft through every direction until the bar is full.</p><button class="btn" data-fcjob="compass">Start</button></div>
+          <div><b>Airspeed sensor</b><p class="help">Cover the pitot tube with a cup or your fingers (no wind on it), then start. Also zeroes the barometer.</p><button class="btn" data-fcjob="airspeed">Start</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Servos and motor: what each output does</h2>
+        <p class="help">Tell the flight controller what is plugged into each output (S1, S2, …): the motor's
+          ESC is <b>Throttle</b>, each aileron servo <b>Aileron</b>, and so on. If a surface moves the wrong
+          way in the bench check (Setup, step 6), set it to <b>Reversed</b>. Propeller OFF.
+          <a href="#tools" data-guide="servos-esc">How to connect ESC and servos</a></p>
+        <div class="row-btns"><button class="btn" id="sv-read">Read the outputs</button></div>
+        <div class="result" id="sv-result" role="status"></div>
+        <table class="cls" id="sv-table" hidden><thead><tr><th>Output</th><th>Drives</th><th>Direction</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Airspeed sensor</h2>
+        <p class="help">Which sensor is fitted, and is it working? Without GPS the aircraft navigates on
+          airspeed, so it must work. <a href="#tools" data-guide="airspeed">How to mount and connect it</a></p>
+        <div class="row-btns"><button class="btn" id="as-read">Check</button></div>
+        <div class="inline as-inputs">
+          <label>Sensor <select id="as-type" aria-label="Airspeed sensor type"></select></label>
+          <label>I2C bus <select id="as-bus" aria-label="I2C bus">
+            <option value="1">1 - Matek H743: pads SDA1 / SCL1</option>
+            <option value="0">0 - Matek H743: pads SDA2 / SCL2</option>
+            <option value="2">2</option><option value="3">3</option></select></label>
+          <button class="btn" id="as-set">Set</button>
+        </div>
+        <div class="result" id="as-result" role="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Battery voltage</h2>
+        <p class="help">The low-battery landing depends on the voltage being right. Measure the battery with a multimeter and enter what it shows.</p>
+        <div class="row-btns"><button class="btn" id="bt-read">What does the aircraft measure?</button></div>
+        <div class="q">What does your multimeter show across the battery?</div>
+        <div class="inline"><input type="number" id="bt-meas" min="3" max="60" step="0.01" aria-label="Measured voltage"> <span class="unit">V</span>
+          <button class="btn primary" id="bt-cal">Calibrate</button></div>
+        <div class="result" id="bt-result" role="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Flight logs</h2>
+        <p class="help">The flight controller's own detailed logs (for checking a flight, tuning, or asking for help). Saved on this laptop in <code>SILM/fc_logs</code>.</p>
+        <div class="row-btns"><button class="btn" id="lg-list">List the logs</button></div>
+        <div class="result" id="lg-result" role="status"></div>
+        <table class="cls" id="lg-table" hidden><thead><tr><th>Log</th><th>Date (UTC)</th><th>Size</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Update ArduPlane (firmware)</h2>
+        <p class="help">For a board that <b>already runs ArduPilot</b>. A brand-new board (or one with
+          Betaflight / INAV) needs the first install done differently: see
+          <a href="#tools" data-guide="firmware-first">how to install ArduPilot the first time</a>.</p>
+        <div class="q">Which flight controller is it?</div>
+        <div class="inline"><select id="fw-board" aria-label="Board"></select>
+          <button class="btn" id="fw-download">Download the latest ArduPlane</button></div>
+        <div class="q small">Or use a firmware file (.apj) you already have:</div>
+        <div class="inline"><input type="file" id="fw-file" accept=".apj"></div>
+        <div class="result" id="fw-result" role="status"></div>
+        <ul class="list" id="fw-files"></ul>
+        <p class="help">During the update: <b>don't unplug it</b>. It takes about a minute; your settings are kept.</p>
       </div>
     </section>
   </main>
@@ -381,5 +609,7 @@
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/wizard.js"></script>
+<script src="/static/tools.js"></script>
+<script src="/static/guides.js"></script>
 </body>
 </html>

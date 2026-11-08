@@ -18,9 +18,11 @@ function toast(msg, ms = 2600) {
   clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
 }
 function setResult(id, r, busy) {
-  const el = $(id);
-  if (busy) { el.className = "result busy"; el.textContent = busy; return; }
-  el.className = "result " + (r.ok ? "ok" : "err");
+  const el = typeof id === "string" ? $(id) : id;
+  el.classList.remove("busy", "ok", "err");                 // keep the element's own classes
+  el.classList.add("result");
+  if (busy) { el.classList.add("busy"); el.textContent = busy; return; }
+  el.classList.add(r.ok ? "ok" : "err");
   el.textContent = (r.ok ? "✓ " : "✗ ") + (r.message || (r.ok ? "done" : "failed"));
 }
 function getv(qid) { const [s, k] = qid.split("."); return (P[s] || {})[k]; }
@@ -50,7 +52,8 @@ function showTab(name) {
   if (name === "launch") renderLaunch();
   if (name === "train") loadTrain();
   if (typeof wzOnTab === "function") wzOnTab(name);
-  if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+  if (typeof toolsOnTab === "function") toolsOnTab(name);
+  if (location.hash.split("/")[0] !== "#" + name) history.replaceState(null, "", "#" + name);
 }
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
@@ -83,7 +86,7 @@ function fieldHTML(q) {
     input = `<div class="chips" id="${id}" role="group" aria-label="${esc(q.q)}">` + Object.entries(q.options).map(([k, l]) =>
       `<button type="button" class="chip ${cur.has(k) ? "on" : ""}" data-v="${esc(k)}" aria-pressed="${cur.has(k)}">${esc(l)}</button>`).join("") + `</div>`;
   }
-  return `<div class="field" data-qid="${q.id}"><div class="q">${esc(q.q)}${q.required ? '<span class="req" title="must be answered">*</span>' : ""}</div>${input}${q.help ? `<div class="help">${esc(q.help)}</div>` : ""}<div class="msg"></div></div>`;
+  return `<div class="field" data-qid="${q.id}"><div class="q">${esc(q.q)}${q.required ? '<span class="req" title="must be answered">*</span>' : ""}</div>${input}${q.help || q.guide ? `<div class="help">${esc(q.help || "")}${q.guide ? ` <a href="#guides" data-guide="${esc(q.guide)}">How to find this out</a>` : ""}</div>` : ""}<div class="msg"></div></div>`;
 }
 function renderForm(tab, el) {
   const qs = META.questions.filter((q) => q.tab === tab);
@@ -358,6 +361,7 @@ $("usb-read").addEventListener("click", async () => {
   if (!r.present) return setResult("usb-result", { ok: false, message: "No SILM_TRANSFER folder on this stick yet - write the settings first." });
   const ir = r.import_result;
   const msg = (ir ? (ir.ok ? `The aircraft imported the settings at ${ir.time}: ${ir.message}.` : `The aircraft REJECTED the settings at ${ir.time}: ${ir.message}`) : "The aircraft has not read this stick yet (plug it into the Pi, power on, wait 10 s).")
+    + (r.aircraft && r.aircraft.software ? `\nSoftware update: ${r.aircraft.software.ok ? "" : "NOT installed - "}${r.aircraft.software.message}` : "")
     + (r.flights.length ? `\nFlights on the stick: ${r.flights.join(", ")} (import them on the Flights tab).` : "");
   setResult("usb-result", { ok: !!(ir && ir.ok), message: msg });
   if (ir && ir.ok) markDone("pi");
@@ -557,7 +561,7 @@ $("fl-import").addEventListener("click", async () => {
   loadDone(); renderForms(); drawPlaces(); fitMission(); listProjects(); runCheck();
   if (typeof wzLoad === "function") await wzLoad();
   // first start: the guided setup; afterwards the Start page
-  showTab((location.hash || "").slice(1) || (typeof WZ !== "undefined" && WZ.state && !WZ.state.complete ? "setup" : "start"));
+  showTab((location.hash || "").slice(1).split("/")[0] || (typeof WZ !== "undefined" && WZ.state && !WZ.state.complete ? "setup" : "start"));
 })();
 
 /* ------------------------------------------------------------------ training */
@@ -587,10 +591,43 @@ async function loadTrain(keep) {
     P.recognition.model = b.dataset.use; renderForms(); changed();
     toast(`The aircraft will use '${b.dataset.use}'. Choose what to look for on the Camera tab, then send it (step 5).`, 6000);
   }));
-  if (!st.tools.available) setResult("tr-result", { ok: false, message: st.tools.why });
+  ttShow(st.tools);
   trainPoll();
   if (!keep && !TR.cur && st.images.length) openTrainImage((st.images.find((i) => !i.labelled) || st.images[0]).name);
 }
+/* the training tools: installed from here once (groundstation/toolsetup.py) */
+const TT = { timer: null };
+function ttShow(tools) {
+  $("tt-box").hidden = !!tools.available && $("tt-job").hidden;
+  $("tt-why").textContent = tools.why || "";
+  $("tt-install").hidden = !tools.can_install;
+  $("tr-start").disabled = !tools.available;
+}
+async function ttPoll() {
+  clearTimeout(TT.timer);
+  let s;
+  try { s = await api("/api/train/tools"); } catch (e) { return; }
+  const running = s.state === "running";
+  if (s.state !== "idle") {
+    $("tt-box").hidden = false; $("tt-job").hidden = false;
+    $("tt-bar").style.width = (s.progress || 0) + "%"; $("tt-step").textContent = s.step || "";
+    const log = $("tt-log"); log.textContent = (s.log || []).join("\n"); log.scrollTop = log.scrollHeight;
+  }
+  $("tt-install").disabled = running; $("tt-cancel").hidden = !running;
+  if (running) { $("tt-result").textContent = ""; TT.timer = setTimeout(ttPoll, 1500); return; }
+  if (s.state !== "idle") setResult("tt-result", { ok: s.state === "done", message: s.result || s.state });
+  ttShow(s.tools);
+  if (s.state === "done") $("tt-box").hidden = false;              // keep the success message in view
+}
+$("tt-install").addEventListener("click", async () => {
+  if (!confirm("Install the training tools on this laptop? About 2 GB from the internet, 5 to 30 minutes. Nothing else on the computer changes.")) return;
+  const r = await api("/api/train/tools/install", {});
+  if (!r.ok) return setResult("tt-result", r);
+  ttPoll();
+});
+$("tt-cancel").addEventListener("click", async () => { await api("/api/train/tools/cancel", {}); ttPoll(); });
+ttPoll();
+
 function loadTrainClasses() {
   $("tr-classes").querySelectorAll(".chip").forEach((b) => { const on = +b.dataset.c === TR.cls; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
   if (TR.sel >= 0) { TR.boxes[TR.sel].cls = TR.cls; drawBoxes(); saveBoxes(); }

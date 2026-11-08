@@ -241,3 +241,27 @@ def test_pi4_temperature_threshold_and_unplugged_storage(tmp_path):
                        throttle_reader=lambda: 0, disk_reader=lambda: 9000.0,
                        mem_reader=lambda: 900.0)
     assert "CPU 78C" in h2.maybe_sample(now=100.0)["warnings"]
+
+
+def test_camera_preview_only_on_the_ground_and_only_when_asked(tmp_path):
+    ground = flying(armed=False, rel_alt=0.0)
+    r = make(tmp_path, ground)
+    pv, req = tmp_path / "preview.jpg", tmp_path / "preview_request"
+    assert not r.maybe_preview(ground) and not pv.exists()          # nobody asked
+    req.write_text("x")
+    assert r.maybe_preview(ground) and pv.read_bytes()[:2] == b"\xff\xd8"
+    assert not r.maybe_preview(ground)                              # at most once a second
+    assert r.maybe_preview(ground, now=time.time() + 1.5)
+    old = time.time() - 60
+    os.utime(req, (old, old))
+    assert not r.maybe_preview(ground, now=time.time() + 5)          # the request ran out
+    req.write_text("x")
+    assert not r.maybe_preview(flying(), now=time.time() + 10)      # never when armed
+    r._shutdown()
+
+
+def test_preview_is_written_by_the_running_program(tmp_path):
+    r = make(tmp_path, flying(armed=False, mode="AUTO", rel_alt=0.0))
+    (tmp_path / "preview_request").write_text("x")
+    _run_for(r, 0.6)
+    assert (tmp_path / "preview.jpg").stat().st_size > 100

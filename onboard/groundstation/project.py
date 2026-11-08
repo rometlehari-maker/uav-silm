@@ -51,12 +51,13 @@ LANDING_TYPES = {"belly": "Belly landing (on the fuselage)", "wheels": "On its w
 
 
 def Q(id, q, help="", type="number", unit="", min=None, max=None, step=None, options=None,
-      required=True, group="", tab="", open=False):
+      required=True, group="", tab="", open=False, guide=None):
     """open=True: more choices are added at run time (your trained models and
-    their object types), so any simple name is accepted."""
+    their object types), so any simple name is accepted. guide: the id of the
+    guide (GUIDES.md) that shows how to find the answer."""
     return {"id": id, "q": q, "help": help, "type": type, "unit": unit, "min": min, "max": max,
             "step": step, "options": options, "required": required, "group": group, "tab": tab,
-            "open": open}
+            "open": open, "guide": guide}
 
 
 QUESTIONS = [
@@ -74,12 +75,12 @@ QUESTIONS = [
     Q("aircraft.chord_mm", "How deep is the wing, front edge to back edge?",
       "The wing chord. For a tapered wing, measure the average (or use the mean "
       "aerodynamic chord from your design).", unit="mm", min=40, max=1000, step=1,
-      tab="aircraft", group="Balance"),
+      tab="aircraft", group="Balance", guide="cg"),
     Q("aircraft.cg_mm", "What is the center of gravity of your aircraft?",
       "Where it balances, measured from the wing's FRONT edge, with the battery in. "
       "Balance it on two fingertips under the wings. Most aircraft fly well with the "
       "centre of gravity at 25-33 % of the wing depth.", unit="mm behind the front edge",
-      min=0, max=1000, step=1, tab="aircraft", group="Balance"),
+      min=0, max=1000, step=1, tab="aircraft", group="Balance", guide="cg"),
     Q("aircraft.battery_cells", "How many cells does the battery have?",
       "The 'S' number on the battery: a 4S battery has 4 cells (14.8 V).", unit="cells (S)",
       min=2, max=12, step=1, tab="aircraft", group="Battery"),
@@ -184,7 +185,7 @@ QUESTIONS = [
       "Pi is connected by USB.", "select",
       options={"1": "SERIAL1 (TELEM1)", "2": "SERIAL2 (TELEM2)", "3": "SERIAL3",
                "4": "SERIAL4", "5": "SERIAL5", "6": "SERIAL6", "7": "SERIAL7"},
-      tab="camera", group="Connections"),
+      tab="camera", group="Connections", guide="wiring"),
     Q("link.pi_baud", "At what speed does that connection run?",
       "Must match SERIALx_BAUD on the flight controller (115 = 115200).", "select",
       options={"57600": "57600", "115200": "115200", "921600": "921600"},
@@ -498,7 +499,7 @@ def make_settings(project: dict) -> dict:
     """The Pi's settings.yaml: the sections config.yaml has, with your answers."""
     r, c, link = project["recognition"], project["camera"], project["link"]
     targets = list(r.get("targets") or [])
-    return {
+    out = {
         "program": {"mode": project.get("program", {}).get("mode", "flight")},
         "telemetry": {"connection": link.get("pi_serial", "/dev/serial0"),
                       "baud": int(link.get("pi_baud") or 115200)},
@@ -515,6 +516,9 @@ def make_settings(project: dict) -> dict:
         "mission_name": project.get("name", ""),
         "aircraft_name": project["aircraft"].get("name", ""),
     }
+    if c.get("calibration"):            # measured on the Tools tab (lens calibration)
+        out["georef"] = {"calibration": c["calibration"]}
+    return out
 
 
 PI_MODELS = "~/silm-settings/models"     # where the agent stores trained models on the Pi

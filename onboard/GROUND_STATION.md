@@ -247,9 +247,79 @@ The standard model doesn't know tractors or combines. To teach it:
    appears under "Trained models" with how many objects it finds; press **Use
    on the aircraft**, then send it (tab 5 - the model goes with the settings).
 
-Training needs the training tools on the laptop (about 2 GB; the tab tells you
-the command). A computer with an NVIDIA graphics card is 10-50 times faster.
+Training needs the training tools on the laptop (about 2 GB, once): the tab
+shows **Install the training tools**, which puts them in their own folder
+(`~/SILM/training-venv`; delete it to remove them) using the Python on this
+computer - see the guide *Installing Python* if there is none. A computer with
+an NVIDIA graphics card is 10-50 times faster.
 [`training/README.md`](training/README.md) explains training in depth.
+
+### 10 · Tools
+
+Everything you would otherwise do on the aircraft computer's keyboard or in
+Mission Planner. The aircraft must be **on the ground and disarmed**; the
+aircraft computer refuses changes while it is armed.
+
+- **Install the aircraft computer (first time)** - over your home Wi-Fi,
+  right after writing its memory card with Raspberry Pi Imager (SSH on): the
+  Pi's name (`silm.local`), its username and password, a password for the
+  aircraft's own Wi-Fi → **Install**. Progress and every message are shown;
+  about 15-20 minutes; the Pi restarts at the end. The same is step 7 of the
+  setup. Details: FLIGHT_READY.md part 3.2.
+
+**Aircraft computer** (join the laptop to the aircraft's Wi-Fi first):
+
+- **Check everything** - the full hardware check (`tools/preflight.py`) on the
+  Pi: camera, gimbal, flight controller link, GPS, failsafe settings, the
+  GPS-loss script, the mission on board, recognition speed against your height
+  and speed, storage, temperature, clock. PASS / WARN / FAIL per part.
+- **Camera** - the live picture, about once a second.
+- **Lens calibration** - measure the 160° lens with a printed checkerboard
+  (the card lists the steps); **Use this calibration** stores it in the
+  mission, and it goes to the aircraft with the settings.
+- **Aircraft software** - **Compare** shows the version on the aircraft and
+  the one in this app. **Update over Wi-Fi** sends it (about a minute), or
+  **Write it to the USB stick** (the stick chosen in tab 5) and plug that
+  into the Pi. The Pi checks the new software with its own code and your
+  settings before it swaps it in, and keeps the old one - a bad update changes
+  nothing. After a stick update, tab 5 → *Read the stick's answer* shows the
+  result.
+- **Aircraft Wi-Fi** - give the aircraft's own Wi-Fi your **name and password**
+  (from its next start: join the new name then), **add your home Wi-Fi**
+  (joined instead of the hotspot when in range, for internet), **forget** one,
+  and set the **Wi-Fi country** (which channels are legal). Names: letters,
+  digits, spaces, `. _ -`; passwords 8-63 characters. Forgot the new password?
+  Plug a keyboard and screen into the Pi and run
+  `sudo /usr/local/sbin/silm-wifi hotspot SILM-new NEWPASSWORD`.
+
+**Flight controller** (USB cable, battery in, Mission Planner closed):
+
+- **Calibrations** - accelerometer (the card tells you each of the 6
+  positions; press *Done, it's in place*), level, compass (turn the aircraft
+  on every side until it reaches 100 %), airspeed sensor (cover the pitot
+  tube).
+- **Servos and motor** - every output (S1, S2, …): choose what it drives
+  (Throttle, Aileron, Elevator, Elevon, V-tail…; Throttle also sets the fixed
+  1000-2000 µs ESC range) and **Normal / Reversed**.
+- **Airspeed sensor** - **Check** says which sensor is set, whether the flight
+  controller found it and the speed it reads; choose the type and I2C bus and
+  **Set** (then restart the flight controller).
+- **Battery** - the voltage it measures; enter your multimeter's reading and
+  **Calibrate** to correct it.
+- **Logs** - list the flight logs and download them (`~/SILM/logs`).
+- **Update ArduPlane** - download the newest stable firmware for your board
+  (internet) or choose a `.apj` file, then install it over the USB cable. The
+  first install on a brand-new board can't be done this way - see the guide
+  linked on the card.
+
+### ? · Guides
+
+How to do what the app can't do for you: the shopping list, wiring (with the
+Matek H743-WING's ports), the first ArduPilot install on a new board, writing
+the Pi's memory card, naming the USB stick, installing Python, the simulator
+on Windows, the camera, ESC and servos, the balance point, the airspeed sensor,
+and permission to fly. The app links to the right guide wherever a step needs
+one. The same text is [`GUIDES.md`](GUIDES.md).
 
 ---
 

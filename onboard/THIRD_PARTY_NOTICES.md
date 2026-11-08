@@ -10,6 +10,7 @@ them.
 | What | Where | Made by | Licence |
 |---|---|---|---|
 | **Leaflet 1.9.4** (the map in the Ground Station) | `groundstation/static/vendor/leaflet/` | Volodymyr Agafonkin, CloudMade and contributors | BSD-2-Clause, text in `vendor/leaflet/LICENSE` |
+| **ArduPilot firmware uploader** (`uploader.py`, used for "Update ArduPlane") | `groundstation/vendor/ardupilot_uploader.py` | PX4 Development Team; from the ArduPilot project | BSD-3-Clause, notice at the top of the file |
 | **Bricolage Grotesque** font | `groundstation/static/fonts/bricolage-*.woff2` | The Bricolage Grotesque Project Authors (Mathieu Triay) | SIL Open Font License 1.1, text in `fonts/OFL-BricolageGrotesque.txt` |
 | **IBM Plex Mono** font | `groundstation/static/fonts/plex-mono-*.woff2` | IBM Corp. | SIL Open Font License 1.1, text in `fonts/OFL-IBMPlexMono.txt` |
 | **Ready-made model `silm_oi`** (tractor, car, truck, livestock) | `models/silm_oi.tflite`, `_labels.txt`, `.json` | UAV SILM team, fine-tuned from **Ultralytics YOLO11n** (© Ultralytics) | **AGPL-3.0** (inherited from YOLO11n), text in `models/LICENSE-silm_oi-AGPL-3.0.txt`. Its source: `training/` (`openimages_dataset.py`, `train.py`, `export.py`) and the steps in `training/README.md` |
@@ -30,9 +31,22 @@ them.
 | NumPy | maths | BSD-3-Clause |
 | PyYAML | settings files | MIT |
 | pySerial | finding USB ports | BSD-3-Clause |
+| Paramiko (with cryptography, bcrypt, PyNaCl) | installing the aircraft computer over SSH from the Ground Station | LGPL-2.1 (Paramiko; source at github.com/paramiko/paramiko), Apache-2.0 / BSD (the others) |
 | Matplotlib | simulator result picture | Matplotlib licence (PSF-based) |
 | Ultralytics, PyTorch | training your own models (optional) | AGPL-3.0, BSD-3-Clause |
 | pytest, lupa, Playwright | automated tests | MIT, MIT, Apache-2.0 |
+
+## Inside the desktop app (the installers)
+
+The Ground Station installers for Windows, macOS and Linux are built with
+PyInstaller and contain, unchanged: **Python** (PSF License), **PyYAML** (MIT),
+**pymavlink** (LGPL-3.0), **pySerial** (BSD-3-Clause), **pywebview**
+(BSD-3-Clause), **Paramiko** (LGPL-2.1) with **cryptography**, **bcrypt** and
+**PyNaCl** (Apache-2.0 / BSD), and PyInstaller's start-up program (GPL-2.0
+with an exception that allows this). The LGPL libraries are used as they are;
+their source code is on pypi.org and their projects' pages, and you may
+replace them by running the Ground Station from the source folder
+(`python -m groundstation`) with your own copies.
 
 ## Online services the Ground Station shows
 

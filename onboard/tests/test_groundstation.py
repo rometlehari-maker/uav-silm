@@ -2,6 +2,7 @@
 flight controller over MAVLink, the Pi over real HTTP and a USB stick, the
 flight library with picture coordinates, and the HTTP API."""
 
+import io
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ import sys
 import threading
 import time
 import urllib.request
+import zipfile
 
 import pytest
 import yaml
@@ -18,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ONBOARD = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 
-from groundstation import fc, flights, pilink  # noqa: E402
+from groundstation import fc, flights, piinstall, pilink  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.app import Station, make_server  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -785,3 +787,195 @@ def test_ports_say_which_are_usb(monkeypatch):
     monkeypatch.setitem(sys.modules, "serial", types.SimpleNamespace(tools=sys.modules["serial.tools"]))
     assert fc.list_ports() == [{"device": "/dev/ttyS0", "description": "n/a", "usb": False},
                                {"device": "/dev/ttyACM0", "description": "MatekH743", "usb": True}]
+
+
+# ------------------------------------------------------------ Tools tab: the Pi
+CAL = {"model": "fisheye", "width": 1920, "height": 1080,
+       "camera_matrix": [[640.0, 0.0, 960.0], [0.0, 640.0, 540.0], [0.0, 0.0, 1.0]],
+       "dist_coeffs": [0.05, -0.01, 0.002, -0.0005]}
+
+
+def test_lens_calibration_travels_with_the_settings_and_the_pi_accepts_it(station, pi):
+    agent, addr, tmp, _ = pi
+    p = full_project()
+    assert "georef" not in P.make_settings(p)                     # none measured: lens defaults
+    p["camera"]["calibration"] = CAL
+    assert P.make_settings(p)["georef"]["calibration"] == CAL
+    assert station.check(p)["ok"], station.check(p)["errors"]
+    r = station.pi_send({"project": p, "address": addr})
+    assert r["ok"], r
+    import run
+    cfg = run.load_checked(os.path.join(ONBOARD, "config.yaml"), agent.settings_file)
+    assert cfg["georef"]["calibration"]["camera_matrix"][0][0] == 640.0
+
+
+def test_camera_picture_calibration_and_check_through_the_ground_station(pi, http):
+    agent, addr, tmp, _ = pi
+    url, _ = http
+    with pytest.raises(urllib.error.HTTPError) as e:                  # no picture yet
+        call(url + "/api/pi/camera.jpg?address=" + addr)
+    assert e.value.code == 503
+    (tmp / "pi" / "preview.jpg").write_bytes(b"\xff\xd8" + bytes(500))
+    body, hdr = call(url + "/api/pi/camera.jpg?address=" + addr)
+    assert hdr["Content-Type"] == "image/jpeg" and len(body) >= 500       # the picture, passed through
+    st, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "state"})
+    assert st["shots"] == 0
+    r, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "capture", "cols": 9, "rows": 6})
+    assert not r["ok"] and "not fully in the picture" in r["message"]
+    r, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "compute", "cols": 9, "rows": 6})
+    assert not r["ok"] and "calibration failed" in r["message"]
+
+    def tool(cmd, timeout=15):
+        assert cmd[cmd.index("--alt-m") + 1] == "100.0"
+        with open(cmd[cmd.index("--json") + 1], "w") as fh:
+            json.dump({"results": [{"part": "system", "status": "PASS", "message": "ok"}],
+                       "fails": 0, "warns": 0}, fh)
+        return True, ""
+    agent._run_tool = tool
+    r, _ = call(url + "/api/pi/preflight", {"address": addr, "project": full_project()})
+    assert r["ok"] and r["fails"] == 0 and r["results"][0]["part"] == "system"
+    with pytest.raises(urllib.error.HTTPError) as e:                  # the Pi is not there
+        call(url + "/api/pi/camera.jpg?address=127.0.0.1:9")
+    assert e.value.code == 502
+
+
+# ------------------------------------------------------------ Tools tab: the flight controller
+def test_flight_controller_tool_routes(http, tmp_path, monkeypatch):
+    from groundstation import fctools
+    url, st = http
+    monkeypatch.setattr(fctools, "firmware_dir", lambda: str(tmp_path))
+    r, _ = call(url + "/api/fc/servos", {"port": ""})
+    assert not r["ok"] and "choose the flight controller's port" in r["message"]
+    assert call(url + "/api/fc/job")[0]["state"] == "idle"
+    r, _ = call(url + "/api/fc/job/start", {"kind": "level", "port": ""})
+    assert r["ok"]
+    t0 = time.time()
+    while call(url + "/api/fc/job")[0]["state"] == "running" and time.time() - t0 < 10:
+        time.sleep(0.1)
+    j = call(url + "/api/fc/job")[0]
+    assert j["state"] == "failed" and "port" in j["result"]
+    assert not call(url + "/api/fc/job/answer", {})[0]["ok"]          # nothing waiting
+    import base64
+    import json as js
+    import zlib
+    apj = js.dumps({"board_id": 1013, "image_size": 4,
+                    "image": base64.b64encode(zlib.compress(b"abcd")).decode()}).encode()
+    r, _ = call(url + "/api/fc/firmware/upload", {"name": "plane.apj", "data_b64": base64.b64encode(apj).decode()})
+    assert r["ok"] and r["board_id"] == 1013
+    fw, _ = call(url + "/api/fc/firmware")
+    assert [f["file"] for f in fw["files"]] == ["plane.apj"] and "MatekH743" in fw["boards"]
+    r, _ = call(url + "/api/fc/firmware/upload", {"name": "x.apj", "data_b64": base64.b64encode(b"junk").decode()})
+    assert not r["ok"] and "not an ArduPilot firmware" in r["message"]
+
+
+# ------------------------------------------------------------ Tools tab: aircraft software and Wi-Fi
+def _pi_software_root(agent, tmp):
+    """Point the agent at a throw-away software folder (an old version)."""
+    root = tmp / "pi_sw" / "onboard"
+    (root / "models").mkdir(parents=True)
+    (root / "VERSION").write_text("0.9.0\n")
+    (root / "requirements.txt").write_text(open(os.path.join(ONBOARD, "requirements.txt")).read())
+    agent.root = str(root)
+    agent._run_tool = lambda cmd, timeout=15: (True, "config OK")
+    exits = []
+    agent.exit_after_update = lambda: exits.append(1)
+    return root, exits
+
+
+def test_pi_software_package_is_complete_and_reproducible():
+    from groundstation import pisoftware
+    data = pisoftware.build_package()
+    assert data == pisoftware.build_package()                         # same files, same bytes
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        names = set(z.namelist())
+        assert set(pisoftware.REQUIRED) <= names
+        assert {"pi/install.sh", "pi/silm-wifi", "systemd/silm-agent.service", "models/silm_oi.tflite",
+                "tools/preflight.py", "tools/calibrate_camera.py", "LICENSE"} <= names
+        assert not any("__pycache__" in n or n.startswith(("tests/", "groundstation/", "training/"))
+                       for n in names)
+        assert (z.getinfo("pi/silm-wifi").external_attr >> 16) & 0o777 == 0o755
+        assert z.read("VERSION").decode().strip() == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    data2, version = pisoftware.package()
+    assert version == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+
+
+def test_pi_software_update_from_the_app_over_wifi(http, pi):
+    url, _ = http
+    agent, addr, tmp, calls = pi
+    root, exits = _pi_software_root(agent, tmp)
+    version = open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    r, _ = call(url + "/api/pi/software", {"how": "info", "address": addr})
+    assert r["ok"] and r["app_version"] == version and r["pi_version"] == "0.9.0"
+    r, _ = call(url + "/api/pi/software", {"how": "info", "address": "127.0.0.1:9"})
+    assert r["ok"] and r["pi_version"] is None and "Wi-Fi" in r["pi_message"]
+    r, _ = call(url + "/api/pi/software", {"how": "wifi", "address": addr})
+    assert r["ok"] and r["from_version"] == "0.9.0" and r["to_version"] == version, r
+    assert pilink.status(addr)["software"] == version
+    assert (root / "VERSION").read_text().strip() == version and (root / "silm_recon" / "agent.py").exists()
+    assert (tmp / "pi_sw" / "onboard.old" / "VERSION").read_text().strip() == "0.9.0"
+    assert ["sudo", "-n", "systemctl", "restart", "silm-recon"] in calls and exits == [1]
+    assert "new Python packages" not in r["message"]                  # same requirements
+    from silm_recon.status import write_status
+    write_status(agent.status_file, {"armed": True})
+    r, _ = call(url + "/api/pi/software", {"how": "wifi", "address": addr})
+    assert not r["ok"] and "ARMED" in r["message"]
+
+
+def test_pi_software_update_by_usb_stick(http, pi):
+    url, _ = http
+    agent, _, tmp, _ = pi
+    root, exits = _pi_software_root(agent, tmp)
+    stick = tmp / "stick"
+    stick.mkdir()
+    r, _ = call(url + "/api/pi/software", {"how": "usb", "path": str(stick)})
+    assert r["ok"] and r["file"].endswith(os.path.join("to_aircraft", "software", "silm-pi-software.zip"))
+    done = agent.usb_tick()
+    assert "installed" in done["software"] and exits == [1]
+    assert (root / "VERSION").read_text().strip() == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    back, _ = call(url + "/api/usb/read", {"path": str(stick)})
+    assert back["aircraft"]["software"]["ok"]                          # the answer the Send tab shows
+    r, _ = call(url + "/api/pi/software", {"how": "usb", "path": str(tmp / "no_stick")})
+    assert not r["ok"] and "does not exist" in r["message"]
+
+
+def test_pi_wifi_from_the_app(http, pi):
+    url, _ = http
+    agent, addr, _, calls = pi
+    listing = "silm-hotspot:802-11-wireless:yes\nhome-Farm WiFi:802-11-wireless:yes\nsiyi-camera:802-3-ethernet:yes\n"
+    agent._run = lambda cmd, timeout=15: (calls.append(cmd) or True, listing if cmd[-1] == "list" else "ok")
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "list"})
+    assert r["ok"] and [(n["name"], n["kind"]) for n in r["networks"]] == [
+        ("silm-hotspot", "aircraft"), ("home-Farm WiFi", "home")]
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "hotspot", "name": "SILM-Tartu",
+                                       "password": "long enough"})
+    assert r["ok"] and calls[-1] == ["sudo", "-n", "/usr/local/sbin/silm-wifi", "hotspot", "SILM-Tartu", "long enough"]
+    call(url + "/api/pi/wifi", {"address": addr, "action": "country", "country": "fi"})
+    assert calls[-1][-2:] == ["country", "FI"]
+    call(url + "/api/pi/wifi", {"address": addr, "action": "home-remove", "name": "Farm WiFi"})
+    assert calls[-1][-2:] == ["home-remove", "Farm WiFi"]
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "reboot"})
+    assert not r["ok"] and "unknown Wi-Fi action" in r["message"]
+
+
+def test_pi_install_routes(http, monkeypatch):
+    """The install job through the Ground Station's HTTP routes (SSH itself: test_piinstall.py)."""
+    url, st = http
+    assert call(url + "/api/pi/install")[0]["state"] == "idle"
+    r, _ = call(url + "/api/pi/install/start", {"host": "silm.local", "user": "pi"})
+    assert not r["ok"] and "password" in r["message"]
+    seen = {}
+
+    def connect(host, user, password, port=22):
+        seen.update(host=host, port=port, user=user)
+        raise piinstall.InstallError("cannot reach it (test)")
+    monkeypatch.setattr(st.piinstall, "_connect", connect)
+    r, _ = call(url + "/api/pi/install/start", {"host": "silm.local:2222", "user": "pi", "password": "pw",
+                                                "hotspot_password": "aircraft-1"})
+    assert r["ok"], r
+    t0 = time.time()
+    while call(url + "/api/pi/install")[0]["state"] == "running" and time.time() - t0 < 10:
+        time.sleep(0.05)
+    s, _ = call(url + "/api/pi/install")
+    assert s["state"] == "failed" and "cannot reach" in s["result"]
+    assert seen == {"host": "silm.local", "port": 2222, "user": "pi"}
+    assert not call(url + "/api/pi/install/cancel", {})[0]["ok"]
