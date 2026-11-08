@@ -72,6 +72,9 @@ User's answers to questions asked:
 - `tests/test_sitl_integration.py` (`SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`):
   **passes** - factory-fresh SITL set up only by Ground Station code, flown with
   GPS jam: 6/6 checks, touchdown 55.9 m, failsafe 5.2 s, battery auto-matched.
+- **Final run (after training, all current files):** SITL integration test
+  + ArduPilot parameter check: 7 passed (3 min); full suite 394 passed in a
+  clean CI-like venv.
 - Earlier 8-scenario SITL matrix (before the GUI work): 7/8 pass; FAIL =
   wind 10 m/s, blind touchdown 160 m long (limit 150).
 
