@@ -40,6 +40,7 @@ function markDone(k) { DONE[k] = true; try { localStorage.setItem(doneKey(), JSO
 function showTab(name) {
   document.querySelectorAll(".page").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  window.scrollTo(0, 0);                       // every step starts at its top
   if (name === "mission") setTimeout(() => { map.invalidateSize(); }, 50);
   if (name === "flights") { loadLibrary(); setTimeout(() => flMap && flMap.invalidateSize(), 50); }
   if (name === "sim") simPoll();
@@ -111,9 +112,10 @@ function renderForms() {
 function markFields() {
   document.querySelectorAll(".field").forEach((f) => { f.classList.remove("invalid"); f.querySelector(".msg").textContent = ""; });
   if (!CHECK) return;
-  META.questions.forEach((q) => {
-    const bad = CHECK.errors.find((e) => e.startsWith(q.q) || e === "Not answered: " + q.q);
-    if (bad) { const f = document.querySelector(`.field[data-qid="${q.id}"]`); if (f) { f.classList.add("invalid"); f.querySelector(".msg").textContent = bad.replace(q.q + " - ", ""); } }
+  Object.entries(CHECK.fields || {}).forEach(([qid, msg]) => {
+    const q = META.questions.find((x) => x.id === qid);
+    const f = document.querySelector(`.field[data-qid="${qid}"]`);
+    if (f) { f.classList.add("invalid"); f.querySelector(".msg").textContent = q ? msg.replace(q.q + " - ", "").replace("Not answered: " + q.q, "Please answer this.") : msg; }
   });
 }
 
@@ -218,6 +220,8 @@ document.querySelectorAll(".tool").forEach((b) => b.addEventListener("click", ()
   tool = tool === b.dataset.tool ? null : b.dataset.tool;
   document.querySelectorAll(".tool").forEach((x) => x.classList.toggle("on", x.dataset.tool === tool));
   map.getContainer().style.cursor = tool ? "crosshair" : "";
+  // quick clicks while drawing corners must not count as "double-click = zoom in"
+  if (tool) map.doubleClickZoom.disable(); else map.doubleClickZoom.enable();
   $("toolhint").textContent = HINTS[tool] || "Pick a tool above, then click on the map.";
 }));
 function bearing(a, b) {

@@ -151,7 +151,8 @@ class Station:
 
     def check(self, project: dict, for_launch: bool = False) -> dict:
         project = P.merge_defaults(project)
-        errors, warnings = P.validate(project, for_launch)
+        pr = P.check_answers(project, for_launch)
+        errors, warnings, fields = pr.errors, pr.warnings, pr.fields
         plan, plan_out = None, None
         try:
             plan = self.plan(project)
@@ -186,6 +187,7 @@ class Station:
         if mdl != "standard" and mdl not in {m["name"] for m in self.trainer.list_models()}:
             errors.append(f"The recognition model '{mdl}' is not on this laptop (Training tab)")
         return {"ok": not errors, "errors": errors, "warnings": warnings, "plan": plan_out,
+                "fields": fields,
                 "cg": P.cg_advice(project["aircraft"]),
                 "params": P.make_params(project, plan) if plan else P.make_params(project)}
 

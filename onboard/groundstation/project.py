@@ -262,92 +262,117 @@ def cg_advice(a: dict) -> dict | None:
             "recommended_mm": [round(lo), round(hi)]}
 
 
-def _check_question(q, v, errors):
+class _Problems:
+    """Errors and warnings, each remembering the question it belongs to (so
+    the GUI can highlight that input)."""
+
+    def __init__(self):
+        self.errors, self.warnings, self.fields = [], [], {}
+
+    def err(self, msg, qid=None):
+        self.errors.append(msg)
+        if qid and qid not in self.fields:
+            self.fields[qid] = msg
+
+    def warn(self, msg, qid=None):
+        self.warnings.append(msg)
+
+
+def _check_question(q, v, pr: _Problems):
+    def e(msg):
+        pr.err(msg, q["id"])
     if v is None or v == "":
         if q["required"]:
-            errors.append(f"Not answered: {q['q']}")
+            e(f"Not answered: {q['q']}")
         return
     if q["type"] == "number":
         if isinstance(v, bool) or not isinstance(v, (int, float)) or math.isnan(v):
-            errors.append(f"{q['q']} - '{v}' is not a number")
+            e(f"{q['q']} - '{v}' is not a number")
             return
         if q["min"] is not None and v < q["min"]:
-            errors.append(f"{q['q']} - {v:g} {q['unit']} is below the minimum {q['min']:g}")
+            e(f"{q['q']} - {v:g} {q['unit']} is below the minimum {q['min']:g}")
         if q["max"] is not None and v > q["max"]:
-            errors.append(f"{q['q']} - {v:g} {q['unit']} is above the maximum {q['max']:g}")
+            e(f"{q['q']} - {v:g} {q['unit']} is above the maximum {q['max']:g}")
     elif q["type"] == "select" and str(v) not in q["options"] and not (
             q.get("open") and re.fullmatch(r"[A-Za-z0-9_\-]{1,80}", str(v))):
-        errors.append(f"{q['q']} - '{v}' is not one of the choices")
+        e(f"{q['q']} - '{v}' is not one of the choices")
     elif q["type"] == "multi":
-        ok = lambda x: x in q["options"] or (q.get("open") and isinstance(x, str)  # noqa: E731
-                                             and re.fullmatch(r"[a-z0-9_ ]{1,40}", x))
+        def ok(x):
+            return x in q["options"] or (q.get("open") and isinstance(x, str)
+                                         and re.fullmatch(r"[a-z0-9_ ]{1,40}", x))
         if not isinstance(v, list) or not all(ok(x) for x in v):
-            errors.append(f"{q['q']} - unknown choice in {v}")
+            e(f"{q['q']} - unknown choice in {v}")
     elif q["type"] == "bool" and not isinstance(v, bool):
-        errors.append(f"{q['q']} - must be yes or no")
+        e(f"{q['q']} - must be yes or no")
     elif q["type"] == "text" and not isinstance(v, str):
-        errors.append(f"{q['q']} - must be text")
+        e(f"{q['q']} - must be text")
 
 
-def validate(project: dict, for_launch: bool = False) -> tuple[list[str], list[str]]:
-    """(errors, warnings) about the answers themselves (the mission geometry
-    is checked by the planner)."""
-    errors: list[str] = []
-    warnings: list[str] = []
+def check_answers(project: dict, for_launch: bool = False) -> _Problems:
+    """All problems with the answers (the mission geometry is checked by the planner)."""
+    pr = _Problems()
     for q in QUESTIONS:
-        _check_question(q, get(project, q["id"]), errors)
+        _check_question(q, get(project, q["id"]), pr)
     a = project.get("aircraft", {})
     try:
         if a["cruise_mps"] < 1.3 * a["stall_mps"]:
-            errors.append(f"The survey speed {a['cruise_mps']:g} m/s is too close to the stall "
-                          f"speed {a['stall_mps']:g} m/s: it must be at least "
-                          f"{1.3 * a['stall_mps']:.1f} m/s")
+            pr.err(f"The survey speed {a['cruise_mps']:g} m/s is too close to the stall "
+                   f"speed {a['stall_mps']:g} m/s: it must be at least "
+                   f"{1.3 * a['stall_mps']:.1f} m/s", "aircraft.cruise_mps")
         if a["max_mps"] < a["cruise_mps"] + 3:
-            errors.append(f"The fastest speed {a['max_mps']:g} m/s must be at least 3 m/s above "
-                          f"the survey speed {a['cruise_mps']:g} m/s")
+            pr.err(f"The fastest speed {a['max_mps']:g} m/s must be at least 3 m/s above "
+                   f"the survey speed {a['cruise_mps']:g} m/s", "aircraft.max_mps")
     except (KeyError, TypeError):
         pass
     if a.get("has_airspeed_sensor") is False:
-        errors.append("An airspeed sensor is required: without GPS the aircraft navigates on "
-                      "airspeed, and the GPS-loss landing depends on it")
+        pr.err("An airspeed sensor is required: without GPS the aircraft navigates on "
+               "airspeed, and the GPS-loss landing depends on it", "aircraft.has_airspeed_sensor")
     cg = cg_advice(a)
     if cg:
         lo, hi = cg["recommended_mm"]
         if cg["verdict"] == "bad":
-            errors.append(f"The centre of gravity is at {cg['pct']:.0f} % of the wing depth: "
-                          f"far outside the usual 25-33 % ({lo}-{hi} mm). Re-measure; it may "
-                          f"not be controllable")
+            pr.err(f"The centre of gravity is at {cg['pct']:.0f} % of the wing depth: "
+                   f"far outside the usual 25-33 % ({lo}-{hi} mm). Re-measure; it may "
+                   f"not be controllable", "aircraft.cg_mm")
         elif cg["verdict"] == "check":
-            warnings.append(f"The centre of gravity is at {cg['pct']:.0f} % of the wing depth; "
-                            f"25-33 % ({lo}-{hi} mm) is usual. Check it against your design")
+            pr.warn(f"The centre of gravity is at {cg['pct']:.0f} % of the wing depth; "
+                    f"25-33 % ({lo}-{hi} mm) is usual. Check it against your design", "aircraft.cg_mm")
     if a.get("launch") == "runway":
-        warnings.append("Runway takeoff with no pilot needs ground steering set up and tested "
-                        "(GROUND_STEER_ALT, steering servo); prefer a hand or bungee launch")
+        pr.warn("Runway takeoff with no pilot needs ground steering set up and tested "
+                "(GROUND_STEER_ALT, steering servo); prefer a hand or bungee launch", "aircraft.launch")
     r = project.get("recognition", {})
     if not r.get("targets") and not r.get("fire"):
-        warnings.append("Nothing to look for: no objects chosen and fire detection is off")
+        pr.warn("Nothing to look for: no objects chosen and fire detection is off", "recognition.targets")
     farm = [t for t in r.get("targets") or [] if t in FARM_TARGETS]
     if farm and r.get("model", "standard") == "standard":
-        warnings.append(f"{', '.join(farm)} need your trained model (the standard model "
-                        f"can't see them) - see training/README.md")
+        pr.warn(f"{', '.join(farm)} need your trained model (the standard model "
+                f"can't see them) - see the 'Teach new objects' tab", "recognition.targets")
     m = project.get("mission", {})
     if (m.get("alt_m") or 0) > (m.get("alt_limit_m") or 1e9):
-        errors.append(f"The survey height {m['alt_m']:g} m is above the {m['alt_limit_m']:g} m limit")
+        pr.err(f"The survey height {m['alt_m']:g} m is above the {m['alt_limit_m']:g} m limit",
+               "mission.alt_m")
     if (r.get("min_alt_m") or 0) >= (m.get("alt_m") or 1e9):
-        errors.append("Pictures start above the survey height: it would never take any")
+        pr.err("Pictures start above the survey height: it would never take any",
+               "recognition.min_alt_m")
     w = project.get("wind", {})
     ws = w.get("speed_mps")
     if ws is not None and ws > MAX_WIND_MPS:
-        errors.append(f"Wind {ws:g} m/s is above the {MAX_WIND_MPS:g} m/s limit: a landing "
-                      f"without GPS could miss the strip. Don't fly today")
+        pr.err(f"Wind {ws:g} m/s is above the {MAX_WIND_MPS:g} m/s limit: a landing "
+               f"without GPS could miss the strip. Don't fly today", "wind.speed_mps")
     if for_launch:
         if ws is None or w.get("from_deg") is None:
-            errors.append("Enter today's wind (speed and direction) before launching")
+            pr.err("Enter today's wind (speed and direction) before launching", "wind.speed_mps")
         if not (project.get("mission") or {}).get("launch"):
-            errors.append("The mission has no launch point")
+            pr.err("The mission has no launch point")
     elif ws is None:
-        warnings.append("Today's wind is not entered yet (needed before launch)")
-    return errors, warnings
+        pr.warn("Today's wind is not entered yet (needed before launch)", "wind.speed_mps")
+    return pr
+
+
+def validate(project: dict, for_launch: bool = False) -> tuple[list[str], list[str]]:
+    """(errors, warnings) about the answers. Errors block sending and launching."""
+    pr = check_answers(project, for_launch)
+    return pr.errors, pr.warnings
 
 
 # ------------------------------------------------------------- outputs
