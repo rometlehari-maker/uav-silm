@@ -208,7 +208,7 @@ function download(name, text, type) {
 
 /* ------------------------------------------------------------------ mission map */
 const map = L.map("map").setView([58.6, 25.0], 7);
-const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: "tiles-dark", attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
 const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Imagery &copy; Esri" });
 L.control.layers({ "Map": osm, "Satellite": sat }).addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
@@ -252,10 +252,10 @@ $("goto-form").addEventListener("submit", (e) => {
 function drawPlaces() {
   G.pts.clearLayers(); G.area.clearLayers();
   const m = P.mission;
-  if ((m.area || []).length) L.polygon(m.area, { color: "#0b6e7f", weight: 2, fillOpacity: 0.08 }).addTo(G.area);
-  (m.area || []).forEach((p) => L.circleMarker(p, { radius: 4, color: "#0b6e7f" }).addTo(G.area));
-  if (m.launch) L.marker(m.launch, { title: "Launch" }).bindTooltip("Launch / home").addTo(G.pts);
-  if (m.landing) L.circleMarker(m.landing, { radius: 8, color: "#b3261e", weight: 3 }).bindTooltip("Touchdown").addTo(G.pts);
+  if ((m.area || []).length) L.polygon(m.area, { color: "#a1e6f3", weight: 2, fillOpacity: 0.12 }).addTo(G.area);
+  (m.area || []).forEach((p) => L.circleMarker(p, { radius: 4, color: "#a1e6f3", fillColor: "#3a494d", fillOpacity: 1 }).addTo(G.area));
+  if (m.launch) L.marker(m.launch, { title: "Launch", icon: L.divIcon({ className: "", html: '<div class="home-pin">H</div>', iconSize: [26, 26], iconAnchor: [13, 13] }) }).bindTooltip("Launch / home").addTo(G.pts);
+  if (m.landing) L.circleMarker(m.landing, { radius: 8, color: "#e88a7a", weight: 3 }).bindTooltip("Touchdown").addTo(G.pts);
 }
 function fitMission() {
   const m = P.mission, pts = [m.launch, m.landing, ...(m.area || [])].filter(Boolean);
@@ -265,9 +265,9 @@ function drawPlan() {
   G.plan.clearLayers();
   const r = CHECK && CHECK.plan, m = P.mission;
   if (!r) { $("plan-stats").innerHTML = ""; $("det-box").innerHTML = ""; return; }
-  L.circle(m.launch, { radius: r.fence_needed_m, color: "#b3261e", weight: 1, fill: false, dashArray: "6 6" }).bindTooltip("Geofence (set on the aircraft)").addTo(G.plan);
-  L.polyline([m.launch, ...r.path], { color: "#e8590c", weight: 3 }).addTo(G.plan);
-  L.polyline([r.approach_start, m.landing || m.launch], { color: "#b3261e", weight: 5 }).bindTooltip("Final approach").addTo(G.plan);
+  L.circle(m.launch, { radius: r.fence_needed_m, color: "#e88a7a", weight: 1.5, fill: false, dashArray: "6 6" }).bindTooltip("Geofence (set on the aircraft)").addTo(G.plan);
+  L.polyline([m.launch, ...r.path], { color: "#f0b64a", weight: 3 }).addTo(G.plan);
+  L.polyline([r.approach_start, m.landing || m.launch], { color: "#e88a7a", weight: 5 }).bindTooltip("Final approach").addTo(G.plan);
   let n = 0;
   r.items.forEach((it, i) => {
     if (i === 0 || !["WAYPOINT", "TAKEOFF", "LAND"].includes(it.name)) return; n++;
@@ -436,8 +436,8 @@ $("sim-stop").addEventListener("click", async () => { await api("/api/sim/stop",
 
 /* ------------------------------------------------------------------ flights */
 let flMap = null, flLayers = null, FL = null, flOn = new Set(), flShown = [], lbIndex = 0;
-const PALETTE = ["#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#9a6324", "#469990", "#800000"];
-function colorFor(p) { if (p.kind === "frame") return "#6c757d"; const i = FL.labels.indexOf(p.label); return PALETTE[i % PALETTE.length]; }
+const PALETTE = ["#f0b64a", "#a1e6f3", "#e88a7a", "#c49cf0", "#8fdc9b", "#f7d774", "#7fb2ff", "#ff9fd0", "#5fd1c1", "#ffb38a"];
+function colorFor(p) { if (p.kind === "frame") return "#9db2b7"; const i = FL.labels.indexOf(p.label); return PALETTE[i % PALETTE.length]; }
 async function loadLibrary() {
   const list = await api("/api/library");
   $("fl-list").innerHTML = list.length ? list.map((f) => `<li class="clickable ${FL && FL.name === f.name ? "active" : ""}" data-fl="${esc(f.name)}"><span><b>${esc(f.when || f.name)}</b><br><span class="meta">${f.pictures} pictures · ${f.detections} found</span></span></li>`).join("")
@@ -456,11 +456,11 @@ async function openFlight(name) {
     ["Minutes logged", s.minutes_logged ?? "-"], ["GPS problems", s.gps_problems]].map(([k, v]) => `<div class="stat"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join("");
   flOn = new Set([...FL.labels, ...(s.frames ? ["(ordinary)"] : [])]);
   $("fl-chips").innerHTML = FL.labels.map((l, i) => `<button class="chip on" data-l="${esc(l)}"><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(l)}</button>`).join("") +
-    (s.frames ? `<button class="chip on" data-l="(ordinary)"><i style="background:#6c757d"></i>ordinary pictures</button>` : "");
+    (s.frames ? `<button class="chip on" data-l="(ordinary)"><i style="background:#9db2b7"></i>ordinary pictures</button>` : "");
   $("fl-chips").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { c.classList.toggle("on"); c.classList.contains("on") ? flOn.add(c.dataset.l) : flOn.delete(c.dataset.l); renderFlight(); }));
   if (!flMap) {
     flMap = L.map("fl-map");
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(flMap);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: "tiles-dark", attribution: "&copy; OpenStreetMap contributors" }).addTo(flMap);
     flLayers = L.layerGroup().addTo(flMap);
   }
   setTimeout(() => { flMap.invalidateSize(); renderFlight(true); }, 30);
@@ -471,13 +471,13 @@ function renderFlight(fit) {
   flLayers.clearLayers();
   const pts = [];
   let seg = [], bad = null;
-  const flush = () => { if (seg.length > 1) L.polyline(seg, { color: bad ? "#e03131" : "#495057", weight: bad ? 4 : 2 }).addTo(flLayers); };
+  const flush = () => { if (seg.length > 1) L.polyline(seg, { color: bad ? "#e88a7a" : "#c3d5d9", weight: bad ? 4 : 2 }).addTo(flLayers); };
   FL.track.forEach((t) => { const b = t.gps && t.gps !== "OK"; if (bad !== null && b !== bad) { flush(); seg = seg.slice(-1); } bad = b; seg.push([t.lat, t.lon]); pts.push([t.lat, t.lon]); });
   flush();
   flShown = FL.pictures.filter(visible);
   flShown.forEach((p, i) => {
     if (p.lat == null) return;
-    L.circleMarker([p.lat, p.lon], { radius: p.kind === "frame" ? 5 : 8, color: "#fff", weight: 1.5, fillColor: colorFor(p), fillOpacity: 0.95 })
+    L.circleMarker([p.lat, p.lon], { radius: p.kind === "frame" ? 5 : 8, color: "#1d2a2d", weight: 1.5, fillColor: colorFor(p), fillOpacity: 0.95 })
       .bindTooltip(`${p.label || "ordinary picture"} · ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`).on("click", () => openLightbox(i)).addTo(flLayers);
     pts.push([p.lat, p.lon]);
   });

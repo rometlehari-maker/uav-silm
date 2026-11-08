@@ -317,6 +317,8 @@ class Handler(BaseHTTPRequestHandler):
         ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
         if path.endswith(".js"):
             ctype = "text/javascript"
+        elif path.endswith(".woff2"):
+            ctype = "font/woff2"
         with open(path, "rb") as fh:
             self._send(200, fh.read(), ctype)
 

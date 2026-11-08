@@ -3,13 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SILM Ground Station</title>
+<title>UAV SILM Ground Station</title>
+<meta name="theme-color" content="#3a494d">
+<link rel="icon" type="image/jpeg" href="/static/logo.jpg">
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">◆</span> SILM Ground Station <small id="version"></small></div>
+  <div class="brand"><img src="/static/logo.jpg" alt="UAV SILM logo" width="32" height="32"><span>UAV SILM</span> <span class="gs">Ground Station</span> <small id="version"></small></div>
   <label class="projname">Mission <input id="project-name" type="text" aria-label="Mission name"></label>
   <button id="save" class="btn">Save</button>
   <button id="check-pill" class="pill" title="Problems to fix">…</button>
@@ -31,6 +33,7 @@
   <main>
     <!-- ======================================================== START -->
     <section id="tab-start" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>1 · Start</span></div>
       <h1>Welcome</h1>
       <p class="lead">Plan a fully automatic survey flight, send it to the aircraft, launch it,
         and look at the pictures it took. Work through the steps on the left from top to bottom.
@@ -69,6 +72,7 @@
 
     <!-- ======================================================== AIRCRAFT -->
     <section id="tab-aircraft" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>2 · Aircraft</span></div>
       <h1>Your aircraft</h1>
       <p class="lead">Answer these once for your aircraft. They set the flight controller's
         speeds, battery warnings, launch behaviour and limits. Everything you need to know is
@@ -79,6 +83,7 @@
 
     <!-- ======================================================== MISSION -->
     <section id="tab-mission" class="page wide">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>3 · Mission</span></div>
       <h1>Mission</h1>
       <div class="mission">
         <div class="mapwrap">
@@ -108,6 +113,7 @@
 
     <!-- ======================================================== CAMERA -->
     <section id="tab-camera" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>4 · Camera</span></div>
       <h1>Camera and recognition</h1>
       <p class="lead">What the aircraft's computer (Raspberry Pi 4) looks for and when it takes
         pictures. These answers go to the Pi in step 5.</p>
@@ -116,6 +122,7 @@
 
     <!-- ======================================================== SEND -->
     <section id="tab-send" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>5 · Send to aircraft</span></div>
       <h1>Send to the aircraft</h1>
       <p class="lead">Two parts of the aircraft get your answers: the <b>flight controller</b>
         (flies the aircraft; USB cable) and the <b>aircraft computer</b> (the Raspberry Pi that
@@ -184,6 +191,7 @@
 
     <!-- ======================================================== LAUNCH -->
     <section id="tab-launch" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>6 · Launch</span></div>
       <h1>Launch</h1>
       <p class="lead">There is no pilot link: once launched it flies the whole mission, lands
         and switches itself off. Arm only with the aircraft in your hand, ready to go.</p>
@@ -207,6 +215,7 @@
 
     <!-- ======================================================== SIM -->
     <section id="tab-sim" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>7 · Simulator</span></div>
       <h1>Simulator</h1>
       <p class="lead">Fly this exact mission, with your aircraft settings and today's wind, in
         ArduPilot's simulator. Halfway through, the GPS is jammed: it must turn back, land on the
@@ -237,6 +246,7 @@
 
     <!-- ======================================================== FLIGHTS -->
     <section id="tab-flights" class="page wide">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>8 · Flights &amp; pictures</span></div>
       <h1>Flights &amp; pictures</h1>
       <div class="flights">
         <div class="flist">
@@ -268,6 +278,7 @@
     </section>
     <!-- ======================================================== TRAIN -->
     <section id="tab-train" class="page wide">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>9 · Teach new objects</span></div>
       <h1>Teach the aircraft new objects</h1>
       <p class="lead">The standard model knows people and vehicles. To find tractors, combines or
         anything else, show it many pictures where you have <b>drawn a box around each object</b>

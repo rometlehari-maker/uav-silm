@@ -170,6 +170,14 @@ User's answers to questions asked:
   metadata in scratchpad `val_meta.csv`). Evaluation script: scratchpad
   `eval_models.py` (also runs COCO SSD with cow/sheep/horse -> livestock).
   Licence note to add: weights derive from Ultralytics YOLO11n (AGPL-3.0).
+- **GUI restyled like www.uavsilm.eu** (user request): the website lives in
+  this repo's root (`index.html`, `fonts/`, `images/`). `groundstation/static/style.css`
+  rewritten with the site's tokens (bg #3a494d, cyan #a1e6f3, amber, coral),
+  Bricolage Grotesque + IBM Plex Mono (copied to `static/fonts/`, OFL), bird logo
+  (`static/logo.jpg`), pill buttons, site-style section labels ("eyebrow"),
+  dark OSM tiles (`tiles-dark` CSS filter; satellite untouched), map overlays
+  in site colours. No ids changed; e2e browser test passes. OSM tiles are
+  blocked in this sandbox, so the dark street map was not seen here.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
