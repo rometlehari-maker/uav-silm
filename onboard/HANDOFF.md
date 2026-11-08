@@ -405,7 +405,16 @@ User's answers to questions asked:
   - After the merge (on the branch, not yet in a release): the first full
     training-tools install ran out of disk here ("No space left on device":
     pip's cache doubled the space). Fix: `--no-cache-dir`, a disk-space
-    message, honest sizes (2-6 GB, keep ~8 GB free). Full install re-running.
+    message, honest sizes. **Re-run succeeded for real:** the app's
+    ToolInstall made the venv and installed ultralytics 8.4.208, litert-torch,
+    ai-edge-litert, ai-edge-quantizer (+ CUDA torch 2.14.1, as the CPU index
+    is blocked here) = **7.0 GB** -> sizes now "2-7 GB, keep ~10 GB free".
+    Then a real Quick training through the Ground Station HTTP routes with
+    that venv (40 Open Images tractor pictures uploaded + boxed via
+    /api/train/upload and /boxes): training 47 s, INT8 export (body INT8, head
+    float, 4.4 MB), confidence check exported/original 0.98, model listed
+    (mAP50 0.28 - expected for 40 pictures / 15 epochs). The whole
+    install -> train -> export path works. Test venv deleted afterwards.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
