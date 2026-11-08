@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SILM Mission Planner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root { --bg:#f5f6f7; --panel:#fff; --text:#1c2226; --dim:#5b676e; --line:#d8dde0; --accent:#0b7285;
+        --accent-text:#fff; --warn:#a15c00; --warnbg:#fff4e0; --err:#b3261e; --errbg:#fdecea; --ok:#1e7a3c; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#14191c; --panel:#1d2428; --text:#e5eaed; --dim:#9aa7ae; --line:#334047; --accent:#4fc3d4;
+          --accent-text:#0b1a1d; --warn:#f0b259; --warnbg:#3a2a12; --err:#f28b82; --errbg:#3b1d1b; --ok:#7ed08f; }
+}
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+#app { display:flex; height:100%; }
+#map { flex:1; min-width:0; }
+#side { width:380px; max-width:100%; overflow-y:auto; background:var(--panel); border-left:1px solid var(--line); padding:14px 16px 40px; }
+h1 { font-size:18px; margin:0 0 2px; } .sub { color:var(--dim); font-size:12.5px; margin-bottom:10px; }
+h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); margin:18px 0 8px; }
+.tools { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+button, select, input { font:inherit; color:inherit; }
+button { border:1px solid var(--line); background:var(--bg); border-radius:7px; padding:7px 9px; cursor:pointer; }
+button:hover { border-color:var(--accent); }
+button.on { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); font-weight:600; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.row { display:grid; grid-template-columns:1fr 112px; gap:8px; align-items:center; margin:6px 0; }
+.row label { color:var(--dim); font-size:13px; }
+input[type=number], input[type=text], select { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:7px; background:var(--bg); }
+.hint { font-size:12.5px; color:var(--dim); margin:6px 0; }
+.stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.stat { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:7px 9px; }
+.stat b { display:block; font-size:16px; } .stat span { font-size:12px; color:var(--dim); }
+ul.msgs { list-style:none; padding:0; margin:8px 0; }
+ul.msgs li { padding:7px 9px; border-radius:7px; margin-bottom:5px; font-size:13px; }
+li.err { background:var(--errbg); color:var(--err); } li.warn { background:var(--warnbg); color:var(--warn); }
+li.ok { color:var(--ok); padding-left:0; }
+.det { font-size:13px; } .det b.good { color:var(--ok); } .det b.bad { color:var(--err); } .det b.mid { color:var(--warn); }
+.actions { display:grid; gap:6px; margin-top:8px; }
+#status { font-size:13px; margin-top:8px; white-space:pre-wrap; }
+.leaflet-container { background:var(--bg); }
+.wpnum { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:9px; font-size:11px;
+  width:18px; height:18px; line-height:16px; text-align:center; }
+@media (max-width: 760px) { #app { flex-direction:column; } #map { height:55vh; flex:none; } #side { width:100%; border-left:0; border-top:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map" aria-label="Map"></div>
+  <aside id="side">
+    <h1>SILM Mission Planner</h1>
+    <div class="sub">Fully automatic: hand launch, survey, autoland. No RC link.</div>
+
+    <h2>1 · Places</h2>
+    <div class="tools">
+      <button id="t-launch" data-tool="launch">Set launch point</button>
+      <button id="t-area" data-tool="area">Draw survey area</button>
+      <button id="t-landing" data-tool="landing">Set landing point</button>
+      <button id="t-heading" data-tool="heading">Set landing direction</button>
+    </div>
+    <div class="hint" id="toolhint">Pick a tool, then click on the map. Survey area: click the corners, then pick another tool to finish.</div>
+    <div class="tools"><button id="undo">Undo last corner</button><button id="clear">Clear area</button></div>
+
+    <h2>2 · Survey</h2>
+    <div class="row"><label for="target">Smallest target</label><select id="target"></select></div>
+    <div class="row"><label for="alt_m">Altitude above launch (m)</label><input id="alt_m" type="number" min="15" max="400" step="5"></div>
+    <div class="row"><label for="speed_mps">Airspeed (m/s)</label><input id="speed_mps" type="number" min="12" max="28" step="0.5"></div>
+    <div class="row"><label for="overlap">Line overlap (%)</label><input id="overlap" type="number" min="0" max="80" step="5"></div>
+    <div class="row"><label for="line_angle">Line direction (deg, blank = auto)</label><input id="line_angle" type="text" inputmode="decimal" placeholder="auto"></div>
+    <div class="det" id="det"></div>
+
+    <h2>3 · Takeoff and landing</h2>
+    <div class="row"><label for="takeoff_alt_m">Takeoff climb to (m)</label><input id="takeoff_alt_m" type="number" min="20" max="120" step="5"></div>
+    <div class="row"><label for="landing_heading_deg">Landing direction (deg)</label><input id="landing_heading_deg" type="number" min="0" max="359" step="5"></div>
+    <div class="row"><label for="approach_len_m">Final approach length (m)</label><input id="approach_len_m" type="number" min="100" max="1000" step="25"></div>
+    <div class="row"><label for="approach_alt_m">Approach start height (m)</label><input id="approach_alt_m" type="number" min="10" max="80" step="5"></div>
+    <div class="hint">Land into the wind, on a large open field: with no RC nobody can correct a landing.</div>
+
+    <h2>4 · Aircraft limits</h2>
+    <div class="row"><label for="fence_radius_m">FENCE_RADIUS on aircraft (m)</label><input id="fence_radius_m" type="number" min="100" step="50"></div>
+    <div class="row"><label for="alt_limit_m">Altitude limit (m)</label><input id="alt_limit_m" type="number" min="30" step="10"></div>
+    <div class="row"><label for="endurance_min">Endurance estimate (min)</label><input id="endurance_min" type="number" min="5" step="5"></div>
+
+    <h2>Result</h2>
+    <div class="stats" id="stats"></div>
+    <ul class="msgs" id="msgs"></ul>
+
+    <h2>Mission</h2>
+    <div class="actions">
+      <button id="dl" class="primary" disabled>Download .waypoints</button>
+      <div class="tools"><button id="save">Save plan</button><button id="loadbtn">Load plan</button></div>
+      <input id="loadfile" type="file" accept=".json,application/json" hidden>
+    </div>
+
+    <h2>Upload to aircraft (USB)</h2>
+    <div class="row"><label for="port">Serial port</label><input id="port" type="text" list="portlist" placeholder="COM3 or /dev/ttyACM0"></div>
+    <datalist id="portlist"></datalist>
+    <div class="row"><label for="baud">Baud</label><input id="baud" type="number" value="115200"></div>
+    <div class="row"><label for="setfence">Also set FENCE_RADIUS</label><input id="setfence" type="checkbox" style="justify-self:start"></div>
+    <div class="actions"><button id="upload" disabled>Upload mission</button></div>
+    <h2>Launch (no RC)</h2>
+    <p class="hint">Only with the aircraft in your hand, ready to throw. Arming re-checks the
+      mission stored on the aircraft and switches to AUTO; the motor starts after the throw.</p>
+    <div class="tools"><button id="arm">Arm for launch</button><button id="disarm">Disarm</button></div>
+    <div id="status"></div>
+  </aside>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const NUM = ["alt_m","speed_mps","takeoff_alt_m","landing_heading_deg","approach_len_m","approach_alt_m",
+             "fence_radius_m","alt_limit_m","endurance_min"];
+let D = null, targets = [], tool = null, lastPlan = null, timer = null;
+const S = { launch: null, area: [], landing: null };
+
+const map = L.map("map", { zoomControl: true }).setView([58.6, 25.0], 7);
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(map);
+const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19, attribution: "Imagery &copy; Esri" });
+L.control.layers({ "Map": osm, "Satellite": sat }).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
+const G = { area: L.layerGroup().addTo(map), plan: L.layerGroup().addTo(map), pts: L.layerGroup().addTo(map) };
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function store() { try { localStorage.setItem("silm-plan", JSON.stringify(body())); } catch (e) {} }
+
+function setTool(t) {
+  tool = (tool === t) ? null : t;
+  document.querySelectorAll("[data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
+  map.getContainer().style.cursor = tool ? "crosshair" : "";
+  const hints = { launch: "Click where the aircraft will be thrown.", area: "Click the corners of the survey area.",
+    landing: "Click the touchdown point (large, open, into the wind).",
+    heading: "Click a point AHEAD of the touchdown point: the aircraft lands travelling towards it." };
+  $("toolhint").textContent = hints[tool] || "Pick a tool, then click on the map.";
+}
+document.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+
+function bearing(a, b) {
+  const p1 = a[0] * Math.PI / 180, p2 = b[0] * Math.PI / 180, dl = (b[1] - a[1]) * Math.PI / 180;
+  const y = Math.sin(dl) * Math.cos(p2), x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+map.on("click", e => {
+  const ll = [e.latlng.lat, e.latlng.lng];
+  if (tool === "launch") { S.launch = ll; if (!S.landing) S.landing = ll; }
+  else if (tool === "area") S.area.push(ll);
+  else if (tool === "landing") S.landing = ll;
+  else if (tool === "heading" && S.landing) $("landing_heading_deg").value = Math.round(bearing(S.landing, ll));
+  else return;
+  drawPlaces(); schedule();
+});
+$("undo").onclick = () => { S.area.pop(); drawPlaces(); schedule(); };
+$("clear").onclick = () => { S.area = []; drawPlaces(); schedule(); };
+
+function drawPlaces() {
+  G.pts.clearLayers(); G.area.clearLayers();
+  if (S.area.length) L.polygon(S.area, { color: "#0b7285", weight: 2, fillOpacity: 0.08 }).addTo(G.area);
+  S.area.forEach(p => L.circleMarker(p, { radius: 4, color: "#0b7285" }).addTo(G.area));
+  if (S.launch) L.marker(S.launch, { title: "Launch" }).bindTooltip("Launch / home", { permanent: false }).addTo(G.pts);
+  if (S.landing) L.circleMarker(S.landing, { radius: 7, color: "#b3261e", weight: 3 }).bindTooltip("Touchdown").addTo(G.pts);
+}
+
+function body() {
+  const b = { launch: S.launch, area: S.area, landing: S.landing,
+              overlap: (parseFloat($("overlap").value) || 0) / 100 };
+  NUM.forEach(k => { const v = parseFloat($(k).value); if (!isNaN(v)) b[k] = v; });
+  const ang = $("line_angle").value.trim();
+  b.line_angle_deg = ang === "" ? null : parseFloat(ang);
+  const t = targets.find(x => x.name === $("target").value);
+  b.target_size_m = t && t.size_m ? t.size_m : null;
+  b.camera = D.plan.camera;
+  return b;
+}
+function schedule() { clearTimeout(timer); timer = setTimeout(replan, 250); store(); }
+document.querySelectorAll("#side input, #side select").forEach(el => {
+  if (!["port","baud","setfence","loadfile"].includes(el.id)) el.addEventListener("input", schedule);
+});
+
+async function replan() {
+  G.plan.clearLayers(); lastPlan = null; $("dl").disabled = $("upload").disabled = true;
+  if (!S.launch || S.area.length < 3) { $("stats").innerHTML = ""; $("det").innerHTML = "";
+    $("msgs").innerHTML = '<li class="warn">Set the launch point and draw a survey area (3+ corners).</li>'; return; }
+  let r;
+  try {
+    const res = await fetch("/api/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body()) });
+    r = await res.json();
+    if (!res.ok) throw new Error(r.error || res.status);
+  } catch (e) { $("msgs").innerHTML = `<li class="err">${esc(e.message)}</li>`; return; }
+  lastPlan = r;
+  // fence circles: what the aircraft has, and what this mission needs
+  L.circle(S.launch, { radius: body().fence_radius_m, color: "#b3261e", weight: 1, fill: false, dashArray: "6 6" })
+    .bindTooltip("Geofence (FENCE_RADIUS)").addTo(G.plan);
+  L.polyline([S.launch, ...r.path], { color: "#e8590c", weight: 3 }).addTo(G.plan);
+  L.polyline([r.approach_start, S.landing || S.launch], { color: "#b3261e", weight: 4 }).bindTooltip("Final approach").addTo(G.plan);
+  let n = 0;
+  r.items.forEach((it, i) => {
+    if (i === 0 || !["WAYPOINT","TAKEOFF","LAND"].includes(it.name)) return;
+    n++;
+    L.marker([it.lat, it.lon], { icon: L.divIcon({ className: "", html: `<div class="wpnum">${n}</div>`, iconSize: [18, 18] }) })
+      .bindTooltip(`${i} ${it.name} · ${Math.round(it.alt)} m`).addTo(G.plan);
+  });
+  const st = [["Survey lines", r.lines], ["Line spacing", r.spacing_m + " m"], ["Detection swath", r.swath_m + " m"],
+    ["Distance", r.distance_km + " km"], ["Flight time", r.flight_min + " min"], ["Battery (est.)", Math.round(r.battery_frac * 100) + " %"],
+    ["Farthest point", r.max_dist_m + " m"], ["Fence needed", r.fence_needed_m + " m"], ["Turn radius", r.turn_radius_m + " m"],
+    ["Glide slope", r.glide_deg + "°"]];
+  $("stats").innerHTML = st.map(([k, v]) => `<div class="stat"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join("");
+  const d = r.detection;
+  $("det").innerHTML = d ? `Target at ${body().alt_m} m: <b class="${d.verdict === "good" ? "good" : d.verdict === "marginal" ? "mid" : "bad"}">${d.px_at_model} px (${d.verdict})</b>.
+    For ~10 px fly at or below ${d.max_alt_for_10px} m. In view ${d.seconds_in_region} s → detector needs ≥ ${d.fps_for_2_sightings} fps.
+    <button id="usealt" style="margin-top:4px">Use ${Math.min(d.max_alt_for_10px, body().alt_limit_m)} m</button>` : "";
+  if (d) $("usealt").onclick = () => { $("alt_m").value = Math.min(d.max_alt_for_10px, body().alt_limit_m); schedule(); };
+  $("msgs").innerHTML = r.errors.map(e => `<li class="err">${esc(e)}</li>`).join("") +
+    r.warnings.map(w => `<li class="warn">${esc(w)}</li>`).join("") +
+    (r.errors.length ? "" : '<li class="ok">✓ No errors: takeoff, survey, landing sequence, fence and altitude are valid.' +
+     (r.warnings.length ? " Read the warnings above before flying." : "") + '</li>');
+  $("dl").disabled = !!r.errors.length; $("upload").disabled = !!r.errors.length;
+}
+
+$("dl").onclick = async () => {
+  const res = await fetch("/api/waypoints", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body()) });
+  const blob = new Blob([await res.text()], { type: "text/plain" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "silm_mission.waypoints" });
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("save").onclick = () => {
+  const blob = new Blob([JSON.stringify(Object.assign(body(), { target: $("target").value }), null, 2)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "silm_plan.json" });
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("loadbtn").onclick = () => $("loadfile").click();
+$("loadfile").onchange = async e => {
+  try { apply(JSON.parse(await e.target.files[0].text())); fit(); }
+  catch (err) { $("status").textContent = "Could not read that plan file: " + err.message; }
+};
+$("upload").onclick = async () => {
+  if (!lastPlan || lastPlan.errors.length) return;
+  if (!confirm("Upload this mission to the aircraft?\n\nThe aircraft must be DISARMED and connected by USB. " +
+               "It is read back and compared after upload.")) return;
+  $("status").textContent = "Uploading...";
+  const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plan: body(), port: $("port").value.trim(), baud: $("baud").value, set_fence: $("setfence").checked }) });
+  const r = await res.json();
+  $("status").textContent = (r.ok ? "✓ " : "✗ ") + r.message;
+  $("status").style.color = r.ok ? "var(--ok)" : "var(--err)";
+};
+
+async function armCmd(action) {
+  if (action === "arm" && !confirm("ARM the aircraft for a hand launch?\n\n" +
+      "- propeller clear, aircraft held ready to throw\n- landing strip and approach clear\n" +
+      "- the motor will start as soon as it is thrown (or jolted)")) return;
+  $("status").textContent = action === "arm" ? "Checking mission and arming..." : "Disarming...";
+  const res = await fetch("/api/arm", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, port: $("port").value.trim(), baud: $("baud").value }) });
+  const r = await res.json();
+  $("status").textContent = (r.ok ? "✓ " : "✗ ") + r.message;
+  $("status").style.color = r.ok ? "var(--ok)" : "var(--err)";
+}
+$("arm").onclick = () => armCmd("arm");
+$("disarm").onclick = () => armCmd("disarm");
+
+function apply(p) {
+  if (p.launch) S.launch = p.launch; if (p.area) S.area = p.area; if (p.landing) S.landing = p.landing;
+  NUM.forEach(k => { if (p[k] != null) $(k).value = p[k]; });
+  if (p.overlap != null) $("overlap").value = Math.round(p.overlap * 100);
+  $("line_angle").value = p.line_angle_deg == null ? "" : p.line_angle_deg;
+  if (p.target) $("target").value = p.target;
+  drawPlaces(); schedule();
+}
+function fit() {
+  const pts = [S.launch, S.landing, ...S.area].filter(Boolean);
+  if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.3));
+}
+
+(async function init() {
+  D = await (await fetch("/api/defaults")).json();
+  targets = D.targets;
+  $("target").innerHTML = '<option value="">(none)</option>' + targets.map(t =>
+    `<option value="${esc(t.name)}">${esc(t.name)}${t.size_m ? " · " + t.size_m + " m" : ""}</option>`).join("");
+  const first = (D.targets_in_config || []).find(n => targets.some(t => t.name === n));
+  if (first) $("target").value = first;
+  NUM.forEach(k => { if (D.plan[k] != null) $(k).value = D.plan[k]; });
+  $("overlap").value = Math.round(D.plan.overlap * 100);
+  try { const saved = JSON.parse(localStorage.getItem("silm-plan") || "null"); if (saved) { apply(saved); fit(); } } catch (e) {}
+  try { const ports = await (await fetch("/api/ports")).json();
+        $("portlist").innerHTML = ports.map(p => `<option value="${esc(p.device)}">${esc(p.description)}</option>`).join(""); } catch (e) {}
+  schedule();
+})();
+</script>
+</body>
+</html>

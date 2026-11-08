@@ -40,7 +40,7 @@
       "url": "https://www.uavsilm.eu/",
       "alternateName": ["SILM UAV", "UAV Silm", "Strategic Intelligence and Land Monitoring"],
       "inLanguage": "en",
-      "dateModified": "2026-11-03"
+      "dateModified": "2026-11-08"
     },
     {
       "@type": "ResearchProject",
@@ -142,7 +142,7 @@
   .menu-btn i::before, .menu-btn i::after{ content:""; position:absolute; left:0; right:0; height:2px; border-radius:2px; background:currentColor; }
   .menu-btn i::before{ top:0; } .menu-btn i::after{ bottom:0; }
   .menu-btn .cur{ color:var(--cyan); font-weight:560; }
-  @media (max-width:1080px){ nav.crumbs{ display:none; } .menu-btn{ display:inline-flex; } }
+  @media (max-width:1120px){ nav.crumbs{ display:none; } .menu-btn{ display:inline-flex; } }
   @media (max-width:600px){ .topbar{ padding:10px 16px; } .brand span{ display:none; } }
 
   /* menu sheet */
@@ -556,6 +556,26 @@
     *, *::before, *::after{ animation:none !important; transition:none !important; }
     .js .rv{ opacity:1; transform:none; }
   }
+
+  .cards.fit ul{ list-style:none; margin-top:12px; display:grid; gap:7px; }
+  .cards.fit li{ position:relative; padding-left:20px; font-size:14.5px; color:var(--dim); line-height:1.5; }
+  .cards.fit li::before{ content:""; position:absolute; left:2px; top:.62em; width:7px; height:7px; border-radius:50%; background:var(--cyan); }
+  .cards.fit > div:nth-child(2) li::before{ background:var(--red); border-radius:1px; transform:rotate(45deg); }
+  .cards.fit li b{ color:var(--text); font-weight:600; }
+  .card-k.warn{ color:var(--red); }
+  .fit-note{ font-size:13.5px; color:var(--faint); margin-top:14px; }
+  /* downloads */
+  .cards.dl > *{ display:flex; flex-direction:column; }
+  .dl-what{ font-size:14.5px; color:var(--dim); margin-top:12px; flex:1; }
+  .dl-btn{ margin-top:18px; align-self:flex-start; font-family:var(--mono); font-size:13.5px; font-weight:500; padding:10px 16px; max-width:100%; overflow-wrap:anywhere; }
+  .dl-btn .ic-arr{ flex:none; }
+  .dl-btn:hover .ic-arr{ transform:translateY(2px); }
+  .dl-hash{ margin-top:14px; display:flex; flex-direction:column; gap:3px; }
+  .dl-hash span{ font-family:var(--mono); font-size:11.5px; color:var(--faint); }
+  .dl-hash code{ font-family:var(--mono); font-size:11.5px; color:var(--dim); word-break:break-all; line-height:1.5; user-select:all; }
+  #downloads code{ font-family:var(--mono); font-size:.88em; }
+  #downloads .dl-hash code{ font-size:11.5px; color:var(--faint); }
+  #downloads .tabs{ margin-top:34px; }
 </style>
 </head>
 <body>
@@ -569,6 +589,7 @@
       <a href="#project">Project</a>
       <a href="#design">Design</a>
       <a href="#inside">Inside</a>
+      <a href="#onboard">Onboard</a>
       <a href="#cfd">CFD</a>
       <a href="#learnt">Lessons</a>
       <a href="#progress">Progress</a>
@@ -576,6 +597,7 @@
       <a href="#timeline">Timeline</a>
       <a href="#team">Team</a>
       <a href="#resources">Resources</a>
+      <a href="#downloads">Downloads</a>
     </nav>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true"></span></button>
   </div>
@@ -590,6 +612,7 @@
     <li><a class="mi" href="#project"><b>Project</b><span>What UAV SILM is and who it is for</span></a></li>
     <li><a class="mi" href="#design"><b>Design</b><span>Geometry, calculated performance and modules</span></a></li>
     <li><a class="mi" href="#inside"><b>Inside the airframe</b><span>Interactive 3D layout and balance calculator</span></a></li>
+    <li><a class="mi" href="#onboard"><b>Onboard system</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
     <li><a class="mi" href="#cfd"><b>CFD</b><span>Airflow and pressure from OpenFOAM, in 3D</span></a></li>
     <li><a class="mi" href="#learnt"><b>Lessons</b><span>What went wrong and what we learnt</span></a></li>
     <li><a class="mi" href="#progress"><b>Progress</b><span>Interim report and next steps</span></a></li>
@@ -597,6 +620,7 @@
     <li><a class="mi" href="#timeline"><b>Timeline</b><span>Five stages up to 8 December</span></a></li>
     <li><a class="mi" href="#team"><b>Team</b><span>Who does what</span></a></li>
     <li><a class="mi" href="#resources"><b>Resources</b><span>Tools, parts and references</span></a></li>
+    <li><a class="mi" href="#downloads"><b>Downloads</b><span>Our software, settings and model, free to use</span></a></li>
   </ol>
 </div>
 
@@ -604,6 +628,7 @@
   <a href="#project" tabindex="-1"><span>Project</span><i></i></a>
   <a href="#design" tabindex="-1"><span>Design</span><i></i></a>
   <a href="#inside" tabindex="-1"><span>Inside</span><i></i></a>
+  <a href="#onboard" tabindex="-1"><span>Onboard</span><i></i></a>
   <a href="#cfd" tabindex="-1"><span>CFD</span><i></i></a>
   <a href="#learnt" tabindex="-1"><span>Lessons</span><i></i></a>
   <a href="#progress" tabindex="-1"><span>Progress</span><i></i></a>
@@ -611,6 +636,7 @@
   <a href="#timeline" tabindex="-1"><span>Timeline</span><i></i></a>
   <a href="#team" tabindex="-1"><span>Team</span><i></i></a>
   <a href="#resources" tabindex="-1"><span>Resources</span><i></i></a>
+  <a href="#downloads" tabindex="-1"><span>Downloads</span><i></i></a>
 </nav>
 
 <main id="top">
@@ -628,7 +654,7 @@
           <div class="pills">
             <span class="pill warn"><span class="dot"></span>In development, not yet flown</span>
             <span class="pill">Presentation 8 Dec 2026</span>
-            <span class="pill">Updated 3 Nov 2026</span>
+            <span class="pill">Updated 8 Nov 2026</span>
           </div>
           <div class="cta">
             <a class="btn primary" href="#inside">Look inside the airframe <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -848,8 +874,8 @@
           <p style="margin-top:16px">We sized the motor against the 1.6 kg all-up mass with margin for material or battery changes. Static thrust will be measured on our own test rig before flight (see Build). The motor sits inside the tail cone on its long shaft, so the cone needs cooling vents.</p>
         </div>
         <div class="panel" role="tabpanel">
-          <p>An ArduPilot autopilot with GPS, compass and digital airspeed sensing flies the aircraft autonomously along waypoints. We plan mission routes on a map in ground-control software (Mission Planner or QGroundControl) and upload them before launch, so the aircraft can fly a pre-set trajectory without continuous manual control.</p>
-          <p>An ExpressLRS 2.4 GHz radio link gives manual control at close range. A 4G LTE module paired with an encrypted WireGuard link on a Raspberry Pi Zero 2W is planned as a MAVLink failsafe channel, to keep telemetry and control available under GPS interference or beyond normal radio range.</p>
+          <p>An ArduPilot autopilot with GPS, compass and digital airspeed sensing flies the aircraft autonomously along waypoints. We plan each mission on a map in our own planner on a laptop and upload it over USB before launch; the aircraft then launches from a hand throw, flies the whole route and lands itself.</p>
+          <p>There is no radio-control link: nobody flies the aircraft by hand, so takeoff, the mission, the landing and every failsafe are automatic. A 4G LTE module paired with an encrypted WireGuard link on a Raspberry Pi Zero 2W is planned as an optional channel for watching telemetry during a flight.</p>
         </div>
         <div class="panel" role="tabpanel">
           <p>The nose cone screws on and off, so the same airframe can carry an ISR sensor payload or be reconfigured without redesigning the fuselage. Swapping the wing set for a cheaper, higher aspect-ratio pair trades cruise performance for lower-cost, lower-tempo missions. Because modules attach at fixed stations, moving the centre of gravity is mostly a matter of choosing which modules are fitted.</p>
@@ -969,7 +995,7 @@
               <tr data-id="wire"><td><span class="sw pw"></span>Wiring and connectors</td><td class="num">70 g</td><td class="num">about 335 mm</td><td>Spread through the fuselage</td><td>Counted as one mass at about 335 mm, close to the CG.</td></tr>
             </tbody>
           </table></div>
-          <p class="note">Positions are along the fuselage from the nose tip. The airframe itself (shells, wing, spar and tail, about 550 g with the lighter V-tail) is part of the balance too. Small items such as the ExpressLRS receiver are not placed yet.</p>
+          <p class="note">Positions are along the fuselage from the nose tip. The airframe itself (shells, wing, spar and tail, about 550 g with the lighter V-tail) is part of the balance too. Some small items are not placed yet.</p>
         </div>
         <div class="panel" role="tabpanel">
           <div class="split">
@@ -1012,6 +1038,71 @@
             <figure><img class="zoom" src="images/layout_side.jpg" alt="Side view drawing of the UAV SILM internal layout with labelled components, CG and neutral point" data-cap="Side view with every component at its fitted position, the CG at 343 mm and the neutral point at 382 mm." width="1800" height="720" loading="lazy" decoding="async"><figcaption>Side view with every component at its fitted position.</figcaption></figure>
             <figure><img class="zoom" src="images/layout_servos_aft.jpg" alt="Top and side view drawing of the layout with the tail servos at 720 to 760 mm" data-cap="Top and side views with the tail servos at x 720 to 760, the option under study. CG 345 mm, static margin 19%." width="1600" height="1414" loading="lazy" decoding="async"><figcaption>Top and side views with the tail servos at x 720 to 760, the option under study.</figcaption></figure>
           </div>
+        </div>
+      </div>
+      <div class="next"><a href="#onboard">Next: <b>Onboard system</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- ============ ONBOARD ============ -->
+  <section class="s" id="onboard">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Onboard</span></div>
+      <h2 class="rv">Flying and seeing without a link</h2>
+      <p class="lead rv">The aircraft is meant to launch from a hand throw, fly its planned route, recognise what it sees, save geo-tagged photos and land itself, with no radio link to the ground at all, and to land safely if GPS is lost or jammed. Everything is prepared in our own laptop program, the Ground Station. None of this has flown yet: so far it has been tested in software and in ArduPilot's flight simulator.</p>
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Onboard system">
+          <button class="tab" role="tab">How it works</button>
+          <button class="tab" role="tab">GPS loss</button>
+          <button class="tab" role="tab">Recognition</button>
+          <button class="tab" role="tab">Testing</button>
+          <span class="tab-ind"></span>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="lessons">
+            <div class="lesson"><svg viewBox="0 0 24 24"><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7 18c6 0 3-11 10-12"/></svg><h3>We plan in the Ground Station</h3><p>Our laptop program asks a plain question above every value ("What is the center of gravity of your aircraft?"), and we draw the survey area, launch point and landing strip on a map. It builds the flight controller's settings, the mission and the camera settings from the answers, and checks them all before anything is sent.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4zM8 21h8M12 17v4"/></svg><h3>Sent by cable, Wi-Fi or USB stick</h3><p>Settings and mission go to the Matek H743 over USB and are read back to make sure they arrived. The Raspberry Pi 4 gets its settings over its own Wi-Fi hotspot, which switches off while the aircraft is armed, or from a USB stick.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3"/></svg><h3>The Raspberry Pi watches the camera</h3><p>It reads position and attitude from the flight controller, looks for objects in each frame and saves a boxed photo with the object's ground coordinates. An object counts only after it is seen in two frames at the same spot, which removes most one-frame false alarms. It never steers the aircraft.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M12 20v-8M8.5 8.5a5 5 0 0 1 7 0M5.5 5.5a9 9 0 0 1 13 0"/></svg><h3>It lands itself</h3><p>There is no radio control, so every mission ends with an automatic landing into the wind, and the motor switches off by itself. Low battery, GPS loss or leaving the geofence all lead to the same landing. Above 10 m/s of wind the Ground Station will not let it launch.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg><h3>Every picture on a map</h3><p>After landing, the flight comes back to the laptop over Wi-Fi or the USB stick, and the Ground Station shows every picture on a map with its coordinates, filters by object type and exports the list for other map programs.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z"/></svg><h3>The Pi watches its own health</h3><p>It logs its temperature, power supply, free memory and storage, and stops saving ordinary pictures before the storage fills up. If the camera is slow to start or one frame is damaged, it carries on instead of stopping.</p></div>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="trouble">
+            <div class="row"><div class="what"><h4>GPS drops out or is jammed</h4><p>Without GPS the aircraft no longer knows exactly where it is.</p></div><div class="fix"><b>What the aircraft does</b>A script on the flight controller tells the navigation filter to stop trusting GPS at all, so a jammer's false positions cannot pull it off course. It keeps flying by dead reckoning, from airspeed, heading and the wind it measured while GPS was still good.</div></div>
+            <div class="row"><div class="what"><h4>GPS stays bad for 5 seconds</h4><p>Carrying on outward would only add to the drift.</p></div><div class="fix"><b>What the aircraft does</b>The script ends the survey and flies the mission's landing approach. Lock that flickers on and off during jamming does not reset its timer, and a landing already under way is never restarted.</div></div>
+            <div class="row"><div class="what"><h4>A jammer switches off, or sends a false signal</h4><p>A weak or faked signal can look like a valid fix.</p></div><div class="fix"><b>What the aircraft does</b>GPS is trusted again only after it has been good for 10 seconds and agrees with the estimated position, so a bad signal cannot snap the position to the wrong place.</div></div>
+            <div class="row"><div class="what"><h4>The estimate drifts too far</h4><p>Dead-reckoning error grows with time and wind.</p></div><div class="fix"><b>What the aircraft does</b>A geofence 100 m beyond the farthest point of the route, sized by the Ground Station for each mission, sends it to the landing approach if the estimated position leaves it.</div></div>
+            <div class="row"><div class="what"><h4>It lands while GPS is still gone</h4><p>Without GPS the aircraft can seem to keep moving on the ground and stay armed.</p></div><div class="fix"><b>What the aircraft does</b>Once it has stood still on the landing for 15 seconds, slow, level and near the ground, the script switches the motor off for good.</div></div>
+          </div>
+          <p class="summary-box">This is a controlled recovery, not navigation without GPS: the longer GPS is gone, the less precise the landing. In the simulator, landings without GPS touched down 85 m past the planned point in 8 m/s of wind and 107 m in 10 m/s, so the landing strip needs at least 150 m of clear ground beyond the touchdown point. At 12 m/s it overshot by 151 m, which is why the Ground Station refuses to launch above 10 m/s.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <p>The detector runs on the Raspberry Pi 4, on the central half of the camera image in four tiles, where the 160° lens is sharpest. Size is the hard limit: at 100 m a car is about 8 pixels for the detector (too few), a combine about 46. The Ground Station works out the highest altitude at which the smallest object you are looking for is still big enough, about 80 m for cars. A colour check finds fire and smoke without any training. The system is set up for 15 classes for farm, forestry and wildfire survey:</p>
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Group</th><th>Classes</th></tr></thead><tbody>
+            <tr><td>Farm machinery</td><td>Tractor, combine, harvester, baler</td></tr>
+            <tr><td>Vehicles</td><td>Car, truck, logging truck</td></tr>
+            <tr><td>Farm and forest</td><td>Hay bale, livestock, silo, barn, timber stack</td></tr>
+            <tr><td>Hazards</td><td>Fire, smoke</td></tr>
+            <tr><td>People</td><td>Person</td></tr>
+          </tbody></table></div>
+          <p>Our ready-made model, trained on about 1,800 real photos from Google Open Images, knows tractors, cars, trucks and livestock. On 298 photos it had never seen, about 3 in 4 of its detections were right (precision 0.70 to 0.75), and it found 4 to 6 in 10 of the objects. The standard model it replaces cannot see tractors at all. New object types can be taught in the Ground Station: add pictures, draw a box around each object, train, and send the model to the aircraft.</p>
+          <p class="summary-box">Honest status: those photos are mostly taken from the ground. From straight above, as our camera sees, the model has not been measured and will do worse. Combines are not in it yet, because the public photos of them were unusable. The plan is to fly, save ordinary pictures, label them in the Ground Station, retrain and repeat.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>
+            <tr><td>No-RC and failsafe parameters against the ArduPlane source</td><td>Every name and range valid</td></tr>
+            <tr><td>GPS-loss script: more than 40 scenarios, including jamming, takeoff, landing and never switching off in flight</td><td>All pass</td></tr>
+            <tr><td>Full missions with GPS jamming in ArduPilot's simulator (SITL), wind 4 to 10 m/s, some with GPS gone until after the landing</td><td>6 of 6 pass</td></tr>
+            <tr><td>The same at 12 m/s of wind</td><td>Lands 151 m long, so 10 m/s is our limit</td></tr>
+            <tr><td>A fresh simulated flight controller set up only by the Ground Station, then flown with GPS jamming</td><td>Passes</td></tr>
+            <tr><td>Ground Station used like a person would, in a real browser: every tab, the map, sending, the launch checklist, the pictures</td><td>Passes</td></tr>
+            <tr><td>Recognition model on 298 photos it had never seen</td><td>Precision 0.70 to 0.75</td></tr>
+            <tr><td>Whole onboard pipeline, from camera frame to saved, geo-tagged photo; camera that is late or drops frames</td><td>Passes</td></tr>
+            <tr><td>Flight tests</td><td>After the airframe is built</td></tr>
+          </tbody></table></div>
+          <p class="summary-box">400 automated tests run on every change. They tell us the software does what we intended; only flight tests will tell us whether that holds up in the air.</p>
         </div>
       </div>
       <div class="next"><a href="#cfd">Next: <b>CFD</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
@@ -1177,6 +1268,8 @@
             <div class="row"><div class="what"><h4>The CAD would not mesh directly for CFD</h4><p>Some curved surfaces in the STEP export failed in the first meshing tool.</p></div><div class="fix"><b>What we did</b>Fused the parts and triangulated them another way before snappyHexMesh could use the geometry.</div></div>
             <div class="row"><div class="what"><h4>Parallel CFD runs failed at first</h4><p>Running the solver on two cores clashed with the installed MPI library.</p></div><div class="fix"><b>What we did</b>A library workaround, after which each case ran in parallel to convergence.</div></div>
             <div class="row"><div class="what"><h4>CFD drag disagreed with XFLR5</h4><p>0.0367 against 0.0227 at 3°.</p></div><div class="fix"><b>What we did</b>Traced it to the fuselage and the fully turbulent boundary layer in CFD. We treat the CFD drag as an upper estimate until flight tests.</div></div>
+            <div class="row"><div class="what"><h4>Our first failsafe settings assumed a radio we do not have</h4><p>They were written for a pilot with an ExpressLRS radio who would land by hand. Without one, a radio failsafe would trigger at once, the aircraft would refuse to arm, and a return home would end in circling until the battery ran out. Several parameter names did not exist in ArduPlane at all.</p></div><div class="fix"><b>What we did</b>Wrote a script that checks every parameter against the ArduPlane source, rebuilt the settings for hand launch and automatic landing with no radio, made every failsafe end in that landing, and wrote our own laptop mission planner that always adds the landing.</div></div>
+            <div class="row"><div class="what"><h4>The camera speed estimate had its sign reversed</h4><p>A test against an independent camera model showed forward flight reading as flying backwards. The estimate was switched off by default, so it never reached the autopilot.</p></div><div class="fix"><b>What we did</b>Fixed the signs, added correction for pitch and roll, and now test it on rendered images of the ground.</div></div>
             <div class="row"><div class="what"><h4>The build started late</h4><p>Airframe printing has not started; the print settings for the foaming LW-PLA still need tuning.</p></div><div class="fix"><b>What we did</b>Planned test prints first (LW-PLA from 5 November, PETG from 13 November) and replaced the stage plan with dated tasks. See the <a href="#progress">progress report</a>.</div></div>
             <div class="row"><div class="what"><h4>The second parts order slipped</h4><p>Carbon tube sizes, wire gauge and the arming connector had to come from the CAD first.</p></div><div class="fix"><b>What we did</b>Finished the sizes and set the order for 4 November.</div></div>
           </div>
@@ -1376,11 +1469,11 @@
         </div>
 
         <div class="panel" role="tabpanel">
-          <figure><img class="zoom" src="images/circuit.jpg" alt="UAV SILM wiring diagram: Matek H743-WING flight controller with ESC, GPS, airspeed sensor, ExpressLRS receiver and four servos" data-cap="Wiring and communications diagram for the aircraft." width="1491" height="546" loading="lazy" decoding="async"><figcaption>Wiring and communications diagram. Click to enlarge.</figcaption></figure>
+          <figure><img class="zoom" src="images/circuit.jpg" alt="UAV SILM wiring diagram: Matek H743-WING flight controller with ESC, GPS, airspeed sensor, a radio receiver and four servos" data-cap="Wiring and communications diagram for the aircraft. The ExpressLRS receiver drawn here is not fitted: the aircraft flies with no radio-control link." width="1491" height="546" loading="lazy" decoding="async"><figcaption>Wiring and communications diagram. The ExpressLRS receiver shown is not fitted. Click to enlarge.</figcaption></figure>
           <div class="cards c3" style="margin-top:22px">
             <div class="hovercard"><div class="card-k">Power</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>4S LiPo through an arming plug to the flight controller and the 60 A ESC, which drives the motor. The ESC's own BEC output is left unconnected.</p></div></div></div>
             <div class="hovercard"><div class="card-k">Sensors</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>GPS and compass on UART4 and I²C, and the digital airspeed sensor on I²C, all on the Matek H743-WING V3.</p></div></div></div>
-            <div class="hovercard"><div class="card-k">Control and link</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>ExpressLRS receiver on UART1; four servos for ailerons and ruddervators powered from the controller's servo rail; ground station on a laptop running Mission Planner or QGroundControl.</p></div></div></div>
+            <div class="hovercard"><div class="card-k">Control and link</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>No radio receiver: missions are uploaded over USB from the laptop planner. Four servos for ailerons and ruddervators are powered from the controller's servo rail.</p></div></div></div>
           </div>
           <p class="note">The physical circuit is due on 30 November. The 4G and WireGuard failsafe (SIM7600E-H module and a Raspberry Pi) is planned as a later addition to the core flight system. Where each part sits in the fuselage is shown in <a href="#inside">Inside the airframe</a>.</p>
         </div>
@@ -1541,7 +1634,7 @@
             <tr><td>Battery</td><td>Gens Ace G-Tech 7000 mAh 4S 60C</td><td><span class="tag ok">Received</span></td></tr>
             <tr><td>Motor</td><td>T-Motor AT2321 1250 KV, long shaft</td><td><span class="tag ok">Received</span></td></tr>
           </tbody></table></div>
-          <p class="note">All received by 20 October. The ExpressLRS radio link and the Raspberry Pi Zero 2W are part of the wiring plan; their sourcing is being confirmed.</p>
+          <p class="note">All received by 20 October. The Raspberry Pi Zero 2W for the optional 4G link is part of the wiring plan; its sourcing is being confirmed. There is no ExpressLRS radio link.</p>
         </div>
         <div class="panel" role="tabpanel">
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Item</th><th>Quantity</th><th>Status</th></tr></thead><tbody>
@@ -1572,7 +1665,8 @@
             <tr><td>XFLR5 6.61</td><td>Airfoil polars, vortex-lattice analysis, stability</td></tr>
             <tr><td>OpenFOAM</td><td>Airframe CFD</td></tr>
             <tr><td>ArduPilot</td><td>Flight-controller firmware and autopilot</td></tr>
-            <tr><td>Mission Planner / QGroundControl</td><td>Configuration and map-based mission planning</td></tr>
+            <tr><td>SILM mission planner (our own, laptop)</td><td>Map-based mission planning, checks, USB upload and arming</td></tr>
+            <tr><td>Mission Planner / QGroundControl</td><td>One-time flight controller configuration</td></tr>
             <tr><td>Python (RPLCD, godirect, RPi.GPIO)</td><td>Thrust rig software</td></tr>
             <tr><td>three.js</td><td>The interactive 3D models on this website</td></tr>
             <tr><td>Google Drive and Sheets</td><td>Shared files, task list and planning</td></tr>
@@ -1597,8 +1691,122 @@
           <div class="src-item"><div><h4>ArduPilot Plane documentation</h4><p><b>What we took</b>: flight-controller setup and waypoint mission planning.</p></div></div>
           <div class="src-item"><div><h4>Vernier godirect and RPLCD Python libraries</h4><p><b>What we took</b>: reading the force sensor and driving the LCD on the thrust rig.</p></div></div>
           <div class="src-item"><div><h4>three.js (MIT licence) <span class="new">new</span></h4><p><b>What we used it for</b>: the interactive 3D viewers on this site, served from our own domain.</p></div></div>
+          <div class="src-item"><div><h4>Google Open Images V6/V7 (CC BY 4.0; photos CC BY 2.0) <span class="new">new</span></h4><p><b>What we used</b>: about 1,800 labelled photos of tractors, cars, trucks and livestock to train our ready-made recognition model. Each photo belongs to its Flickr author.</p></div></div>
+          <div class="src-item"><div><h4>Ultralytics YOLO11 (AGPL-3.0) <span class="new">new</span></h4><p><b>What we used</b>: the YOLO11n network and training tools; our model is fine-tuned from it and shared under the same licence.</p></div></div>
+          <div class="src-item"><div><h4>ArduPilot SITL simulator and LiteRT <span class="new">new</span></h4><p><b>What we used</b>: flying our missions with GPS jamming in simulation, and running the recognition model on the Raspberry Pi.</p></div></div>
+          <div class="src-item"><div><h4>Leaflet, OpenStreetMap and Esri World Imagery <span class="new">new</span></h4><p><b>What we used</b>: the maps in our Ground Station program (map data &copy; OpenStreetMap contributors, imagery &copy; Esri and its data providers).</p></div></div>
           <div class="src-item"><div><h4>Claude (Anthropic)</h4><p><b>What we used it for</b>: help organising the website content, writing the page's HTML, CSS and JavaScript including the 3D viewers, setting up and running the OpenFOAM CFD of our V4 airframe, and the centre-of-gravity, fit-check and layout calculations.</p></div></div>
         </div></div></div>
+      </div>
+      <div class="next"><a href="#downloads">Next: <b>Downloads</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- ============ DOWNLOADS ============ -->
+  <section class="s" id="downloads">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Downloads</span></div>
+      <h2 class="rv">Download the software</h2>
+      <p class="lead rv">Everything we use to plan a survey, set up the aircraft, fly it in the simulator and look at the pictures afterwards. Our own code is free to use, change and share under the MIT licence; the parts made by others keep their licences and are credited below.</p>
+      <div class="cards c2 fit rv">
+        <div>
+          <div class="card-k">Will it work on my aircraft? Yes, with</div>
+          <ul>
+            <li>a <b>fixed-wing plane</b> running <b>ArduPlane</b> (ArduPilot)</li>
+            <li>a flight controller that can run Lua scripts (H7 or F7 boards such as the Matek H743)</li>
+            <li>an <b>airspeed sensor</b>, GPS with compass and a battery monitor</li>
+            <li>for recognition: a <b>Raspberry Pi 4</b> and a network (RTSP) or USB camera; other cameras need a lens calibration</li>
+            <li>a laptop with Windows, macOS or Linux</li>
+          </ul>
+        </div>
+        <div>
+          <div class="card-k warn">It will not work with</div>
+          <ul>
+            <li><b>quadcopters and other multirotors</b></li>
+            <li>DJI, PX4 or iNav flight controllers</li>
+            <li>small F4 boards that cannot run scripts</li>
+            <li>planes without an airspeed sensor</li>
+          </ul>
+          <p class="fit-note">Even on the right aircraft: answer every question about <i>your</i> plane in the Ground Station, fly the mission in its simulator first, check the control directions on the bench, and get your flight authorisation.</p>
+        </div>
+      </div>
+      <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
+      <div class="cards c2 dl rv">
+        <div>
+          <div class="card-k">Software · MIT + third-party</div>
+          <div class="card-t">UAV SILM software 2.0.0</div>
+          <div class="card-s">ZIP · 4.5 MB</div>
+          <p class="dl-what">Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.</p>
+          <a class="btn ghost dl-btn" href="downloads/uav-silm-software-2.0.0.zip" download>uav-silm-software-2.0.0.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>074843d4959b6d10eede85cae97c6e3d189abf9307a0d2fbf0278a639748e3cb</code></div>
+        </div>
+        <div>
+          <div class="card-k">Model · AGPL-3.0</div>
+          <div class="card-t">Farm recognition model silm_oi</div>
+          <div class="card-s">ZIP · 3.5 MB</div>
+          <p class="dl-what">The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.</p>
+          <a class="btn ghost dl-btn" href="downloads/silm-oi-farm-model-v1.zip" download>silm-oi-farm-model-v1.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>9672ae516e96055cbebd7dad6640b3e70c797aec7a4473ab9a9c050e763ad9cc</code></div>
+        </div>
+        <div>
+          <div class="card-k">ArduPilot · MIT</div>
+          <div class="card-t">Flight controller settings</div>
+          <div class="card-s">PARAM · 8 kB</div>
+          <p class="dl-what">ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.</p>
+          <a class="btn ghost dl-btn" href="downloads/gps_denied_failsafe.param" download>gps_denied_failsafe.param<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d</code></div>
+        </div>
+        <div>
+          <div class="card-k">ArduPilot · MIT</div>
+          <div class="card-t">GPS-loss script</div>
+          <div class="card-s">LUA · 14 kB</div>
+          <p class="dl-what">ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.</p>
+          <a class="btn ghost dl-btn" href="downloads/silm_gps_loss.lua" download>silm_gps_loss.lua<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315</code></div>
+        </div>
+      </div>
+      <p class="note rv">Version 2.0.0, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/d1b2f093c4ff9d840b01432f3e721a8539b598ba/onboard"><code>d1b2f093c4</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
+      <!-- downloads:end -->
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Using the downloads">
+          <button class="tab" role="tab">Start here</button>
+          <button class="tab" role="tab">Check a download</button>
+          <button class="tab" role="tab">Licences and credits</button>
+          <span class="tab-ind"></span>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>You want to</th><th>Take</th></tr></thead><tbody>
+            <tr><td>Plan and fly a survey, see the pictures</td><td>The software zip. Unpack it and start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>. <code>GROUND_STATION.md</code> explains every tab, <code>FLIGHT_READY.md</code> the whole procedure.</td></tr>
+            <tr><td>Set up the Raspberry Pi 4</td><td>The software zip, then <code>bash pi/install.sh</code> on the Pi.</td></tr>
+            <tr><td>Only the flight controller settings</td><td>The <code>.param</code> file (Mission Planner: Full Parameter List, Load from file) and the <code>.lua</code> script (SD card, <code>APM/scripts</code>).</td></tr>
+            <tr><td>Recognise tractors and livestock</td><td>The model zip, or choose "Ready-made" on the Ground Station's Camera tab (it is already inside the software).</td></tr>
+          </tbody></table></div>
+          <p class="summary-box">Read before flying: the software is tested in ArduPilot's simulator but <b>not yet flown on a real aircraft</b>. Fully automatic flight without a radio link needs the EASA "specific" category (an operational authorisation from Transpordiamet in Estonia), and taking pictures of people and property has its own rules. It comes as is, without any warranty.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <p>Each file's SHA-256 checksum is listed above. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Computer</th><th>Command (in the folder with the file)</th></tr></thead><tbody>
+            <tr><td>Windows</td><td><code>certutil -hashfile uav-silm-software-2.0.0.zip SHA256</code></td></tr>
+            <tr><td>macOS</td><td><code>shasum -a 256 uav-silm-software-2.0.0.zip</code></td></tr>
+            <tr><td>Linux</td><td><code>sha256sum -c SHA256SUMS.txt --ignore-missing</code></td></tr>
+          </tbody></table></div>
+          <p class="note">The files are built from a published commit of our repository, always the same way, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py</code>.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Part</th><th>Made by</th><th>Licence</th></tr></thead><tbody>
+            <tr><td>Our software, settings, script and documentation</td><td>UAV SILM team</td><td>MIT</td></tr>
+            <tr><td>Recognition model silm_oi</td><td>UAV SILM team, fine-tuned from Ultralytics YOLO11n (&copy; Ultralytics)</td><td>AGPL-3.0</td></tr>
+            <tr><td>Photos and boxes the model learnt from</td><td>Google Open Images; photos by their Flickr authors</td><td>CC BY 4.0 (boxes), CC BY 2.0 (photos)</td></tr>
+            <tr><td>Map in the Ground Station</td><td>Leaflet (Volodymyr Agafonkin and contributors)</td><td>BSD-2-Clause</td></tr>
+            <tr><td>Map data and tiles</td><td>&copy; OpenStreetMap contributors</td><td>ODbL</td></tr>
+            <tr><td>Satellite imagery</td><td>&copy; Esri and its data providers</td><td>Esri terms of use</td></tr>
+            <tr><td>Fonts (on this site and in the Ground Station)</td><td>Bricolage Grotesque Project Authors; IBM Corp. (IBM Plex Mono)</td><td>SIL Open Font License 1.1 (<a href="fonts/OFL-BricolageGrotesque.txt">text</a>, <a href="fonts/OFL-IBMPlexMono.txt">text</a>)</td></tr>
+            <tr><td>Flight controller firmware and simulator (not included)</td><td>ArduPilot project</td><td>GPL-3.0</td></tr>
+            <tr><td>Standard recognition model (downloaded on the Pi)</td><td>TensorFlow authors, COCO SSD MobileNet v1</td><td>Apache-2.0</td></tr>
+            <tr><td>Python libraries (installed separately)</td><td>pymavlink, OpenCV, NumPy, LiteRT, PyYAML, pySerial and others</td><td>LGPL-3.0, Apache-2.0, BSD, MIT</td></tr>
+          </tbody></table></div>
+          <p class="note">The full list, with every author and licence text, is in <code>THIRD_PARTY_NOTICES.md</code> inside the software zip. The four test photos in it are credited by name in <code>tests/data/oi_samples/samples.json</code>.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -1629,11 +1837,13 @@
         <a href="#project">About UAV SILM</a>
         <a href="#design">Design and capability</a>
         <a href="#inside">Inside the airframe</a>
+        <a href="#onboard">Onboard system</a>
         <a href="#cfd">CFD results</a>
         <a href="#learnt">What we learnt</a>
         <a href="#progress">Progress report</a>
         <a href="#build">Build and testing</a>
         <a href="#timeline">Timeline</a>
+        <a href="#downloads">Downloads</a>
       </div>
       <div class="fcol">
         <div class="ftag">Team</div>
@@ -1647,7 +1857,7 @@
       </div>
     </div>
     <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 3 November 2026</span></div>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 8 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">
@@ -1753,8 +1963,8 @@
 
   // scroll progress, active section in nav, menu and rail
   var bar = d.getElementById('scrollbar'), hdr = d.querySelector('header.top');
-  var ids = ['project','design','inside','cfd','learnt','progress','build','timeline','team','resources'];
-  var names = {project:'Project', design:'Design', inside:'Inside', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources'};
+  var ids = ['project','design','inside','onboard','cfd','learnt','progress','build','timeline','team','resources','downloads'];
+  var names = {project:'Project', design:'Design', inside:'Inside', onboard:'Onboard', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources', downloads:'Downloads'};
   var secs = ids.map(function(i){ return d.getElementById(i); });
   var navLinks = [].slice.call(d.querySelectorAll('[data-nav] a[href^="#"]'));
   var ticking = false, lastCur = null;

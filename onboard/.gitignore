@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+# model weights are downloaded/exported, not committed
+models/*.tflite
+# training artifacts (large / regenerable)
+training/datasets/
+training/runs/
+*.pt
+# mission captures
+captures/
+silm_captures/
+frames/
+
+models/*_labels.txt
+.pytest_cache/
+training/practice/
+training/to_label/
+.venv/
+
+# the ready-made farm model is committed (4 MB; see models/README.md)
+!models/silm_oi.tflite
+!models/silm_oi_labels.txt

@@ -1,0 +1,4 @@
+074843d4959b6d10eede85cae97c6e3d189abf9307a0d2fbf0278a639748e3cb  uav-silm-software-2.0.0.zip
+9672ae516e96055cbebd7dad6640b3e70c797aec7a4473ab9a9c050e763ad9cc  silm-oi-farm-model-v1.zip
+137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d  gps_denied_failsafe.param
+84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315  silm_gps_loss.lua

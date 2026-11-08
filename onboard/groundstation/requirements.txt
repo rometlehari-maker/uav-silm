@@ -1,0 +1,7 @@
+# SILM Ground Station (laptop: Windows, macOS or Linux, Python 3.9+).
+# The launchers ("Start Ground Station.bat", start_ground_station.sh) install
+# these automatically the first time.
+PyYAML>=5.4
+pymavlink>=2.4.40        # flight controller over USB, incl. MAVFTP for the script
+pyserial>=3.5            # finds the USB ports
+matplotlib>=3.5          # simulator result picture (only for the Simulator tab)

@@ -1,0 +1,15 @@
+person
+car
+truck
+tractor
+combine
+harvester
+baler
+hay_bale
+livestock
+silo
+barn
+logging_truck
+timber_stack
+fire
+smoke

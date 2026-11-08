@@ -1,0 +1,26 @@
+# Agriculture / forestry / wildfire class list for the SILM detector.
+# Order defines the class index; keep it stable once you start labelling, and
+# keep these names identical in config.yaml -> targets and in the labels file.
+#
+# "person" is included for situational awareness and safe-distance review, not
+# for tracking individuals.
+#
+# Starter set based on your given objects (harvester, combine, car, forest fire)
+# plus common farming/forestry survey subjects. Add/remove freely before you
+# label data -- just renumber consistently.
+names:
+  0: person
+  1: car
+  2: truck
+  3: tractor
+  4: combine            # combine harvester (grain)
+  5: harvester          # forage / forestry harvester
+  6: baler
+  7: hay_bale
+  8: livestock          # cattle / sheep herds
+  9: silo
+  10: barn
+  11: logging_truck
+  12: timber_stack
+  13: fire              # active flame (wildfire / field fire)
+  14: smoke             # smoke plume

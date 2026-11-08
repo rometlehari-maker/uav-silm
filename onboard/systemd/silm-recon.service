@@ -1,0 +1,32 @@
+# SILM flight program on the Raspberry Pi 4 (camera + recognition + pictures).
+#
+# Installed by pi/install.sh, which replaces @USER@ and @ONBOARD@ with your
+# user name and the onboard/ folder. Manual install:
+#   sed "s#@USER@#$USER#g; s#@ONBOARD@#$HOME/uav-silm/onboard#g; s#@VENV@#$HOME/silm-venv#g" \
+#       systemd/silm-recon.service | sudo tee /etc/systemd/system/silm-recon.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now silm-recon
+#   journalctl -u silm-recon -f        # watch its log
+
+[Unit]
+Description=SILM flight program (link-free recognition and geo-tagged pictures)
+After=network-online.target
+Wants=network-online.target
+# keep trying forever: the flight controller or camera may come up later
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@ONBOARD@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@VENV@/bin/python3 @ONBOARD@/run.py --config @ONBOARD@/config.yaml
+Restart=always
+RestartSec=3
+Nice=-5
+# Raspberry Pi 4, 2 GB: never let the flight program starve the rest of the
+# system (it normally uses ~300-500 MB).
+MemoryHigh=1100M
+MemoryMax=1400M
+
+[Install]
+WantedBy=multi-user.target

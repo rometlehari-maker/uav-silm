@@ -1,0 +1,153 @@
+# ===========================================================================
+# SILM parameter set for FULLY AUTOMATIC flight, NO RC TRANSMITTER
+# ArduPlane 4.7.x (every name and range verified against 4.7.2)
+# ===========================================================================
+# This aircraft has no RC (ExpressLRS or other) link: nobody can take manual
+# control in the air. So the aircraft must do everything itself:
+#   launch  - hand launch in AUTO: the motor stays off until the throw is
+#             detected (TKOFF_THR_MINACC), then the mission's NAV_TAKEOFF climbs
+#   fly     - the AUTO mission planned in the laptop GUI (planner/)
+#   land    - a belly autoland: the mission ENDS with DO_LAND_START + NAV_LAND,
+#             and every failsafe (GPS loss, battery, geofence) goes there too
+#   disarm  - automatically after touchdown (LAND_DISARMDELAY)
+# The flight controller refuses to arm unless the mission has a takeoff and
+# a landing sequence (ARMING_MIS_ITEMS).
+#
+# Check against YOUR firmware version before loading:
+#   python3 tools/check_params.py --src <ardupilot checkout> ardupilot/gps_denied_failsafe.param
+# Load in Mission Planner (or QGroundControl) on the laptop over USB:
+#   CONFIG > Full Parameter List > Load from file > Write Params, then reboot.
+# Then install ardupilot/scripts/silm_gps_loss.lua (FLIGHT_READY.md A1).
+# Test in the simulator first (tools/sitl_failsafe_test.py, FLIGHT_READY.md A3).
+#
+# Values are starting points for a 1.4 m, ~1.6 kg hand-launched pusher with a
+# 4S 7000 mAh battery (stall ~9.5 m/s). Read every line.
+# ---------------------------------------------------------------------------
+
+# --- No RC receiver -----------------------------------------------------------
+# RC failsafe off: with no receiver it would be permanently "in failsafe".
+THR_FAILSAFE,0
+# Skip ONLY the RC-channel arming checks (bit 6 = 64); all other checks stay.
+ARMING_SKIPCHK,64
+# Refuse to arm unless the mission contains Land (1) + DO_LAND_START (4) +
+# Takeoff (8) = 13. Without RC, a mission with no landing would circle until
+# the battery is empty.
+ARMING_MIS_ITEMS,13
+# No ground station in flight -> GCS failsafe off. If you add a 4G/telemetry
+# link for monitoring, keep this 0 so link drop-outs don't change the mission.
+FS_GCS_ENABL,0
+# Only relevant if a GCS/RC failsafe is ever enabled: in AUTO, continue.
+FS_SHORT_ACTN,0
+FS_LONG_ACTN,0
+# Boot straight into AUTO (10). ArduPilot documents this for "AUTO on boot
+# without a receiver". Harmless while disarmed; you arm from the laptop
+# planner (USB) just before the throw. ARMING_REQUIRE stays at its default
+# (1): the motor cannot run until armed.
+INITIAL_MODE,10
+
+# --- Hand launch (automatic) -------------------------------------------------
+# Motor stays stopped in AUTO until a forward acceleration of 15 m/s/s (the
+# throw), then waits TKOFF_THR_DELAY tenths of a second before starting so
+# the pusher propeller is clear of the launcher's hand (ArduPilot: >= 2 for
+# pushers). The climb angle and altitude are set by the mission's NAV_TAKEOFF.
+TKOFF_THR_MINACC,15
+TKOFF_THR_DELAY,3
+
+# --- Automatic belly landing --------------------------------------------------
+# Any RTL (GPS-loss script, geofence) goes straight to the mission's landing
+# sequence (DO_LAND_START) instead of circling over home until the battery
+# runs out: 2 = go directly to the landing sequence.
+RTL_AUTOLAND,2
+# Flare: lock heading and hold the landing pitch 2 s before touchdown, or
+# from 3 m. Slightly nose-up for a belly landing so the camera window in the
+# nose is not the first thing to touch the ground.
+LAND_FLARE_SEC,2
+LAND_FLARE_ALT,3
+LAND_PITCH_DEG,4
+# Disarm 10 s after touchdown (motor is already stopped from the flare).
+LAND_DISARMDELAY,10
+# RTL altitude above home (m) - used on the way to the landing sequence.
+RTL_ALTITUDE,100
+RTL_RADIUS,60
+
+# --- Battery failsafe: land with energy to spare -------------------------------
+# Needs a working battery monitor (BATT_MONITOR and the voltage/current
+# scaling for your power board - calibrate per the Matek docs and check the
+# readings in Mission Planner before relying on this).
+BATT_CAPACITY,7000
+# Low: 3.5 V/cell under load or 25% left -> fly the landing sequence now
+# (2 = "Land": jump to the mission's DO_LAND_START landing).
+BATT_LOW_VOLT,14.0
+BATT_LOW_MAH,1750
+BATT_FS_LOW_ACT,2
+# Critical: 3.3 V/cell or 15% left -> land (continues an ongoing landing).
+BATT_CRT_VOLT,13.2
+BATT_CRT_MAH,1050
+BATT_FS_CRT_ACT,2
+
+# --- Airspeed: required for dead reckoning without GPS -----------------------
+# 1 = use the airspeed sensor (ASPD-4525) for control and estimation.
+ARSPD_USE,1
+# Speed limits (m/s, indicated). Min ~1.3x level stall, max with margin.
+AIRSPEED_MIN,12
+AIRSPEED_CRUISE,19
+AIRSPEED_MAX,28
+
+# --- EKF3: GPS jamming / spoofing behaviour ----------------------------------
+# GPS loss handling (all on the flight controller):
+#   1. ArduPlane dead-reckons automatically on airspeed + learnt wind.
+#   2. silm_gps_loss.lua switches to RTL after SLM_GPS_LOSS_S seconds of bad
+#      GPS in AUTO; with RTL_AUTOLAND=2 that means "fly the landing sequence".
+#      The landing then happens on a DEAD-RECKONED position, so it can be tens
+#      of metres off: plan the landing on a large, open field.
+#   3. The geofence below bounds the worst case.
+# Bit 0 JammingExpected: after a GPS loss > 2 s, require the EK3_GPS_CHECK
+# quality checks to pass before using GPS again.
+EK3_OPTIONS,1
+# Full GPS quality check set (nsats, HDoP, speed/pos/yaw error, drift).
+EK3_GPS_CHECK,31
+
+# No DCM fallback in forward flight. When the EKF rejects GPS but the receiver
+# still reports a (jammed, flickering) 3D fix, the AHRS would otherwise switch
+# to DCM, which navigates on the RAW GPS position - i.e. straight to wherever
+# the jammer says. In SITL that flew the aircraft out of the fence.
+AHRS_OPTIONS,1
+
+# EKF source set 2 = "no GPS". silm_gps_loss.lua switches the EKF to it for
+# the whole GPS-loss episode (from the first bad sample) and back to set 1
+# once GPS has been good for SLM_GPS_OK_S. Without this, the EKF kept fusing
+# the jammed receiver's vertical velocity; in SITL that made the landing flare
+# fire 20-90 m up and the aircraft touch down hundreds of metres short.
+# Height stays on the barometer, yaw on the compass. (Set 1 = ArduPilot
+# defaults: GPS position/velocity, baro height, compass yaw.)
+EK3_SRC2_POSXY,0
+EK3_SRC2_VELXY,0
+EK3_SRC2_POSZ,1
+EK3_SRC2_VELZ,0
+EK3_SRC2_YAW,1
+
+# --- Scripting: runs silm_gps_loss.lua on the flight controller -------------
+SCR_ENABLE,1
+
+# --- Geofence: hard backstop ------------------------------------------------
+FENCE_ENABLE,1
+# Bitmask: 1 = max altitude, 2 = circle around home -> 3. Add 4 (=7) if you
+# also upload an inclusion polygon.
+FENCE_TYPE,3
+# 1 = RTL on breach (-> landing sequence, because of RTL_AUTOLAND=2).
+FENCE_ACTION,1
+# Circle radius around home (m). The planner GUI computes the value your
+# mission needs and warns if it is outside this.
+FENCE_RADIUS,1500
+# Max altitude (m). Check your legal ceiling (EASA open category: 120 m).
+FENCE_ALT_MAX,120
+# Distance inside the fence at which it starts acting (m, documented max 10).
+FENCE_MARGIN,10
+
+# --- Optional, OFF by default: optical-flow velocity from the Pi ------------
+# Only after the bench check in FLIGHT_READY.md B6, and only if you understand
+# EKF source sets. Flight safety must never depend on the Pi.
+# Source set 2 is the GPS-loss set above (silm_gps_loss.lua switches to it), so
+# enabling this means CHANGING the EK3_SRC2_VELXY,0 line above to 6 (don't add
+# a second line) - then re-run the SITL tests.
+# EK3_SRC2_VELXY,6
