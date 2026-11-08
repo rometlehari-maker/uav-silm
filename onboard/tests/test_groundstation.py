@@ -732,3 +732,56 @@ def test_http_training_endpoints(http):
     r, _ = call(url + "/api/train/boxes", {"name": "../../x.jpg", "boxes": []})
     assert r["ok"] is False
     assert call(url + "/api/train/delete", {"name": name})[0]["ok"]
+
+
+# ------------------------------------------------------------ guided setup
+def test_setup_progress_is_kept_on_the_laptop(station):
+    s = station.setup_state()
+    assert s["steps"][0] == "need" and len(s["steps"]) == 10 and not s["done"] and not s["complete"]
+    r = station.setup_mark({"step": "need"})
+    assert r["ok"] and "need" in r["done"]
+    assert "need" in station.setup_state()["done"]                     # read back from the file
+    assert not station.setup_mark({"step": "nonsense"})["ok"]
+    station.setup_mark({"step": "need", "done": False})
+    assert "need" not in station.setup_state()["done"]
+    for k in station.SETUP_STEPS:
+        station.setup_mark({"step": k})
+    assert station.setup_state()["complete"]
+    assert station.setup_mark({"reset": True})["done"] == {}
+
+
+def test_http_setup_endpoints(http):
+    url, _ = http
+    assert call(url + "/api/setup")[0]["done"] == {}
+    assert call(url + "/api/setup", {"step": "bench"})[0]["done"].keys() == {"bench"}
+    assert "bench" in call(url + "/api/setup")[0]["done"]
+    html, _ = call(url + "/")
+    assert 'data-tab="setup"' in html and "/static/wizard.js" in html
+    js, hdr = call(url + "/static/wizard.js")
+    assert "WZ_STEPS" in js and hdr["Content-Type"] == "text/javascript"
+    font, hdr = None, call(url + "/static/fonts/plex-mono-400.woff2")[1]
+    assert hdr["Content-Type"] == "font/woff2"
+
+
+def test_flight_controller_port_to_the_pi_is_set():
+    p = full_project()
+    params = P.make_params(p)
+    assert params["SERIAL2_PROTOCOL"] == 2 and params["SERIAL2_BAUD"] == 115      # the defaults
+    p["link"].update(fc_serial_for_pi="1", pi_baud="921600")
+    params = P.make_params(p)
+    assert params["SERIAL1_PROTOCOL"] == 2 and params["SERIAL1_BAUD"] == 921 and "SERIAL2_BAUD" not in params
+    p["link"]["pi_serial"] = "/dev/ttyACM0"                                        # Pi on USB: no port to set
+    assert not any(k.startswith("SERIAL") for k in P.make_params(p))
+    assert "SERIAL1_BAUD" in P.param_file_text(full_project(link__fc_serial_for_pi="1"))
+
+
+def test_ports_say_which_are_usb(monkeypatch):
+    import types
+    fake = [types.SimpleNamespace(device="/dev/ttyS0", description="n/a", vid=None),
+            types.SimpleNamespace(device="/dev/ttyACM0", description="MatekH743", vid=0x1209)]
+    mod = types.SimpleNamespace(comports=lambda: fake)
+    monkeypatch.setitem(sys.modules, "serial.tools.list_ports", mod)
+    monkeypatch.setitem(sys.modules, "serial.tools", types.SimpleNamespace(list_ports=mod))
+    monkeypatch.setitem(sys.modules, "serial", types.SimpleNamespace(tools=sys.modules["serial.tools"]))
+    assert fc.list_ports() == [{"device": "/dev/ttyS0", "description": "n/a", "usb": False},
+                               {"device": "/dev/ttyACM0", "description": "MatekH743", "usb": True}]

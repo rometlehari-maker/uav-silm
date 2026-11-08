@@ -216,6 +216,8 @@ def disarm(port: str, baud: int = 115200) -> dict:
 def list_ports() -> list:
     try:
         from serial.tools import list_ports as lp
-        return [{"device": p.device, "description": p.description} for p in lp.comports()]
+        # usb: a USB device (flight controllers are); built-in serial ports are not
+        return [{"device": p.device, "description": p.description, "usb": p.vid is not None}
+                for p in lp.comports()]
     except Exception:
         return []

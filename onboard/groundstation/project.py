@@ -178,6 +178,13 @@ QUESTIONS = [
       "select", options={"/dev/serial0": "Pi pins (UART) to a TELEM port",
                          "/dev/ttyACM0": "USB cable", "/dev/ttyUSB0": "USB-serial adapter"},
       tab="camera", group="Connections"),
+    Q("link.fc_serial_for_pi", "Which flight-controller port are the Pi's wires connected to?",
+      "The TELEM port the Pi's UART wires go to (see your board's manual: on most boards "
+      "TELEM2 is SERIAL2). The Ground Station sets that port for the Pi. Not used when the "
+      "Pi is connected by USB.", "select",
+      options={"1": "SERIAL1 (TELEM1)", "2": "SERIAL2 (TELEM2)", "3": "SERIAL3",
+               "4": "SERIAL4", "5": "SERIAL5", "6": "SERIAL6", "7": "SERIAL7"},
+      tab="camera", group="Connections"),
     Q("link.pi_baud", "At what speed does that connection run?",
       "Must match SERIALx_BAUD on the flight controller (115 = 115200).", "select",
       options={"57600": "57600", "115200": "115200", "921600": "921600"},
@@ -226,7 +233,7 @@ def default_project() -> dict:
         "camera": {"url": "rtsp://192.168.144.25:8554/main.264", "gimbal": True},
         "program": {"mode": "flight"},
         "link": {"fc_port": "", "fc_baud": 115200, "pi_serial": "/dev/serial0",
-                 "pi_baud": "115200", "pi_address": "10.42.0.1", "usb_path": ""},
+                 "fc_serial_for_pi": "2", "pi_baud": "115200", "pi_address": "10.42.0.1", "usb_path": ""},
     }
 
 
@@ -439,6 +446,14 @@ def make_params(project: dict, plan: dict | None = None) -> dict:
     p["LAND_PITCH_DEG"] = 4 if a.get("landing", "belly") == "belly" else 2
     if plan and plan.get("fence_needed_m"):
         p["FENCE_RADIUS"] = int(max(plan["fence_needed_m"], 300))
+    # the flight controller's port to the Pi: MAVLink2 at the Pi's speed
+    link = project.get("link") or {}
+    port = str(link.get("fc_serial_for_pi") or "2")
+    if link.get("pi_serial", "/dev/serial0") == "/dev/serial0" and port in {str(i) for i in range(1, 8)}:
+        n = int(port)
+        baud = int(link.get("pi_baud") or 115200)
+        p[f"SERIAL{n}_PROTOCOL"] = 2
+        p[f"SERIAL{n}_BAUD"] = {57600: 57, 115200: 115, 921600: 921}.get(baud, 115)
     return p
 
 

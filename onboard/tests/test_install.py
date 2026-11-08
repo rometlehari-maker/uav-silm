@@ -25,14 +25,23 @@ def dry_run(*args):
 def test_dry_run_reaches_every_step_and_changes_nothing(tmp_path):
     code, out = dry_run("--ssid", "SILM-test", "--password", "secret123")
     assert code == 0, out
-    for n in range(2, 9):
-        assert f"{n}/8" in out
+    for n in range(2, 10):
+        assert f"{n}/9" in out
     assert "silm-recon.service silm-agent.service" in out
     assert "ssid SILM-test mode ap" in out and "10.42.0.1/24" in out
     assert "LABEL=SILM /mnt/silm_usb" in out
     assert "NOPASSWD: /usr/bin/systemctl restart silm-recon" in out
     assert "nmcli radio wifi off" in out
     assert "run.py --check" in out
+
+
+def test_camera_network_and_serial_port_are_set_up():
+    code, out = dry_run("--password", "secret123")
+    assert code == 0, out
+    assert "con-name siyi-camera" in out and "192.168.144.20/24" in out
+    assert "do_serial_hw 0" in out and "do_serial_cons 1" in out
+    code, out = dry_run("--password", "secret123", "--no-camera-net")
+    assert code == 0 and "skipped (--no-camera-net)" in out and "siyi-camera autoconnect" not in out
 
 
 def test_no_hotspot_option():

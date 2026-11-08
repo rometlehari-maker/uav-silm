@@ -19,6 +19,7 @@
 
 <div class="layout">
   <nav class="tabs" aria-label="Steps">
+    <button data-tab="setup" class="tab tab-setup"><b>✦</b> Setup <span class="tab-badge" id="setup-badge"></span></button>
     <button data-tab="start" class="tab"><b>1</b> Start</button>
     <button data-tab="aircraft" class="tab"><b>2</b> Aircraft</button>
     <button data-tab="mission" class="tab"><b>3</b> Mission</button>
@@ -31,10 +32,34 @@
   </nav>
 
   <main>
+    <!-- ======================================================== SETUP -->
+    <section id="tab-setup" class="page wide">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>Set up aircraft</span></div>
+      <h1>Set up your aircraft</h1>
+      <p class="lead">Ten short steps, about an hour the first time. Each step checks itself:
+        when it turns green, go on to the next. You only do this once per aircraft.</p>
+      <div class="wizard">
+        <ol class="wz-steps" id="wz-steps" aria-label="Setup steps"></ol>
+        <div class="wz-main">
+          <div class="wz-progress"><div class="wz-bar"><i id="wz-bar"></i></div><span id="wz-count"></span></div>
+          <div class="card wz-card" id="wz-card"></div>
+          <div class="wz-nav">
+            <button class="btn ghost" id="wz-prev">◀ Back</button>
+            <button class="btn primary" id="wz-next">Next ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ======================================================== START -->
     <section id="tab-start" class="page">
       <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>1 · Start</span></div>
       <h1>Welcome</h1>
+      <div class="card setup-banner" id="setup-banner" hidden>
+        <div><b id="setup-banner-title">First, set up your aircraft</b>
+          <div class="help" id="setup-banner-text">A guided setup checks every part for you, one step at a time.</div></div>
+        <button class="btn primary" id="setup-banner-go">Start the setup</button>
+      </div>
       <p class="lead">Plan a fully automatic survey flight, send it to the aircraft, launch it,
         and look at the pictures it took. Work through the steps on the left from top to bottom.
         Everything is saved on this laptop as you go.</p>
@@ -350,9 +375,11 @@
     <div class="row-btns"><button class="btn ghost" id="lb-prev">◀ Previous</button><button class="btn ghost" id="lb-next">Next ▶</button></div>
   </div>
 </div>
+<button class="back-setup" id="back-setup" hidden>◀ Back to setup</button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/app.js"></script>
+<script src="/static/wizard.js"></script>
 </body>
 </html>

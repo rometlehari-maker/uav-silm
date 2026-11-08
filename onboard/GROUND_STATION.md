@@ -44,7 +44,8 @@ Starting it again while it's already running just opens the browser page.
 +--------------------------------------------------------------------------+
 | SILM Ground Station           Mission [Field A     ]  [Save]  [Ready]    |
 +--------------+---------------------------------------+-------------------+
-| 1 Start      |                                       | Before you fly    |
+| ✦ Setup 4/10 |                                       | Before you fly    |
+| 1 Start      |                                       |                   |
 | 2 Aircraft   |   the step you are on                 |  - problems to    |
 | 3 Mission    |   (questions, map, buttons)           |    fix (red)      |
 | 4 Camera     |                                       |  - notes          |
@@ -70,6 +71,30 @@ Starting it again while it's already running just opens the browser page.
 ---
 
 ## 3. The tabs, one by one
+
+### ✦ · Setup (the first time)
+
+On the first start the Ground Station opens the **guided setup**: ten short
+steps, one screen each, that take a new aircraft to ready-to-fly. Each step
+checks itself and turns green; **Skip for now** moves on, and the steps can
+be done in any order. Progress is kept on this laptop.
+
+| Step | What you do | What turns it green |
+|---|---|---|
+| 1 What you need | tick the parts you have | all ticked |
+| 2 Your aircraft | answer the aircraft questions (button opens tab 2) | no aircraft question left |
+| 3 A first mission | draw launch point, area, landing point (opens tab 3) | a valid mission |
+| 4 Connect the flight controller | install ArduPlane once in Mission Planner, then battery + USB in | **found by itself**: firmware, battery, GPS shown |
+| 5 Set up the flight controller | **one button**; unplug and replug when it asks | settings, script (after the restart) and mission read back |
+| 6 Check the controls | tilt the plane on the table, watch the surfaces | all ticked |
+| 7 Prepare the Raspberry Pi | Raspberry Pi Imager, then paste **one command** (Copy button) | you tick "finished" |
+| 8 Connect to the Pi | join the SILM-… Wi-Fi | **found by itself** |
+| 9 Camera and link | **Send the settings** | camera sends pictures and the flight controller's data arrives |
+| 10 Test in the simulator | fly the mission with GPS jammed | all seven checks passed |
+
+When a step sends you to another tab, an orange **◀ Back to setup** button
+brings you back. **Run the setup again** (at the end) starts over without
+changing anything on the aircraft.
 
 ### 1 · Start
 

@@ -90,6 +90,42 @@ class Station:
                 "projects_dir": self.projects, "sim": self.sim.available(),
                 "models": self.trainer.list_models(), "training_classes": self.dataset.classes()}
 
+    # ---------------------------------------------------------- setup wizard
+    SETUP_STEPS = ("need", "aircraft", "mission", "fc_connect", "fc_setup", "bench",
+                   "pi_install", "pi_connect", "pi_check", "sim")
+
+    def _setup_file(self) -> str:
+        return os.path.join(os.path.dirname(self.projects), "setup.json")
+
+    def setup_state(self) -> dict:
+        try:
+            with open(self._setup_file(), encoding="utf-8") as fh:
+                done = json.load(fh).get("done", {})
+        except (OSError, ValueError):
+            done = {}
+        done = {k: v for k, v in done.items() if k in self.SETUP_STEPS}
+        return {"steps": list(self.SETUP_STEPS), "done": done,
+                "complete": all(done.get(k) for k in self.SETUP_STEPS)}
+
+    def setup_mark(self, body: dict) -> dict:
+        state = self.setup_state()
+        done = state["done"]
+        if body.get("reset"):
+            done = {}
+        else:
+            step = body.get("step")
+            if step not in self.SETUP_STEPS:
+                return {"ok": False, "message": f"unknown setup step {step!r}"}
+            if body.get("done", True):
+                done[step] = time.strftime("%Y-%m-%d %H:%M")
+            else:
+                done.pop(step, None)
+        tmp = self._setup_file() + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump({"done": done}, fh, indent=2)
+        os.replace(tmp, self._setup_file())
+        return {"ok": True, **self.setup_state()}
+
     # ---------------------------------------------------------- training
     def train_state(self) -> dict:
         return {"dataset": self.dataset.name, "classes": self.dataset.classes(),
@@ -344,6 +380,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.list_projects())
             if path.startswith("/api/projects/"):
                 return self._send(200, st.load_project(urllib.parse.unquote(path[14:])))
+            if path == "/api/setup":
+                return self._send(200, st.setup_state())
             if path == "/api/ports":
                 return self._send(200, fc.list_ports())
             if path == "/api/drives":
@@ -412,6 +450,8 @@ class Handler(BaseHTTPRequestHandler):
             m = re.match(r"^/api/fc/(info|params|script|mission|arm|disarm)$", path)
             if m:
                 return self._send(200, st.fc_action(m.group(1), body))
+            if path == "/api/setup":
+                return self._send(200, st.setup_mark(body))
             if path == "/api/pi/status":
                 return self._send(200, pilink.status(body.get("address")))
             if path == "/api/pi/send":

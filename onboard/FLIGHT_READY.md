@@ -74,8 +74,10 @@ python.exe to PATH"**), get the repository (GitHub **Code → Download ZIP**, or
 - **Windows:** double-click `onboard\Start Ground Station.bat`
 - **macOS / Linux:** `cd uav-silm/onboard && ./start_ground_station.sh`
 
-It opens in your browser at <http://127.0.0.1:8765>. Answer the questions on
-tabs 2-4 (aircraft, mission, camera). Details: [`GROUND_STATION.md`](GROUND_STATION.md).
+It opens in your browser at <http://127.0.0.1:8765>, the first time in the
+**guided setup** (✦ Setup), which walks through sections 2 and 3 below one
+screen at a time and checks each part itself. Details:
+[`GROUND_STATION.md`](GROUND_STATION.md).
 
 ---
 
@@ -194,23 +196,21 @@ matched to your cell count automatically (simulator only).
 - **Camera video:** the SIYI A2 mini's Ethernet into the Pi's Ethernet port.
   The camera needs **12 V** (a regulated 12 V output or BEC).
 - **Flight controller:** a spare H743 UART (e.g. TELEM2) to the Pi's UART pins
-  (GPIO 14/15, `/dev/serial0`), or USB (`/dev/ttyACM0`). In ArduPilot set that
-  port `SERIALx_PROTOCOL=2`, `SERIALx_BAUD=115`. Enable the Pi's UART with
-  `sudo raspi-config` → Interface Options → Serial Port: login shell **No**,
-  hardware **Yes**.
-- **Camera network:** the camera is at 192.168.144.25. Give the Pi an address
-  on that network (no gateway, so Wi-Fi stays the default route):
-  ```bash
-  sudo nmcli con add type ethernet ifname eth0 con-name siyi-camera \
-      ipv4.method manual ipv4.addresses 192.168.144.20/24 ipv6.method disabled
-  sudo nmcli con up siyi-camera
-  ping -c 3 192.168.144.25
-  ```
+  (GPIO 14/15, `/dev/serial0`: Pi TX → FC RX, Pi RX → FC TX, ground), or USB
+  (`/dev/ttyACM0`). Answer "Which flight-controller port are the Pi's wires
+  connected to?" on the Camera tab: the Ground Station sets that port
+  (`SERIALx_PROTOCOL=2`, `SERIALx_BAUD`) with the other parameters. The
+  installer switches the Pi's UART on.
+- **Camera network:** the camera is at 192.168.144.25; the installer gives the
+  Pi's Ethernet port the address 192.168.144.20 (from the reboot after the
+  install; `--no-camera-net` to skip). Check: `ping -c 3 192.168.144.25`.
 
 ### 3.2 Install (on the Pi, with internet - Ethernet to your router, or your home Wi-Fi)
 
-Set the Wi-Fi country first (`sudo raspi-config` → Localisation → WLAN Country).
-Then:
+Easiest: prepare the card with **Raspberry Pi Imager** (Raspberry Pi OS Lite
+64-bit; in its settings: hostname `silm`, your user, your home Wi-Fi and
+country, SSH on), connect with `ssh <user>@silm.local` and paste the one line
+the Ground Station's setup (step 7) gives you. By hand it is:
 
 ```bash
 sudo apt update && sudo apt install -y git
@@ -220,16 +220,18 @@ bash pi/install.sh
 ```
 
 It asks for the password of the aircraft's Wi-Fi network and then, step by
-step: installs the system packages (OpenCV with GStreamer for the Pi's hardware
+step: sets the Wi-Fi country if none is set (`--country`, default EE), installs the system packages (OpenCV with GStreamer for the Pi's hardware
 video decoder), a Python environment `~/silm-venv`, the recognition model
 (checked by its SHA-256), the two services (`silm-recon`: the flight program;
 `silm-agent`: settings in and flights out), a permission for the agent to
 restart the flight program and switch Wi-Fi on/off (nothing else), the **Wi-Fi
-hotspot** `SILM-<hostname>` at 10.42.0.1, and automatic mounting of a USB stick
-named **SILM**. It ends with a configuration check. Then `sudo reboot`.
+hotspot** `SILM-<hostname>` at 10.42.0.1, the camera network on the Ethernet
+port and the serial port to the flight controller, and automatic mounting of a
+USB stick named **SILM**. It ends with a configuration check. Then `sudo reboot`.
 
-Options: `--ssid NAME`, `--password PASS`, `--no-hotspot`, `--skip-apt`,
-`--dry-run` (print what it would do). Safe to run again.
+Options: `--ssid NAME`, `--password PASS`, `--country CC`, `--no-hotspot`,
+`--no-camera-net`, `--skip-apt`, `--dry-run` (print what it would do). Safe to
+run again.
 
 Your home Wi-Fi (if you set one up) is preferred when in range - handy for
 updates (`cd ~/uav-silm && git pull`). At the field the hotspot comes up instead.

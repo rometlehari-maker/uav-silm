@@ -13,6 +13,9 @@
 #     --ssid NAME        Wi-Fi hotspot name            (default SILM-<hostname>)
 #     --password PASS    Wi-Fi hotspot password, 8-63 characters
 #     --no-hotspot       don't set up the Wi-Fi hotspot (USB stick only)
+#     --country CC       Wi-Fi country if none is set yet (default EE); the
+#                        hotspot can't start without one
+#     --no-camera-net    don't reserve the Ethernet port for the SIYI camera
 #     --skip-apt         don't install system packages (re-runs)
 #     --dry-run          print every command, change nothing
 #
@@ -23,8 +26,10 @@
 #   4. the two services: silm-recon (flight program) and silm-agent (transfer)
 #   5. permission for the agent to restart the flight program and switch Wi-Fi
 #   6. the Wi-Fi hotspot the laptop joins on the ground (10.42.0.1)
-#   7. automatic mounting of a USB stick labelled SILM at /mnt/silm_usb
-#   8. a configuration check (run.py --check)
+#   7. the camera network on the Ethernet port (Pi 192.168.144.20, camera
+#      .25; active after the reboot) and the serial port to the flight controller
+#   8. automatic mounting of a USB stick labelled SILM at /mnt/silm_usb
+#   9. a configuration check (run.py --check)
 # Expects 64-bit Raspberry Pi OS (Bookworm or later) on a Raspberry Pi 4.
 # =============================================================================
 set -euo pipefail
@@ -32,6 +37,8 @@ set -euo pipefail
 SSID=""
 PASSWORD=""
 HOTSPOT=1
+CAMNET=1
+COUNTRY="EE"
 APT=1
 DRY=0
 while [ $# -gt 0 ]; do
@@ -39,9 +46,11 @@ while [ $# -gt 0 ]; do
     --ssid) SSID="$2"; shift 2 ;;
     --password) PASSWORD="$2"; shift 2 ;;
     --no-hotspot) HOTSPOT=0; shift ;;
+    --country) COUNTRY="$2"; shift 2 ;;
+    --no-camera-net) CAMNET=0; shift ;;
     --skip-apt) APT=0; shift ;;
     --dry-run) DRY=1; shift ;;
-    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
     *) echo "unknown option: $1 (see --help)"; exit 2 ;;
   esac
 done
@@ -90,25 +99,25 @@ fi
 
 # ---------------------------------------------------------------- 1. packages
 if [ "$APT" = 1 ]; then
-  step "1/8 System packages (OpenCV + GStreamer for hardware video decoding)"
+  step "1/9 System packages (OpenCV + GStreamer for hardware video decoding)"
   run sudo apt-get update
   run sudo apt-get install -y python3-opencv python3-numpy python3-yaml python3-venv \
       python3-serial gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
       gstreamer1.0-libav network-manager curl unzip exfat-fuse exfatprogs
   ok "packages installed"
 else
-  step "1/8 System packages: skipped (--skip-apt)"
+  step "1/9 System packages: skipped (--skip-apt)"
 fi
 
 # ---------------------------------------------------------------- 2. venv
-step "2/8 Python environment $VENV"
+step "2/9 Python environment $VENV"
 [ -d "$VENV" ] || run python3 -m venv --system-site-packages "$VENV"
 run "$VENV/bin/pip" install --upgrade pip
 run "$VENV/bin/pip" install -r "$ONBOARD/requirements.txt"
 ok "Python packages installed"
 
 # ---------------------------------------------------------------- 3. model
-step "3/8 Detection model"
+step "3/9 Detection model"
 if [ -f "$MODEL_FILE" ]; then
   ok "already present: $MODEL_FILE"
 else
@@ -123,7 +132,7 @@ else
 fi
 
 # ---------------------------------------------------------------- 4. services
-step "4/8 Services silm-recon (flight program) and silm-agent (transfer)"
+step "4/9 Services silm-recon (flight program) and silm-agent (transfer)"
 for svc in silm-recon silm-agent; do
   sed "s#@USER@#$USER_NAME#g; s#@ONBOARD@#$ONBOARD#g; s#@VENV@#$VENV#g" \
       "$ONBOARD/systemd/$svc.service" | put "/etc/systemd/system/$svc.service"
@@ -137,7 +146,7 @@ run sudo systemctl enable silm-recon.service silm-agent.service
 ok "services installed and enabled (start at every power-on)"
 
 # ---------------------------------------------------------------- 5. sudo rules
-step "5/8 Permissions for the agent (restart the program, switch Wi-Fi)"
+step "5/9 Permissions for the agent (restart the program, switch Wi-Fi)"
 SUDOERS_TMP="$(mktemp)"
 cat >"$SUDOERS_TMP" <<EOF
 # SILM ground agent: exactly these commands, nothing else
@@ -156,9 +165,10 @@ ok "rules installed (/etc/sudoers.d/silm)"
 
 # ---------------------------------------------------------------- 6. hotspot
 if [ "$HOTSPOT" = 1 ]; then
-  step "6/8 Wi-Fi hotspot '$SSID' (laptop joins it on the ground; the Pi is 10.42.0.1)"
-  if command -v raspi-config >/dev/null && [ -z "$(sudo raspi-config nonint get_wifi_country 2>/dev/null)" ]; then
-    warn "no Wi-Fi country set: run 'sudo raspi-config' > Localisation > WLAN Country (e.g. EE)"
+  step "6/9 Wi-Fi hotspot '$SSID' (laptop joins it on the ground; the Pi is 10.42.0.1)"
+  if command -v raspi-config >/dev/null && [ -z "$(sudo raspi-config nonint get_wifi_country 2>/dev/null || true)" ]; then
+    run sudo raspi-config nonint do_wifi_country "$COUNTRY"
+    ok "Wi-Fi country set to $COUNTRY (change with --country XX)"
   fi
   if nmcli -t -f NAME con show 2>/dev/null | grep -qx silm-hotspot; then
     run sudo nmcli con delete silm-hotspot
@@ -171,11 +181,40 @@ if [ "$HOTSPOT" = 1 ]; then
       connection.autoconnect-priority -10
   ok "hotspot '$SSID' created (address 10.42.0.1, Ground Station port 8080)"
 else
-  step "6/8 Wi-Fi hotspot: skipped (--no-hotspot) - use the USB stick"
+  step "6/9 Wi-Fi hotspot: skipped (--no-hotspot) - use the USB stick"
 fi
 
-# ---------------------------------------------------------------- 7. USB stick
-step "7/8 USB stick labelled SILM -> /mnt/silm_usb (mounted automatically)"
+# ---------------------------------------------------------------- 7. camera + FC port
+step "7/9 Camera network and the serial port to the flight controller"
+if [ "$CAMNET" = 1 ]; then
+  if nmcli -t -f NAME con show 2>/dev/null | grep -qx siyi-camera; then
+    ok "camera network already set up"
+  else
+    # Not switched on now (that could cut the internet this install uses);
+    # it takes over the Ethernet port from the next boot.
+    run sudo nmcli con add type ethernet ifname eth0 con-name siyi-camera autoconnect yes \
+        ipv4.method manual ipv4.addresses 192.168.144.20/24 ipv6.method disabled \
+        connection.autoconnect-priority 10
+    ok "Ethernet port -> camera network after the reboot (Pi 192.168.144.20, camera 192.168.144.25)"
+    ok "use Wi-Fi for internet from now on (--no-camera-net to keep Ethernet for internet)"
+  fi
+else
+  ok "camera network: skipped (--no-camera-net)"
+fi
+# UART on GPIO 14/15 for the flight controller; no login console on it
+if [ "$DRY" = 1 ]; then
+  echo "    [dry-run] sudo raspi-config nonint do_serial_hw 0; sudo raspi-config nonint do_serial_cons 1"
+elif command -v raspi-config >/dev/null; then
+  { sudo raspi-config nonint do_serial_hw 0 && sudo raspi-config nonint do_serial_cons 1; } \
+    || sudo raspi-config nonint do_serial 2 \
+    || warn "could not set the serial port: sudo raspi-config > Interface Options > Serial Port (login shell No, hardware Yes)"
+  ok "serial port /dev/serial0 for the flight controller (after the reboot)"
+else
+  warn "raspi-config not found: enable the serial port yourself (login shell No, hardware Yes)"
+fi
+
+# ---------------------------------------------------------------- 8. USB stick
+step "8/9 USB stick labelled SILM -> /mnt/silm_usb (mounted automatically)"
 run sudo mkdir -p /mnt/silm_usb
 FSTAB_LINE="LABEL=SILM /mnt/silm_usb auto nofail,noauto,x-systemd.automount,x-systemd.idle-timeout=10,x-systemd.device-timeout=3,uid=$(id -u),gid=$(id -g),umask=022 0 0"
 if grep -q "/mnt/silm_usb" /etc/fstab 2>/dev/null; then
@@ -187,8 +226,8 @@ else
   ok "added (format the stick as FAT32 or exFAT and name it SILM)"
 fi
 
-# ---------------------------------------------------------------- 8. check
-step "8/8 Checking the configuration"
+# ---------------------------------------------------------------- 9. check
+step "9/9 Checking the configuration"
 if [ "$DRY" = 1 ]; then
   echo "    [dry-run] $VENV/bin/python3 $ONBOARD/run.py --check"
 else
@@ -203,7 +242,8 @@ fi
 cat <<EOF
 
 Done. Next:
-  * Reboot once (sudo reboot) so the hotspot and USB mount are active.
+  * Reboot once (sudo reboot) so the hotspot, the camera network, the serial
+    port and the USB mount are active.
   * On the laptop: join Wi-Fi '$SSID', open the Ground Station, tab
     "Send to aircraft" > Pi address 10.42.0.1 > Check connection.
   * Then run the full check on the bench: $VENV/bin/python3 tools/preflight.py
