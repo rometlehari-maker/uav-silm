@@ -229,7 +229,9 @@ User's answers to questions asked:
     component (Edge WebView2 / Cocoa) and Windows/macOS builds fail without it
     (SILM_REQUIRE_WINDOW=1). The window itself has not been seen on a real
     screen (CI is headless): the user should try it once.
-  - downloads/ rebuilt for 2.1.0.
+  - downloads/ rebuilt for 2.1.0; `tools/build_downloads.py` now deletes files
+    of older versions and rewrites the software zip's name everywhere on the
+    page (the checksum commands). Website app block checked: no errors, phone OK.
   - **Waiting on the user:** OK to push tag `gs-v2.1.0` (public GitHub release
     with the installers) and to merge to `main` (website live, incl. the app
     download buttons, which only work once the release exists).
