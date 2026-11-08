@@ -126,7 +126,7 @@ li.ok { background: var(--okbg); color: var(--cyan); border-color: color-mix(in 
 .q .req, .q-req { color: var(--amber); font-weight: 700; margin-left: 4px; }
 .inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .unit { color: var(--faint); font-family: var(--mono); font-size: 13px; }
-input[type=text], input[type=number], input:not([type]), select {
+input[type=text], input[type=password], input[type=number], input:not([type]), select {
   padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--text);
   min-width: 0; transition: border-color .25s, box-shadow .25s; }
 input::placeholder { color: var(--faint); opacity: .8; }
@@ -431,3 +431,14 @@ tr.pf-fail td:nth-child(2) b { color: var(--red); } tr.pf-skip td:nth-child(2) b
 h3.q.small { margin-top: 16px; }
 .wf-inputs input:not(.wf-cc) { flex: 1 1 200px; min-width: 0; }
 .wf-cc { width: 5em; text-transform: uppercase; }
+
+/* ---------- install the Pi over SSH (wizard + Tools) */
+.pin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 16px; margin: 10px 0; }
+.pin-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--dim); }
+.pin-grid .unit { font-size: 12px; }
+.pin-grid input { width: 100%; min-width: 0; }
+.pin-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--dim); margin: 4px 0 8px; }
+.pin-job { margin-top: 10px; }
+.pin-log { max-height: 260px; overflow: auto; }
+.wz-byhand { margin: 14px 0; color: var(--dim); }
+.wz-byhand summary { cursor: pointer; font-weight: 560; }

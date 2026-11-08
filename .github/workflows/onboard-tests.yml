@@ -23,7 +23,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy opencv-python-headless pyyaml pytest pymavlink lupa ai-edge-litert shellcheck-py
+          pip install numpy opencv-python-headless pyyaml pytest pymavlink lupa ai-edge-litert shellcheck-py paramiko
 
       # The Ground Station is also tested in a real browser (tests/test_gui_browser.py).
       - uses: actions/setup-node@v4
@@ -53,7 +53,20 @@ jobs:
           git sparse-checkout set ArduPlane libraries
           grep -m1 'define THISFIRMWARE' ArduPlane/version.h
 
+      # Installing the Pi from the Ground Station over SSH is tested against a
+      # real SSH server: a throw-away user whose sudo asks for its password.
+      - name: SSH server for the Pi-install test
+        run: |
+          sudo apt-get install -y -q openssh-server
+          sudo useradd -m -s /bin/bash -G sudo silmpi
+          echo 'silmpi:silm-ci-pass-1' | sudo chpasswd
+          sudo ssh-keygen -A
+          sudo mkdir -p /run/sshd
+          printf 'Port 2222\nListenAddress 127.0.0.1\nPasswordAuthentication yes\nKbdInteractiveAuthentication no\nUsePAM yes\nSubsystem sftp internal-sftp\n' > "$RUNNER_TEMP/sshd_config"
+          sudo /usr/sbin/sshd -f "$RUNNER_TEMP/sshd_config"
+
       - name: Run tests
         env:
           ARDUPILOT_SRC: ${{ runner.temp }}/ardupilot
+          SILM_SSH_TEST: silmpi:silm-ci-pass-1@127.0.0.1:2222
         run: python -m pytest -q -rs

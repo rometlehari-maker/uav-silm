@@ -18,9 +18,11 @@ function toast(msg, ms = 2600) {
   clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
 }
 function setResult(id, r, busy) {
-  const el = $(id);
-  if (busy) { el.className = "result busy"; el.textContent = busy; return; }
-  el.className = "result " + (r.ok ? "ok" : "err");
+  const el = typeof id === "string" ? $(id) : id;
+  el.classList.remove("busy", "ok", "err");                 // keep the element's own classes
+  el.classList.add("result");
+  if (busy) { el.classList.add("busy"); el.textContent = busy; return; }
+  el.classList.add(r.ok ? "ok" : "err");
   el.textContent = (r.ok ? "✓ " : "✗ ") + (r.message || (r.ok ? "done" : "failed"));
 }
 function getv(qid) { const [s, k] = qid.split("."); return (P[s] || {})[k]; }

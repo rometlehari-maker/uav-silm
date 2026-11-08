@@ -207,10 +207,27 @@ matched to your cell count automatically (simulator only).
 
 ### 3.2 Install (on the Pi, with internet - Ethernet to your router, or your home Wi-Fi)
 
-Easiest: prepare the card with **Raspberry Pi Imager** (Raspberry Pi OS Lite
-64-bit; in its settings: hostname `silm`, your user, your home Wi-Fi and
-country, SSH on), connect with `ssh <user>@silm.local` and paste the one line
-the Ground Station's setup (step 7) gives you. By hand it is:
+Easiest - **from the Ground Station, no terminal:**
+
+1. Write the card with **Raspberry Pi Imager** (raspberrypi.com/software):
+   device *Raspberry Pi 4*, OS *Raspberry Pi OS Lite (64-bit)*. In *Edit
+   settings*: hostname `silm`, a username and password, **your home Wi-Fi**
+   and its country; tab *Services*: **Enable SSH**, *Use password
+   authentication*.
+2. Card in the Pi, power on, wait two minutes. The laptop on the same Wi-Fi.
+3. Ground Station → Setup step 7 (or Tools tab → *Install the aircraft
+   computer*): the Pi's name `silm.local`, its username and password, a name
+   (optional) and a **new password for the aircraft's own Wi-Fi**, the
+   country → **Install**. It connects over SSH, checks sudo and internet,
+   copies this app's aircraft software (no GitHub needed), runs the installer
+   below with progress shown, and restarts the Pi (about 15-20 minutes).
+   If `silm.local` is not found (some Windows PCs, some routers), use the
+   Pi's address from your router's device list, e.g. `192.168.1.57`.
+
+The app remembers the Pi's SSH key (`~/SILM/known_hosts`); if you write the
+card again, delete that line when it says the key changed.
+
+By hand instead (`ssh <user>@silm.local`, then):
 
 ```bash
 sudo apt update && sudo apt install -y git

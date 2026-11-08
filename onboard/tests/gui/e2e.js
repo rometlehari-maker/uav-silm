@@ -190,6 +190,13 @@ let PAGE = null;
   assert((await page.textContent("#lc-current")).includes("No lens calibration yet"), "calibration status");
   await step("11-tools");
   await page.click("#cam-toggle");
+  // install the Pi over SSH: the form is there, and a missing password is explained
+  await page.waitForSelector("#pin-tools .pin-form");
+  await page.fill("#pin-tools .pin-user", "pi");
+  await page.click("#pin-tools .pin-start");
+  await page.waitForFunction(() => /✗/.test(document.querySelector("#pin-tools .pin-result").textContent), null, { timeout: 10000 });
+  assert((await page.textContent("#pin-tools .pin-result")).includes("user name and password"), "install needs the Pi's password");
+  assert(!(await page.isDisabled("#pin-tools .pin-start")), "install button usable again");
   // aircraft software: compare, write to the stick, update over Wi-Fi
   await page.waitForFunction(() => /\d/.test(document.getElementById("sw-app").textContent), null, { timeout: 10000 });
   await page.click("#sw-info");

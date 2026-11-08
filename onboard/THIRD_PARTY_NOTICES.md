@@ -31,9 +31,22 @@ them.
 | NumPy | maths | BSD-3-Clause |
 | PyYAML | settings files | MIT |
 | pySerial | finding USB ports | BSD-3-Clause |
+| Paramiko (with cryptography, bcrypt, PyNaCl) | installing the aircraft computer over SSH from the Ground Station | LGPL-2.1 (Paramiko; source at github.com/paramiko/paramiko), Apache-2.0 / BSD (the others) |
 | Matplotlib | simulator result picture | Matplotlib licence (PSF-based) |
 | Ultralytics, PyTorch | training your own models (optional) | AGPL-3.0, BSD-3-Clause |
 | pytest, lupa, Playwright | automated tests | MIT, MIT, Apache-2.0 |
+
+## Inside the desktop app (the installers)
+
+The Ground Station installers for Windows, macOS and Linux are built with
+PyInstaller and contain, unchanged: **Python** (PSF License), **PyYAML** (MIT),
+**pymavlink** (LGPL-3.0), **pySerial** (BSD-3-Clause), **pywebview**
+(BSD-3-Clause), **Paramiko** (LGPL-2.1) with **cryptography**, **bcrypt** and
+**PyNaCl** (Apache-2.0 / BSD), and PyInstaller's start-up program (GPL-2.0
+with an exception that allows this). The LGPL libraries are used as they are;
+their source code is on pypi.org and their projects' pages, and you may
+replace them by running the Ground Station from the source folder
+(`python -m groundstation`) with your own copies.
 
 ## Online services the Ground Station shows
 

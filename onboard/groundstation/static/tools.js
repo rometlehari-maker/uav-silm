@@ -173,6 +173,7 @@ function toolsOnTab(name) {
   if (name !== "tools") { if (TL.camOn) camStop(); return; }
   lcCurrent();
   swInfo(false);
+  piInstallTools();
 }
 
 /* ================================================================ flight controller */
@@ -291,3 +292,76 @@ toolsOnTab = function (name) {                // eslint-disable-line no-func-ass
   $("tl-port").value = fcPort();
   fwFiles(); fcJobPoll();
 };
+
+/* ================================================================ install the Pi over SSH
+   The same form in the setup wizard and on this tab: piInstallForm() + piInstallBind(el). */
+const PIN = { timer: null };
+function piInstallForm() {
+  const pi = P.link.pi_install || {};
+  return `<div class="pin-form">
+    <div class="pin-grid">
+      <label>Pi's name or address<input class="pin-host" value="${esc(pi.host || "silm.local")}" aria-label="Pi name or address"></label>
+      <label>Its username<input class="pin-user" value="${esc(pi.user || "")}" autocomplete="username" aria-label="Pi username"></label>
+      <label>Its password<input class="pin-pass" type="password" autocomplete="current-password" aria-label="Pi password"></label>
+      <label>Aircraft Wi-Fi name <span class="unit">(empty: SILM-silm)</span><input class="pin-ssid" maxlength="32" value="${esc(pi.ssid || "")}" aria-label="Aircraft Wi-Fi name"></label>
+      <label>Aircraft Wi-Fi password <span class="unit">(new, 8+ characters)</span><input class="pin-hspass" type="password" maxlength="63" autocomplete="new-password" aria-label="Aircraft Wi-Fi password"></label>
+      <label>Wi-Fi country<input class="pin-cc" maxlength="2" value="${esc(pi.country || "EE")}" aria-label="Wi-Fi country"></label>
+    </div>
+    <label class="pin-check"><input type="checkbox" class="pin-camnet" ${pi.camera_net === false ? "" : "checked"}> The camera (SIYI) uses the Pi's Ethernet port</label>
+    <div class="row-btns"><button class="btn primary pin-start">Install</button><button class="btn ghost pin-cancel" hidden>Stop</button></div>
+    <div class="pin-job" hidden><div class="wz-bar"><i class="pin-bar"></i></div><div class="help pin-step"></div>
+      <details><summary>Details</summary><pre class="log pin-log"></pre></details></div>
+    <div class="result pin-result" role="status"></div>
+    <p class="help">The passwords go only to the Pi and are not saved. The Pi needs internet once (your home Wi-Fi). The install takes about 15 minutes; keep the Pi powered.</p>
+  </div>`;
+}
+function piInstallBind(el) {
+  el.querySelectorAll(".pin-form").forEach((f) => {
+    const v = (c) => f.querySelector(c).value.trim();
+    f.querySelector(".pin-start").addEventListener("click", async () => {
+      const body = { host: v(".pin-host"), user: v(".pin-user"), password: f.querySelector(".pin-pass").value,
+        hotspot_password: f.querySelector(".pin-hspass").value, ssid: v(".pin-ssid"), country: v(".pin-cc").toUpperCase(),
+        camera_net: f.querySelector(".pin-camnet").checked };
+      P.link.pi_install = { host: body.host, user: body.user, ssid: body.ssid, country: body.country, camera_net: body.camera_net }; changed();
+      let r;
+      try { r = await api("/api/pi/install/start", body); } catch (e) { r = { ok: false, message: String(e) }; }
+      if (!r.ok) return setResult(f.querySelector(".pin-result"), r);
+      f.querySelector(".pin-pass").value = "";
+      piInstallPoll();
+    });
+    f.querySelector(".pin-cancel").addEventListener("click", async () => {
+      if (confirm("Stop the install? You can start it again later; it continues where it can.")) { await api("/api/pi/install/cancel", {}); piInstallPoll(); }
+    });
+  });
+  piInstallPoll();
+}
+async function piInstallPoll() {
+  clearTimeout(PIN.timer);
+  let s;
+  try { s = await api("/api/pi/install"); } catch (e) { return; }
+  const running = s.state === "running";
+  document.querySelectorAll(".pin-form").forEach((f) => {
+    if (s.state === "idle") return;
+    f.querySelector(".pin-job").hidden = false;
+    f.querySelector(".pin-bar").style.width = (s.progress || 0) + "%";
+    f.querySelector(".pin-step").textContent = s.step || "";
+    const log = f.querySelector(".pin-log"); log.textContent = (s.log || []).join("\n"); log.scrollTop = log.scrollHeight;
+    f.querySelector(".pin-start").disabled = running;
+    f.querySelector(".pin-cancel").hidden = !running;
+    const res = f.querySelector(".pin-result");
+    if (running) res.textContent = "";
+    else setResult(res, { ok: s.state === "done", message: s.result || s.state });
+  });
+  if (running) { PIN.timer = setTimeout(piInstallPoll, 1000); return; }
+  if (s.state === "done" && typeof wzMark === "function" && !wzIsDone("pi_install")) {
+    await wzMark("pi_install", true);
+    const c = $("wz-pi-installed"); if (c) c.checked = true;
+    if (typeof wzNextLabel === "function") wzNextLabel();
+  }
+}
+function piInstallTools() {                     // the Tools tab's copy, made when the tab opens
+  const card = $("pin-tools");
+  if (card.querySelector(".pin-form")) return;
+  card.insertAdjacentHTML("beforeend", piInstallForm());
+  piInstallBind(card);
+}

@@ -128,6 +128,8 @@ def selftest() -> int:
         assert os.path.getsize(lua) > 1000, "GPS-loss script"
         sw = _get(url + "api/pi/software", {"how": "info"})
         assert sw.get("ok") and sw["app_version"] == software_version() and sw["size"] > 100_000, "Pi software"
+        assert _get(url + "api/pi/install")["state"] == "idle", "Pi install"
+        import paramiko  # noqa: F401  - installing the Pi over SSH needs it
     except Exception as exc:  # noqa: BLE001
         print(f"SELFTEST FAILED: {exc!r}")
         return 1

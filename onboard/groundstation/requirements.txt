@@ -4,4 +4,5 @@
 PyYAML>=5.4
 pymavlink>=2.4.40        # flight controller over USB, incl. MAVFTP for the script
 pyserial>=3.5            # finds the USB ports
+paramiko>=3.0            # installs the aircraft computer over SSH (Tools tab / setup)
 matplotlib>=3.5          # simulator result picture (only for the Simulator tab)

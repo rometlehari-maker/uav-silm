@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, fctools, flights, pilink, pisoftware, training  # noqa: E402
+from groundstation import fc, fctools, flights, piinstall, pilink, pisoftware, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -79,6 +79,7 @@ class Station:
         self.camera = camera_from_config()
         self.sim = sim or SimRunner()
         self.dataset = training.Dataset(self.training_root)
+        self.piinstall = piinstall.PiInstall()
         self.fcjobs = fctools.FCJobs(log_dir=os.path.join(os.path.dirname(self.projects), "fc_logs"))
         self.trainer = training.Trainer(os.path.join(self.training_root, "models"),
                                         bundled_dirs=(os.path.join(ONBOARD, "models"),))
@@ -403,6 +404,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.setup_state())
             if path == "/api/fc/job":
                 return self._send(200, st.fcjobs.status())
+            if path == "/api/pi/install":
+                return self._send(200, st.piinstall.status())
             if path == "/api/fc/firmware":
                 return self._send(200, {"files": fctools.firmware_files(), "boards": fctools.BOARDS})
             if path == "/api/pi/camera.jpg":
@@ -527,6 +530,12 @@ class Handler(BaseHTTPRequestHandler):
                 pr = P.merge_defaults(body.get("project") or {})
                 return self._send(200, pilink.preflight(body.get("address"), float(pr["mission"].get("alt_m") or 100),
                                                         float(pr["aircraft"].get("cruise_mps") or 19)))
+            if path == "/api/pi/install/start":
+                kw = {k: body[k] for k in ("host", "user", "password", "hotspot_password", "ssid", "country",
+                                           "hotspot", "camera_net", "reboot", "port", "dry_run") if k in body}
+                return self._send(200, st.piinstall.start(**kw))
+            if path == "/api/pi/install/cancel":
+                return self._send(200, st.piinstall.cancel())
             if path == "/api/pi/software":
                 return self._send(200, st.pi_software(body))
             if path == "/api/pi/wifi":

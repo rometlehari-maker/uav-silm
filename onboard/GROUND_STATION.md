@@ -257,6 +257,13 @@ Everything you would otherwise do on the aircraft computer's keyboard or in
 Mission Planner. The aircraft must be **on the ground and disarmed**; the
 aircraft computer refuses changes while it is armed.
 
+- **Install the aircraft computer (first time)** - over your home Wi-Fi,
+  right after writing its memory card with Raspberry Pi Imager (SSH on): the
+  Pi's name (`silm.local`), its username and password, a password for the
+  aircraft's own Wi-Fi → **Install**. Progress and every message are shown;
+  about 15-20 minutes; the Pi restarts at the end. The same is step 7 of the
+  setup. Details: FLIGHT_READY.md part 3.2.
+
 **Aircraft computer** (join the laptop to the aircraft's Wi-Fi first):
 
 - **Check everything** - the full hardware check (`tools/preflight.py`) on the

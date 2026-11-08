@@ -30,7 +30,7 @@ def test_build_options():
     assert args[0].endswith("app_entry.py") and "--name" in args
     hidden = {args[i + 1] for i, a in enumerate(args) if a == "--hidden-import"}
     assert {"groundstation.desktop", "survey", "pymavlink.dialects.v20.ardupilotmega",
-            "serial.tools.list_ports", "groundstation.pisoftware"} <= hidden
+            "serial.tools.list_ports", "groundstation.pisoftware", "groundstation.piinstall", "paramiko"} <= hidden
     data = [args[i + 1] for i, a in enumerate(args) if a == "--add-data"]
     assert any(d.startswith(build_app.PI_PACKAGE + os.pathsep) for d in data)   # the Pi's software rides along
     excluded = {args[i + 1] for i, a in enumerate(args) if a == "--exclude-module"}

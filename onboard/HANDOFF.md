@@ -64,7 +64,7 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **439 passed**, 8 skipped (after task 11) (ArduPilot
+- `python3 -m pytest -q` in `onboard/`: **447 passed**, 9 skipped (after task 12; +1 skip = real-SSH test without SILM_SSH_TEST) (ArduPilot
   source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
   `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
@@ -329,6 +329,32 @@ User's answers to questions asked:
     PyInstaller build (`packaging/build_app.py --smoke`) passes its self-test,
     which now also checks the bundled Pi package. Full suite 439 passed,
     8 skipped.
+  - (12) done: install the Pi from the app over SSH (`groundstation/piinstall.py`,
+    paramiko). Job `PiInstall` (one at a time, polled `GET /api/pi/install`,
+    `POST /api/pi/install/{start,cancel}`): connect (key remembered in
+    ~/SILM/known_hosts, changed key refused with an explanation), `sudo -v`
+    (answers sudo's password prompt on a pty), internet check (pypi.org),
+    SFTP the app's Pi package, unpack + swap with a python3 snippet (UNPACK;
+    keeps downloaded models, old -> onboard.old), `bash pi/install.sh
+    --password/--ssid/--country [--no-hotspot] [--no-camera-net]`, progress
+    from its "==> N/9" lines, passwords masked in the log, reboot. Host field
+    accepts name:port. UI: one shared form (`piInstallForm/piInstallBind` in
+    tools.js) in Setup step 7 (marks the step done) and the Tools tab.
+    install.sh now also checks the SHA-256 of an already-present model
+    (re-downloads a damaged one; SHA of detect.tflite e4b118e5...).
+    `setResult` no longer wipes an element's own classes (bug found while
+    driving the new form in a browser).
+    **Verified for real:** sshd in this container (user silmpi, sudo asks
+    for the password): wrong password explained; dry-run install all 9 steps
+    via the Ground Station HTTP route and via the browser UI; a REAL install
+    ran apt, the venv + pip, the model download+check, and stopped at step 4
+    only because the container has no systemd (shown clearly in the UI);
+    re-install keeps the model and onboard.old; cancel works. CI now starts
+    an sshd on 127.0.0.1:2222 with a throw-away sudo user and runs
+    `test_install_over_a_real_ssh_server` (SILM_SSH_TEST). paramiko added to
+    groundstation/requirements.txt, build_app hidden imports, the desktop
+    self-test, THIRD_PARTY_NOTICES (also a new section listing what the
+    desktop installers bundle - that was missing). Full suite 447 passed.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

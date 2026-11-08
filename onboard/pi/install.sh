@@ -62,6 +62,7 @@ VENV="$HOME_DIR/silm-venv"
 MODEL_URL="https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip"
 MODEL_SHA="a809cd290b4d6a2e8a9d5dad076e0bd695b8091974e0eed1052b480b2f21b6dc"
 MODEL_FILE="$ONBOARD/models/coco_ssd_mobilenet_v1_quant.tflite"
+MODEL_FILE_SHA="e4b118e5e4531945de2e659742c7c590f7536f8d0ed26d135abcfe83b4779d13"   # detect.tflite in the zip
 [ -z "$SSID" ] && SSID="SILM-$(hostname)"
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
@@ -118,14 +119,16 @@ ok "Python packages installed"
 
 # ---------------------------------------------------------------- 3. model
 step "3/9 Detection model"
-if [ -f "$MODEL_FILE" ]; then
-  ok "already present: $MODEL_FILE"
+if [ -f "$MODEL_FILE" ] && echo "$MODEL_FILE_SHA  $MODEL_FILE" | sha256sum -c - >/dev/null 2>&1; then
+  ok "already present and checked: $MODEL_FILE"
 else
+  [ -f "$MODEL_FILE" ] && warn "the model file is damaged or different: downloading it again"
   TMPZ="$(mktemp -d)"
   run curl -fsSL -o "$TMPZ/model.zip" "$MODEL_URL"
   if [ "$DRY" = 0 ]; then
     echo "$MODEL_SHA  $TMPZ/model.zip" | sha256sum -c - >/dev/null || { echo "model download corrupt"; exit 1; }
     unzip -p "$TMPZ/model.zip" detect.tflite >"$MODEL_FILE"
+    echo "$MODEL_FILE_SHA  $MODEL_FILE" | sha256sum -c - >/dev/null || { echo "model file corrupt"; exit 1; }
   fi
   rm -rf "$TMPZ"
   ok "downloaded and checked"

@@ -14,7 +14,7 @@ const WZ_STEPS = [
   { id: "fc_connect", title: "Connect the flight controller", sub: "USB cable" },
   { id: "fc_setup", title: "Set up the flight controller", sub: "One button" },
   { id: "bench", title: "Check the controls", sub: "On the bench" },
-  { id: "pi_install", title: "Prepare the Raspberry Pi", sub: "Copy one command" },
+  { id: "pi_install", title: "Prepare the Raspberry Pi", sub: "Memory card, then install" },
   { id: "pi_connect", title: "Connect to the Pi", sub: "Its own Wi-Fi" },
   { id: "pi_check", title: "Camera and link", sub: "Then send the settings" },
   { id: "sim", title: "Test in the simulator", sub: "Before the first flight" },
@@ -189,14 +189,18 @@ const WZ_RENDER = {
     <div class="result" id="wz-fc-result"></div>
     <button class="btn primary big" id="wz-fc-go" ${wzMissionOK() ? "" : "disabled"}>Set up the flight controller</button>`,
   bench: () => `<p class="wz-lead">With no pilot to correct it, a control surface that moves the wrong way would crash the first flight. Check it now, on the table.</p>${ticks(BENCH, "bench")}`,
-  pi_install: () => `<p class="wz-lead">The Pi needs a prepared memory card and one command. About 20 minutes, mostly waiting.</p>
+  pi_install: () => `<p class="wz-lead">The Pi needs a prepared memory card, then this app installs everything on it. About 20 minutes, mostly waiting.</p>
     <ol class="wz-howto">
       <li>Install <b>Raspberry Pi Imager</b> on this laptop (raspberrypi.com/software). Choose <b>Raspberry Pi 4</b> and <b>Raspberry Pi OS Lite (64-bit)</b>.</li>
-      <li>When it asks about settings, choose <b>Edit settings</b>: hostname <code>silm</code>, a username and password, <b>your home Wi-Fi</b> with its country, and under Services <b>enable SSH</b>. Write the card.</li>
-      <li>Put the card in the Pi and power it. Wait two minutes.</li>
-      <li>On this laptop open a terminal (Windows: <b>PowerShell</b>) and connect to the Pi with your username:${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}</li>
-      <li>Paste this one line into it and press Enter. It asks you to choose a password for the aircraft's own Wi-Fi, installs everything (about 15 minutes) and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</li>
+      <li>When it asks about settings, choose <b>Edit settings</b>: hostname <code>silm</code>, a username and password, <b>your home Wi-Fi</b> with its country, and under Services <b>enable SSH</b> (password). Write the card.</li>
+      <li>Put the card in the Pi and power it. Wait two minutes. This laptop must be on the same home Wi-Fi.</li>
+      <li>Fill in and press <b>Install</b>:</li>
     </ol>
+    ${piInstallForm()}
+    <details class="wz-byhand"><summary>Or install by hand in a terminal</summary>
+      <p>Connect to the Pi (Windows: <b>PowerShell</b>):${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
+      then paste this line. It asks for a password for the aircraft's own Wi-Fi, installs everything and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</p>
+    </details>
     <label class="wz-confirm"><input type="checkbox" id="wz-pi-installed" ${wzIsDone("pi_install") ? "checked" : ""}> The installer finished and the Pi restarted</label>`,
   pi_connect: () => `<p class="wz-lead">After the restart, the Pi makes its own Wi-Fi network named <b>SILM-silm</b> whenever your home Wi-Fi is out of reach (at the field, or with the aircraft away from home).</p>
     <ol class="wz-howto"><li>Join this laptop to the Wi-Fi <b>SILM-…</b> with the password you chose. (No internet while joined: that is normal.)</li><li>Wait: the Pi is found by itself.</li></ol>
@@ -225,7 +229,10 @@ const WZ_BIND = {
     el.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => wzGo(b.dataset.go)));
     const c = $("wz-sim-ok"); if (c) c.addEventListener("change", () => { wzMark("sim", c.checked); wzRenderStep(); });
   },
-  pi_install: () => $("wz-pi-installed").addEventListener("change", (e) => { wzMark("pi_install", e.target.checked); wzNextLabel(); }),
+  pi_install: (el) => {
+    $("wz-pi-installed").addEventListener("change", (e) => { wzMark("pi_install", e.target.checked); wzNextLabel(); });
+    piInstallBind(el);
+  },
   fc_connect: () => {
     $("wz-fc-retry").addEventListener("click", () => { WZ.fc = null; wzFcPoll(true); });
     $("wz-port").addEventListener("change", () => { P.link.fc_port = $("wz-port").value; $("fc-port").value = $("fc-port-2").value = P.link.fc_port; changed(); WZ.fc = null; wzFcPoll(true); });

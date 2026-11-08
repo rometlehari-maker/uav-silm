@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ONBOARD = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 
-from groundstation import fc, flights, pilink  # noqa: E402
+from groundstation import fc, flights, piinstall, pilink  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.app import Station, make_server  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -955,3 +955,27 @@ def test_pi_wifi_from_the_app(http, pi):
     assert calls[-1][-2:] == ["home-remove", "Farm WiFi"]
     r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "reboot"})
     assert not r["ok"] and "unknown Wi-Fi action" in r["message"]
+
+
+def test_pi_install_routes(http, monkeypatch):
+    """The install job through the Ground Station's HTTP routes (SSH itself: test_piinstall.py)."""
+    url, st = http
+    assert call(url + "/api/pi/install")[0]["state"] == "idle"
+    r, _ = call(url + "/api/pi/install/start", {"host": "silm.local", "user": "pi"})
+    assert not r["ok"] and "password" in r["message"]
+    seen = {}
+
+    def connect(host, user, password, port=22):
+        seen.update(host=host, port=port, user=user)
+        raise piinstall.InstallError("cannot reach it (test)")
+    monkeypatch.setattr(st.piinstall, "_connect", connect)
+    r, _ = call(url + "/api/pi/install/start", {"host": "silm.local:2222", "user": "pi", "password": "pw",
+                                                "hotspot_password": "aircraft-1"})
+    assert r["ok"], r
+    t0 = time.time()
+    while call(url + "/api/pi/install")[0]["state"] == "running" and time.time() - t0 < 10:
+        time.sleep(0.05)
+    s, _ = call(url + "/api/pi/install")
+    assert s["state"] == "failed" and "cannot reach" in s["result"]
+    assert seen == {"host": "silm.local", "port": 2222, "user": "pi"}
+    assert not call(url + "/api/pi/install/cancel", {})[0]["ok"]
