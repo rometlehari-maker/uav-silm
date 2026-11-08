@@ -132,18 +132,26 @@ def send_script(port: str, local_path: str, baud: int = 115200) -> dict:
     try:
         if m.motors_armed():
             raise FCError("the aircraft is ARMED - disarm before copying the script")
+        # The simulator keeps scripts in ./scripts; a real board on its SD card.
+        is_sitl = mm.get_param(m, "SIM_SPEEDUP", timeout=2.0) is not None
+        dirs = ["scripts"] if is_sitl else [d for d in SCRIPT_DIRS if d != "scripts"]
         ftp = MAVFTP(m, m.target_system, m.target_component)
         tried = []
-        for d in SCRIPT_DIRS:
+        for d in dirs:
             remote = f"{d}/{SCRIPT_NAME}"
             ftp.cmd_mkdir([d])                         # fine if it already exists
+            # cmd_put/cmd_get only START a transfer; process_ftp_reply runs it to the end
             r = ftp.cmd_put([local_path, remote])
+            if getattr(r, "error_code", 1) == 0:
+                r = ftp.process_ftp_reply("CreateFile", timeout=60)
             if getattr(r, "error_code", 1) != 0:
                 tried.append(f"{remote}: {getattr(r, 'error_code', r)}")
                 continue
             with tempfile.TemporaryDirectory() as td:
                 back = os.path.join(td, "back.lua")
                 g = ftp.cmd_get([remote, back])
+                if getattr(g, "error_code", 1) == 0:
+                    g = ftp.process_ftp_reply("OpenFileRO", timeout=60)
                 same = getattr(g, "error_code", 1) == 0 and os.path.isfile(back) and \
                     open(back, "rb").read() == data
             return {"ok": same, "path": remote, "bytes": len(data),
