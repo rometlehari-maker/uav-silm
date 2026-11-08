@@ -269,7 +269,7 @@ def test_http_status_settings_flights_and_download(http):
     set_aircraft(tmp, armed=False, rel_alt_m=0, mode="AUTO", gps="OK")
     code, body, _ = get(url + "/api/status")
     st = json.loads(body)
-    assert code == 200 and st["ok"] and st["software"] == "2.0.0" and st["flights"] == 1
+    assert code == 200 and st["ok"] and st["software"] == open(os.path.join(os.path.dirname(__file__), "..", "VERSION")).read().strip() and st["flights"] == 1
     assert st["program_running"] and not st["flying"] and st["aircraft"]["gps"] == "OK"
     code, r = post(url + "/api/settings", {"settings_yaml": GOOD, "mission_wpl": WPL})
     assert code == 200 and r["ok"]

@@ -352,7 +352,7 @@ def pi(tmp_path):
 def test_wifi_status_send_and_download_round_trip(station, pi):
     agent, addr, tmp, calls = pi
     st = pilink.status(addr)
-    assert st["ok"] and st["software"] == "2.0.0" and not st["settings_present"]
+    assert st["ok"] and st["software"] == open(os.path.join(ONBOARD, "VERSION")).read().strip() and not st["settings_present"]
     p = full_project(recognition__targets=["tractor"])
     r = station.pi_send({"project": p, "address": addr})
     assert r["ok"], r
