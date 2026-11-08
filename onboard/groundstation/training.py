@@ -254,7 +254,7 @@ def tools_available() -> dict:
         return {"available": True, "can_install": True, "why": None}
     return {"available": False, "can_install": True,
             "why": "the training tools are not installed on this laptop yet. Press 'Install the "
-                   "training tools' (about 2 GB, once; internet needed). A computer with an NVIDIA "
+                   "training tools' (2-6 GB, once; internet and about 8 GB free disk needed). A computer with an NVIDIA "
                    "graphics card trains 10-50x faster."}
 
 

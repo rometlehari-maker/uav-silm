@@ -620,7 +620,7 @@ async function ttPoll() {
   if (s.state === "done") $("tt-box").hidden = false;              // keep the success message in view
 }
 $("tt-install").addEventListener("click", async () => {
-  if (!confirm("Install the training tools on this laptop? About 2 GB from the internet, 5 to 30 minutes. Nothing else on the computer changes.")) return;
+  if (!confirm("Install the training tools on this laptop? 2 to 6 GB from the internet (keep about 8 GB free), 5 minutes to an hour. Nothing else on the computer changes.")) return;
   const r = await api("/api/train/tools/install", {});
   if (!r.ok) return setResult("tt-result", r);
   ttPoll();
