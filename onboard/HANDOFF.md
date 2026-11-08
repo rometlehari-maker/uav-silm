@@ -64,7 +64,7 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **394 passed**, 2 skipped (ArduPilot
+- `python3 -m pytest -q` in `onboard/`: **411 passed**, 2 skipped (ArduPilot
   source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
   `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
@@ -198,6 +198,35 @@ User's answers to questions asked:
   `.nojekyll`, so files are served as-is, including `onboard/`).**
   To refresh after onboard changes: commit, `python3 onboard/tools/build_downloads.py`,
   commit `downloads/` + `index.html`.
+- **"Make it much easier, like an app"** (user chose: guided setup wizard +
+  real installer with icon; NOT "Pi set up from the app"):
+  - **Wizard** (committed 058d8f5): tab "✦ Setup" (`groundstation/static/wizard.js`,
+    `/api/setup` -> `~/SILM/setup.json`), 10 self-checking steps (need, aircraft,
+    mission, fc_connect [auto-finds USB port, fc/info], fc_setup [one button:
+    params -> script -> waits for replug -> mission], bench, pi_install [Imager +
+    one copy-paste line], pi_connect [polls /api/pi/status], pi_check [camera
+    frames, telemetry_ok, send settings], sim). First start opens it.
+    New Camera-tab question `link.fc_serial_for_pi` -> make_params sets
+    SERIALn_PROTOCOL=2/BAUD. `pi/install.sh` now 9 steps: Wi-Fi country
+    (--country, default EE), camera network siyi-camera on eth0 (from reboot,
+    --no-camera-net), UART via raspi-config. e2e covers the wizard.
+  - **Desktop app** (committed c788201, v2.1.0): `groundstation/desktop.py`
+    (pywebview window, browser+tk fallback, `--selftest` incl. MAVLink
+    loopback), `groundstation/runtime.py` (frozen app finds a system Python
+    for simulator/training), `packaging/build_app.py` (PyInstaller onedir,
+    numpy/lxml excluded; Linux build 48 MB / 22 MB tar.gz, built + selftested
+    here and the packaged UI loaded without errors), Inno Setup
+    `packaging/windows/installer.iss` (per-user, desktop icon), Linux
+    `packaging/linux/install.sh`, icons from the bird logo in `packaging/icons/`.
+    Workflow `.github/workflows/ground-station-app.yml`: builds + selftests
+    Windows/macOS(arm64)/Linux on push; tag `gs-v*` publishes a release with
+    fixed-name copies (UAV-SILM-Ground-Station-Setup.exe, -macos.zip,
+    -linux.tar.gz) + SHA256SUMS. Website Downloads has an app block linking to
+    releases/latest/download/... (dead until a release exists).
+  - **Waiting on:** first CI run of ground-station-app.yml (Windows/macOS never
+    built before). Then ASK the user before: pushing tag gs-v2.1.0 (public
+    release) and merging to main (site live). Rebuild downloads/ after merge
+    prep (`python3 onboard/tools/build_downloads.py`, VERSION is 2.1.0 now).
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
