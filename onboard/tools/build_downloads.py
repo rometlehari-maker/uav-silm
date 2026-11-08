@@ -3,7 +3,9 @@
 
     python3 onboard/tools/build_downloads.py            # from the repository root
 
-Writes `downloads/` at the repository root (the website serves it):
+Commit your onboard/ changes first: only committed files are packed. Writes
+`downloads/` at the repository root (the website serves it) and updates the
+download cards in `index.html` (between the downloads:begin/end markers):
 
     uav-silm-software-<version>.zip   the whole onboard folder: Ground Station,
                                       Pi software, ArduPilot files, docs, tests
@@ -151,11 +153,61 @@ def _write(out, name, data, kind, version, what, licence) -> dict:
             "sha256": hashlib.sha256(data).hexdigest(), "what": what, "licence": licence}
 
 
+SITE_BEGIN, SITE_END = "<!-- downloads:begin (written by onboard/tools/build_downloads.py) -->", "<!-- downloads:end -->"
+TITLES = {"software": "UAV SILM software {version}", "model": "Farm recognition model silm_oi",
+          "param": "Flight controller settings", "lua": "GPS-loss script"}
+KINDS = {"software": "Software", "model": "Model", "param": "ArduPilot", "lua": "ArduPilot"}
+ARROW = '<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>'
+
+
+def _esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def site_block(meta: dict) -> str:
+    """The download cards for index.html (between the markers)."""
+    cards = []
+    for f in meta["files"]:
+        size = f"{f['bytes'] / 1e6:.1f} MB" if f["bytes"] >= 100_000 else f"{f['bytes'] / 1e3:.0f} kB"
+        ext = f["name"].rsplit(".", 1)[-1].upper()
+        cards.append(
+            f'        <div>\n'
+            f'          <div class="card-k">{KINDS[f["kind"]]} · {_esc(f["licence"])}</div>\n'
+            f'          <div class="card-t">{_esc(TITLES[f["kind"]].format(**f))}</div>\n'
+            f'          <div class="card-s">{ext} · {size}</div>\n'
+            f'          <p class="dl-what">{_esc(f["what"])}</p>\n'
+            f'          <a class="btn ghost dl-btn" href="downloads/{f["name"]}" download>{_esc(f["name"])}{ARROW}</a>\n'
+            f'          <div class="dl-hash"><span>SHA-256</span><code>{f["sha256"]}</code></div>\n'
+            f'        </div>')
+    src = f"https://github.com/rometlehari-maker/uav-silm/tree/{meta['commit']}/onboard"
+    return (f"{SITE_BEGIN}\n"
+            f'      <div class="cards c2 dl rv">\n' + "\n".join(cards) + "\n      </div>\n"
+            f'      <p class="note rv">Version {meta["version"]}, built {meta["date"]} from commit '
+            f'<a href="{src}"><code>{meta["commit_short"]}</code></a>. '
+            f'All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>\n'
+            f"      {SITE_END}")
+
+
+def update_site(index_html: str, meta: dict) -> bool:
+    with open(index_html, encoding="utf-8") as fh:
+        page = fh.read()
+    a, b = page.find(SITE_BEGIN), page.find(SITE_END)
+    if a < 0 or b < a:
+        raise SystemExit(f"{index_html}: download markers not found")
+    new = page[:a] + site_block(meta) + page[b + len(SITE_END):]
+    if new != page:
+        with open(index_html, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(new)
+    return new != page
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=os.path.join(ROOT, "downloads"))
     ap.add_argument("--commit", default=None,
                     help="git commit to pack (default: the last commit that changed onboard/)")
+    ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
+                    help="website page whose download cards to update ('' to skip)")
     a = ap.parse_args(argv)
     commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard").decode().strip()
     commit = git("rev-parse", commit).decode().strip()
@@ -164,6 +216,10 @@ def main(argv=None) -> int:
               f"(packing commit {commit[:10]})", file=sys.stderr)
     for f in build(a.out, commit):
         print(f"{f['name']:34s} {f['bytes'] / 1e6:6.2f} MB  {f['sha256']}")
+    if a.site:
+        with open(os.path.join(a.out, "downloads.json"), encoding="utf-8") as fh:
+            changed = update_site(a.site, json.load(fh))
+        print(f"{a.site}: {'updated' if changed else 'already up to date'}")
     return 0
 
 

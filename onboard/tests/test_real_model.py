@@ -19,7 +19,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ONBOARD = os.path.join(HERE, "..")
 MODEL = os.path.join(ONBOARD, "models", "coco_ssd_mobilenet_v1_quant.tflite")
 LABELS = os.path.join(ONBOARD, "models", "coco_labels.txt")
-AIRCRAFT_PHOTO = os.path.join(ONBOARD, "..", "images", "assembled.jpg")
+AIRCRAFT_PHOTO = os.path.join(ONBOARD, "..", "images", "assembled.jpg")   # the website's photo
+needs_photo = pytest.mark.skipif(not os.path.isfile(AIRCRAFT_PHOTO),
+                                 reason="needs the website's images/assembled.jpg (not in the download)")
 
 
 def _runtime():
@@ -46,6 +48,7 @@ def test_label_file_matches_the_models_class_ids():
 
 
 @needs_model
+@needs_photo
 def test_real_model_recognises_the_aircraft_photo():
     d = ObjectDetector(MODEL, LABELS, 0.4)
     assert d.fmt == "ssd" and d.input_size == (300, 300)
@@ -65,6 +68,7 @@ def test_real_model_finds_nothing_in_a_blank_frame():
 
 
 @needs_model
+@needs_photo
 def test_real_model_tiled_roi_on_a_full_hd_frame():
     d = ObjectDetector(MODEL, LABELS, 0.4)
     img = cv2.imread(AIRCRAFT_PHOTO)
