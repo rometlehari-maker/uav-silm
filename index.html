@@ -564,6 +564,15 @@
   .cards.fit li b{ color:var(--text); font-weight:600; }
   .card-k.warn{ color:var(--red); }
   .fit-note{ font-size:13.5px; color:var(--faint); margin-top:14px; }
+  .app-dl{ margin-top:34px; padding:26px; border:1px solid var(--cyan); border-radius:12px; background:color-mix(in srgb, var(--cyan) 6%, var(--bg)); }
+  .app-dl-head{ display:flex; gap:18px; align-items:flex-start; }
+  .app-dl-head img{ width:56px; height:56px; border-radius:14px; flex:none; }
+  .app-dl-t{ font-weight:700; font-size:1.45rem; letter-spacing:-.015em; margin-top:4px; }
+  .app-dl-head p{ font-size:15px; color:var(--dim); margin-top:6px; max-width:62ch; }
+  .app-dl-btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+  .app-dl-btns .ic-arr{ transform:none; }
+  .app-dl .note{ margin-top:14px; }
+  #downloads .cards.fit{ margin-top:22px; }
   /* downloads */
   .cards.dl > *{ display:flex; flex-direction:column; }
   .dl-what{ font-size:14.5px; color:var(--dim); margin-top:12px; flex:1; }
@@ -1730,15 +1739,28 @@
           <p class="fit-note">Even on the right aircraft: answer every question about <i>your</i> plane in the Ground Station, fly the mission in its simulator first, check the control directions on the bench, and get your flight authorisation.</p>
         </div>
       </div>
+      <div class="app-dl rv">
+        <div class="app-dl-head">
+          <img src="images/logo_small.jpg" alt="" width="56" height="56">
+          <div><div class="card-k">The app · start here</div><div class="app-dl-t">UAV SILM Ground Station</div>
+            <p>Plan, send, launch and look at the pictures, with a guided setup for a new aircraft. Install it like any program; nothing else needed.</p></div>
+        </div>
+        <div class="app-dl-btns">
+          <a class="btn primary" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-Setup.exe">Windows installer<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-macos.zip">macOS (Apple silicon)<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-linux.tar.gz">Linux<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+        </div>
+        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The files below are for people who want the parts on their own.</p>
+      </div>
       <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
       <div class="cards c2 dl rv">
         <div>
           <div class="card-k">Software · MIT + third-party</div>
-          <div class="card-t">UAV SILM software 2.0.0</div>
-          <div class="card-s">ZIP · 4.5 MB</div>
+          <div class="card-t">UAV SILM software 2.1.0</div>
+          <div class="card-s">ZIP · 5.3 MB</div>
           <p class="dl-what">Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.</p>
-          <a class="btn ghost dl-btn" href="downloads/uav-silm-software-2.0.0.zip" download>uav-silm-software-2.0.0.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>074843d4959b6d10eede85cae97c6e3d189abf9307a0d2fbf0278a639748e3cb</code></div>
+          <a class="btn ghost dl-btn" href="downloads/uav-silm-software-2.1.0.zip" download>uav-silm-software-2.1.0.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>b63479d113b30d7882f9f0a29b5735e16648ebcb394fe623730002db45fa6a24</code></div>
         </div>
         <div>
           <div class="card-k">Model · AGPL-3.0</div>
@@ -1746,7 +1768,7 @@
           <div class="card-s">ZIP · 3.5 MB</div>
           <p class="dl-what">The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.</p>
           <a class="btn ghost dl-btn" href="downloads/silm-oi-farm-model-v1.zip" download>silm-oi-farm-model-v1.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>9672ae516e96055cbebd7dad6640b3e70c797aec7a4473ab9a9c050e763ad9cc</code></div>
+          <div class="dl-hash"><span>SHA-256</span><code>87da5932d2a5a123c7b86846568169e1957f4d207256288d48ece43e9d644c08</code></div>
         </div>
         <div>
           <div class="card-k">ArduPilot · MIT</div>
@@ -1765,7 +1787,7 @@
           <div class="dl-hash"><span>SHA-256</span><code>84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315</code></div>
         </div>
       </div>
-      <p class="note rv">Version 2.0.0, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/d1b2f093c4ff9d840b01432f3e721a8539b598ba/onboard"><code>d1b2f093c4</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
+      <p class="note rv">Version 2.1.0, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/1d196ee249fb0c1ad6529a60e740463bc243341f/onboard"><code>1d196ee249</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
       <!-- downloads:end -->
       <div class="tabs rv" data-tabs>
         <div class="tablist" role="tablist" aria-label="Using the downloads">
@@ -1776,8 +1798,9 @@
         </div>
         <div class="panel" role="tabpanel">
           <div class="tblwrap"><table class="tbl"><thead><tr><th>You want to</th><th>Take</th></tr></thead><tbody>
-            <tr><td>Plan and fly a survey, see the pictures</td><td>The software zip. Unpack it and start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>. <code>GROUND_STATION.md</code> explains every tab, <code>FLIGHT_READY.md</code> the whole procedure.</td></tr>
-            <tr><td>Set up the Raspberry Pi 4</td><td>The software zip, then <code>bash pi/install.sh</code> on the Pi.</td></tr>
+            <tr><td>Plan and fly a survey, see the pictures</td><td>The <b>app</b> above. Its guided setup takes a new aircraft step by step to ready-to-fly; <code>GROUND_STATION.md</code> explains every tab.</td></tr>
+            <tr><td>Change the software, or run it from source</td><td>The software zip. Start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>; <code>FLIGHT_READY.md</code> describes the whole procedure.</td></tr>
+            <tr><td>Set up the Raspberry Pi 4</td><td>Nothing to download: the app's setup gives you one line to paste on the Pi.</td></tr>
             <tr><td>Only the flight controller settings</td><td>The <code>.param</code> file (Mission Planner: Full Parameter List, Load from file) and the <code>.lua</code> script (SD card, <code>APM/scripts</code>).</td></tr>
             <tr><td>Recognise tractors and livestock</td><td>The model zip, or choose "Ready-made" on the Ground Station's Camera tab (it is already inside the software).</td></tr>
           </tbody></table></div>
@@ -1786,8 +1809,8 @@
         <div class="panel" role="tabpanel">
           <p>Each file's SHA-256 checksum is listed above. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Computer</th><th>Command (in the folder with the file)</th></tr></thead><tbody>
-            <tr><td>Windows</td><td><code>certutil -hashfile uav-silm-software-2.0.0.zip SHA256</code></td></tr>
-            <tr><td>macOS</td><td><code>shasum -a 256 uav-silm-software-2.0.0.zip</code></td></tr>
+            <tr><td>Windows</td><td><code>certutil -hashfile uav-silm-software-2.1.0.zip SHA256</code></td></tr>
+            <tr><td>macOS</td><td><code>shasum -a 256 uav-silm-software-2.1.0.zip</code></td></tr>
             <tr><td>Linux</td><td><code>sha256sum -c SHA256SUMS.txt --ignore-missing</code></td></tr>
           </tbody></table></div>
           <p class="note">The files are built from a published commit of our repository, always the same way, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py</code>.</p>

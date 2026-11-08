@@ -34,7 +34,10 @@ function doneKey() { return "silm-done-" + (P && P.name); }
 function loadDone() {
   try { Object.assign(DONE, { fc: false, pi: false, sim: false }, JSON.parse(localStorage.getItem(doneKey()) || "{}")); } catch (e) {}
 }
-function markDone(k) { DONE[k] = true; try { localStorage.setItem(doneKey(), JSON.stringify(DONE)); } catch (e) {} renderProgress(); }
+function markDone(k) {
+  DONE[k] = true; try { localStorage.setItem(doneKey(), JSON.stringify(DONE)); } catch (e) {} renderProgress();
+  if (k === "sim" && typeof wzMark === "function") wzMark("sim");
+}
 
 /* ------------------------------------------------------------------ tabs */
 function showTab(name) {
@@ -46,6 +49,7 @@ function showTab(name) {
   if (name === "sim") simPoll();
   if (name === "launch") renderLaunch();
   if (name === "train") loadTrain();
+  if (typeof wzOnTab === "function") wzOnTab(name);
   if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
 }
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -150,6 +154,7 @@ async function runCheck() {
   pill.textContent = CHECK.errors.length ? `${CHECK.errors.length} to fix` : CHECK.warnings.length ? `${CHECK.warnings.length} notes` : "Ready";
   markFields(); drawPlan(); renderProgress();
   if ($("tab-launch").classList.contains("active")) renderLaunch();
+  if (typeof wzRefresh === "function") wzRefresh();
 }
 $("check-pill").addEventListener("click", () => { const p = $("problems"); p.style.display = "block"; p.scrollIntoView(); });
 
@@ -285,7 +290,10 @@ async function refreshPorts() {
   const ports = await api("/api/ports");
   $("port-list").innerHTML = ports.map((p) => `<option value="${esc(p.device)}">${esc(p.description)}</option>`).join("");
   if (!ports.length) toast("No serial ports found. Plug in the flight controller's USB cable (and the battery), then try again.", 5000);
-  else if (!$("fc-port").value) { $("fc-port").value = $("fc-port-2").value = ports[0].device; P.link.fc_port = ports[0].device; changed(); }
+  else if (!$("fc-port").value) {
+    const pick = ports.find((p) => p.usb !== false) || ports[0];        // flight controllers are USB devices
+    $("fc-port").value = $("fc-port-2").value = pick.device; P.link.fc_port = pick.device; changed();
+  }
 }
 ["fc-port", "fc-port-2"].forEach((id) => $(id).addEventListener("change", () => { P.link.fc_port = $(id).value.trim(); $("fc-port").value = $("fc-port-2").value = P.link.fc_port; changed(); }));
 $("fc-refresh").addEventListener("click", refreshPorts);
@@ -547,7 +555,9 @@ $("fl-import").addEventListener("click", async () => {
   P = Object.assign(JSON.parse(JSON.stringify(META.default_project)), p || {});
   for (const k of Object.keys(META.default_project)) if (typeof META.default_project[k] === "object" && META.default_project[k] && !Array.isArray(META.default_project[k])) P[k] = Object.assign({}, META.default_project[k], P[k] || {});
   loadDone(); renderForms(); drawPlaces(); fitMission(); listProjects(); runCheck();
-  showTab((location.hash || "#start").slice(1));
+  if (typeof wzLoad === "function") await wzLoad();
+  // first start: the guided setup; afterwards the Start page
+  showTab((location.hash || "").slice(1) || (typeof WZ !== "undefined" && WZ.state && !WZ.state.complete ? "setup" : "start"));
 })();
 
 /* ------------------------------------------------------------------ training */

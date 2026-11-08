@@ -17,24 +17,35 @@ not need the internet except for the map background.
 
 ## 1. Start it
 
-**First time only:** install **Python 3** from <https://www.python.org/downloads/>.
-On Windows, tick **"Add python.exe to PATH"** on the first installer screen.
-Then get the software: on GitHub, **Code → Download ZIP**, and unzip it (or
-`git clone https://github.com/rometlehari-maker/uav-silm`).
+**Easiest: the app.** On www.uavsilm.eu → Downloads (or the GitHub releases):
 
-**Every time:**
+| Computer | Install | Start |
+|---|---|---|
+| **Windows** | `UAV-SILM-Ground-Station-Setup.exe`, double-click, Next, Install. No administrator rights needed. Windows may say the publisher is unknown (the app isn't code-signed): **More info → Run anyway** | the **UAV SILM Ground Station** icon on the desktop or in the Start menu |
+| **macOS** (Apple silicon) | unzip `UAV-SILM-Ground-Station-macos.zip`, drag the app to Applications | the first time **right-click → Open** (it isn't notarised), then as usual |
+| **Linux** | unpack `UAV-SILM-Ground-Station-linux.tar.gz`, run `./install.sh` in it | the applications menu, or `uav-silm-ground-station` |
+
+It opens in its own window (on Linux in the browser, with a small window to
+quit it). Nothing else to install: Python is inside the app. Only the
+simulator and training need Python on the computer; their tabs tell you.
+
+**From the source** (developers, or the simulator on Linux/WSL): install
+**Python 3** (<https://www.python.org/downloads/>; on Windows tick **"Add
+python.exe to PATH"**), get the software (the website's software zip, GitHub
+**Code → Download ZIP**, or `git clone https://github.com/rometlehari-maker/uav-silm`), then:
 
 | Computer | Do this |
 |---|---|
-| **Windows** | Open the `uav-silm\onboard` folder and **double-click `Start Ground Station.bat`** |
+| **Windows** | Open the `onboard` folder and **double-click `Start Ground Station.bat`** |
 | **macOS / Linux** | In a terminal: `cd uav-silm/onboard && ./start_ground_station.sh` |
 
 The first start sets itself up (it needs internet once and takes about a
 minute). Then your browser opens at **http://127.0.0.1:8765**. A black window
 stays open: that is the Ground Station running. **Keep it open** while you use
-it; close it when you're done.
+it; close it when you're done. Starting it again while it's already running
+just opens the page.
 
-Starting it again while it's already running just opens the browser page.
+**The first time, it opens the guided setup** (✦ Setup, below).
 
 ---
 
@@ -44,7 +55,8 @@ Starting it again while it's already running just opens the browser page.
 +--------------------------------------------------------------------------+
 | SILM Ground Station           Mission [Field A     ]  [Save]  [Ready]    |
 +--------------+---------------------------------------+-------------------+
-| 1 Start      |                                       | Before you fly    |
+| ✦ Setup 4/10 |                                       | Before you fly    |
+| 1 Start      |                                       |                   |
 | 2 Aircraft   |   the step you are on                 |  - problems to    |
 | 3 Mission    |   (questions, map, buttons)           |    fix (red)      |
 | 4 Camera     |                                       |  - notes          |
@@ -70,6 +82,30 @@ Starting it again while it's already running just opens the browser page.
 ---
 
 ## 3. The tabs, one by one
+
+### ✦ · Setup (the first time)
+
+On the first start the Ground Station opens the **guided setup**: ten short
+steps, one screen each, that take a new aircraft to ready-to-fly. Each step
+checks itself and turns green; **Skip for now** moves on, and the steps can
+be done in any order. Progress is kept on this laptop.
+
+| Step | What you do | What turns it green |
+|---|---|---|
+| 1 What you need | tick the parts you have | all ticked |
+| 2 Your aircraft | answer the aircraft questions (button opens tab 2) | no aircraft question left |
+| 3 A first mission | draw launch point, area, landing point (opens tab 3) | a valid mission |
+| 4 Connect the flight controller | install ArduPlane once in Mission Planner, then battery + USB in | **found by itself**: firmware, battery, GPS shown |
+| 5 Set up the flight controller | **one button**; unplug and replug when it asks | settings, script (after the restart) and mission read back |
+| 6 Check the controls | tilt the plane on the table, watch the surfaces | all ticked |
+| 7 Prepare the Raspberry Pi | Raspberry Pi Imager, then paste **one command** (Copy button) | you tick "finished" |
+| 8 Connect to the Pi | join the SILM-… Wi-Fi | **found by itself** |
+| 9 Camera and link | **Send the settings** | camera sends pictures and the flight controller's data arrives |
+| 10 Test in the simulator | fly the mission with GPS jammed | all seven checks passed |
+
+When a step sends you to another tab, an orange **◀ Back to setup** button
+brings you back. **Run the setup again** (at the end) starts over without
+changing anything on the aircraft.
 
 ### 1 · Start
 

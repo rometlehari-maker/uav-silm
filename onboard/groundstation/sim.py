@@ -23,6 +23,8 @@ import sys
 import threading
 import time
 
+from groundstation import runtime  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ONBOARD = os.path.dirname(HERE)
 TEST_TOOL = os.path.join(ONBOARD, "tools", "sitl_failsafe_test.py")
@@ -68,6 +70,8 @@ class SimRunner:
             why = f"ArduPilot not found at {self.ardupilot_dir} (SITL_HOWTO.md part A)"
         elif not os.path.isfile(binp):
             why = f"ArduPlane SITL is not built: cd {self.ardupilot_dir} && ./waf plane"
+        elif runtime.python_cmd() is None:
+            ok, why = False, "The simulator needs Python 3 on this computer (sudo apt install python3)."
         return {"available": ok, "why": why, "ardupilot_dir": self.ardupilot_dir,
                 "run_dir": self.run_dir}
 
@@ -107,7 +111,7 @@ class SimRunner:
     def _start_sitl(self, launch):
         self._stop_sitl()
         loc = f"{launch[0]:.7f},{launch[1]:.7f},{launch[2] if len(launch) > 2 else 0:.1f},0"
-        cmd = [sys.executable, self.sim_vehicle(), "-v", "ArduPlane", "--no-rebuild",
+        cmd = [*runtime.python_cmd(), self.sim_vehicle(), "-v", "ArduPlane", "--no-rebuild",
                "--no-mavproxy", f"--custom-location={loc}"]
         self._log("$ " + " ".join(cmd[1:]))
         self._sitl = subprocess.Popen(cmd, cwd=self.run_dir, stdout=subprocess.DEVNULL,
@@ -140,7 +144,7 @@ class SimRunner:
             time.sleep(0.3)
 
     def _test(self, a) -> int:
-        cmd = [sys.executable, "-u", TEST_TOOL, "--connect", "tcp:127.0.0.1:5760",
+        cmd = [*runtime.python_cmd(), "-u", TEST_TOOL, "--connect", "tcp:127.0.0.1:5760",
                "--params", a["pf"], "--mission", a["mf"], "--fault", a["fault"],
                "--fault-s", str(a["fault_s"]), "--trigger-s", str(a["trigger_s"]),
                "--wind", str(a["wind"]), "--wind-dir", str(a["wind_dir"]), "--out", a["out"]]

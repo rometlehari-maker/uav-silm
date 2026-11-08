@@ -1,0 +1,5 @@
+# Building the desktop app (packaging/build_app.py), on top of
+# groundstation/requirements.txt. The app window uses pywebview on Windows
+# (Edge WebView2) and macOS (WebKit); on Linux the app opens the browser.
+pyinstaller>=6.10,<7
+pywebview>=5.3,<6; sys_platform == "win32" or sys_platform == "darwin"

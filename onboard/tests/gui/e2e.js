@@ -148,6 +148,34 @@ let PAGE = null;
   assert((await page.textContent("#tr-stats")).includes("tractor"), "statistics count the box");
   await step("09-train");
 
+  // ---------------- guided setup ("Set up aircraft")
+  await tab("start");
+  assert(await page.isVisible("#setup-banner"), "start page offers the setup");
+  await page.click("#setup-banner-go");
+  await page.waitForSelector("#wz-steps li");
+  assert((await page.$$("#wz-steps li")).length === 10, "ten setup steps");
+  assert(await page.$("#wz-steps li:nth-child(2).done"), "aircraft step green after answering the questions");
+  assert(await page.$("#wz-steps li:nth-child(3).done"), "mission step green after drawing the mission");
+  await page.click("#wz-steps li:nth-child(1) button");
+  assert(/Skip/.test(await page.textContent("#wz-next")), "an open step can be skipped");
+  for (const b of await page.$$("#wz-card .wz-ticks input")) await b.check();
+  await page.waitForSelector("#wz-steps li:nth-child(1).done");
+  assert(/Next/.test(await page.textContent("#wz-next")), "a done step says Next");
+  await page.click("#wz-steps li:nth-child(2) button");          // a step sends you to its tab ...
+  await page.click('#wz-card [data-go="aircraft"]');
+  assert(await page.isVisible("#tab-aircraft") && await page.isVisible("#back-setup"), "back-to-setup button on the other tab");
+  await page.click("#back-setup");                                 // ... and brings you back
+  assert(await page.isVisible("#tab-setup") && await page.isHidden("#back-setup"), "back in the setup");
+  await page.click("#wz-steps li:nth-child(8) button");          // the Pi is found by itself
+  await page.fill("#wz-pi-addr", PI);
+  await page.dispatchEvent("#wz-pi-addr", "change");
+  await page.waitForFunction(() => /Connected to/.test(document.getElementById("wz-pi-live").textContent), null, { timeout: 15000 });
+  await page.waitForSelector("#wz-steps li:nth-child(8).done");
+  await page.click("#wz-steps li:nth-child(4) button");          // no flight controller plugged in: it says so
+  await page.waitForFunction(() => /No flight controller|No answer/.test(document.getElementById("wz-fc-live").textContent), null, { timeout: 30000 });
+  assert(/^4\/10$/.test((await page.textContent("#setup-badge")).trim()), "progress badge 4/10: " + await page.textContent("#setup-badge"));
+  await step("10-setup");
+
   // ---------------- saved missions
   await tab("start");
   await page.click("#save");

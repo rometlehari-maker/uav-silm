@@ -136,6 +136,10 @@ def build(out: str, commit: str) -> list[dict]:
                         "lua", version, "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting "
                         "GPS and land on dead reckoning. Copy to APM/scripts on the SD card.", "MIT"))
 
+    keep = {f["name"] for f in files} | {"SHA256SUMS.txt", "downloads.json"}
+    for old in os.listdir(out):                    # files from an older version
+        if old not in keep and os.path.isfile(os.path.join(out, old)):
+            os.remove(os.path.join(out, old))
     with open(os.path.join(out, "SHA256SUMS.txt"), "w", encoding="utf-8", newline="\n") as fh:
         for f in files:
             fh.write(f"{f['sha256']}  {f['name']}\n")
@@ -195,6 +199,8 @@ def update_site(index_html: str, meta: dict) -> bool:
     if a < 0 or b < a:
         raise SystemExit(f"{index_html}: download markers not found")
     new = page[:a] + site_block(meta) + page[b + len(SITE_END):]
+    software = next(f["name"] for f in meta["files"] if f["kind"] == "software")
+    new = re.sub(r"uav-silm-software-\d+\.\d+\.\d+\.zip", software, new)   # e.g. the checksum commands
     if new != page:
         with open(index_html, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(new)
@@ -209,7 +215,9 @@ def main(argv=None) -> int:
     ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
                     help="website page whose download cards to update ('' to skip)")
     a = ap.parse_args(argv)
-    commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard").decode().strip()
+    # the handoff notes aren't packed, so a commit that only changes them doesn't count
+    commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard",
+                             ":(exclude)onboard/HANDOFF.md").decode().strip()
     commit = git("rev-parse", commit).decode().strip()
     if git("status", "--porcelain", "--", "onboard").strip():
         print("note: onboard/ has uncommitted changes; they are NOT in the downloads "
