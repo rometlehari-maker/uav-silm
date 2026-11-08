@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SILM Ground Station</title>
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true">◆</span> SILM Ground Station <small id="version"></small></div>
+  <label class="projname">Mission <input id="project-name" type="text" aria-label="Mission name"></label>
+  <button id="save" class="btn">Save</button>
+  <button id="check-pill" class="pill" title="Problems to fix">…</button>
+</header>
+
+<div class="layout">
+  <nav class="tabs" aria-label="Steps">
+    <button data-tab="start" class="tab"><b>1</b> Start</button>
+    <button data-tab="aircraft" class="tab"><b>2</b> Aircraft</button>
+    <button data-tab="mission" class="tab"><b>3</b> Mission</button>
+    <button data-tab="camera" class="tab"><b>4</b> Camera</button>
+    <button data-tab="send" class="tab"><b>5</b> Send to aircraft</button>
+    <button data-tab="launch" class="tab"><b>6</b> Launch</button>
+    <button data-tab="sim" class="tab"><b>7</b> Simulator</button>
+    <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
+  </nav>
+
+  <main>
+    <!-- ======================================================== START -->
+    <section id="tab-start" class="page">
+      <h1>Welcome</h1>
+      <p class="lead">Plan a fully automatic survey flight, send it to the aircraft, launch it,
+        and look at the pictures it took. Work through the steps on the left from top to bottom.
+        Everything is saved on this laptop as you go.</p>
+      <div class="cards two">
+        <div class="card">
+          <h2>Your progress</h2>
+          <ol class="progress" id="progress"></ol>
+        </div>
+        <div class="card">
+          <h2>Missions on this laptop</h2>
+          <p class="help">Open a saved mission, or start a new one (it copies the aircraft
+            answers from the current mission).</p>
+          <ul class="list" id="project-list"></ul>
+          <div class="row-btns">
+            <button id="new-project" class="btn">New mission</button>
+            <button id="export-project" class="btn ghost">Save to a file…</button>
+            <button id="import-project" class="btn ghost">Open a file…</button>
+            <input id="import-file" type="file" accept=".json" hidden>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>How a flight works</h2>
+        <ol class="steps">
+          <li><b>Aircraft</b> - answer the questions about your aircraft once.</li>
+          <li><b>Mission</b> - draw the area on the map, set where you launch and land, enter today's wind.</li>
+          <li><b>Camera</b> - choose what it should look for.</li>
+          <li><b>Send to aircraft</b> - USB cable to the flight controller; Wi-Fi or a USB stick to the aircraft's computer.</li>
+          <li><b>Launch</b> - tick the checklist, arm, throw. It flies, lands and switches itself off.</li>
+          <li><b>Flights &amp; pictures</b> - bring the pictures back and see where each one was taken.</li>
+        </ol>
+        <p class="help">Before the first real flight, fly your mission in the <b>Simulator</b> (step 7).</p>
+      </div>
+    </section>
+
+    <!-- ======================================================== AIRCRAFT -->
+    <section id="tab-aircraft" class="page">
+      <h1>Your aircraft</h1>
+      <p class="lead">Answer these once for your aircraft. They set the flight controller's
+        speeds, battery warnings, launch behaviour and limits. Everything you need to know is
+        written under each question; questions marked <span class="q-req">*</span> must be answered.</p>
+      <div id="cg-box" class="card cg"></div>
+      <div id="form-aircraft" class="form"></div>
+    </section>
+
+    <!-- ======================================================== MISSION -->
+    <section id="tab-mission" class="page wide">
+      <h1>Mission</h1>
+      <div class="mission">
+        <div class="mapwrap">
+          <div class="maptools" role="toolbar" aria-label="Map tools">
+            <button class="btn tool" data-tool="launch">① Set launch point</button>
+            <button class="btn tool" data-tool="area">② Draw survey area</button>
+            <button class="btn tool" data-tool="landing">③ Set landing point</button>
+            <button class="btn tool" data-tool="heading">Landing direction</button>
+            <button class="btn ghost" id="undo-corner">Undo corner</button>
+            <button class="btn ghost" id="clear-area">Clear area</button>
+            <button class="btn ghost" id="into-wind">Land into the wind</button>
+          </div>
+          <div id="toolhint" class="toolhint">Pick a tool above, then click on the map.</div>
+          <div id="map" aria-label="Map"></div>
+          <form class="search" id="goto-form">
+            <input id="goto" type="text" placeholder="Go to: latitude, longitude (e.g. 58.38, 26.72)">
+            <button class="btn">Go</button>
+          </form>
+        </div>
+        <div class="side">
+          <div class="stats" id="plan-stats"></div>
+          <div id="det-box" class="help"></div>
+          <div id="form-mission" class="form"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== CAMERA -->
+    <section id="tab-camera" class="page">
+      <h1>Camera and recognition</h1>
+      <p class="lead">What the aircraft's computer (Raspberry Pi 4) looks for and when it takes
+        pictures. These answers go to the Pi in step 5.</p>
+      <div id="form-camera" class="form"></div>
+    </section>
+
+    <!-- ======================================================== SEND -->
+    <section id="tab-send" class="page">
+      <h1>Send to the aircraft</h1>
+      <p class="lead">Two parts of the aircraft get your answers: the <b>flight controller</b>
+        (flies the aircraft; USB cable) and the <b>aircraft computer</b> (the Raspberry Pi that
+        takes the pictures; its own Wi-Fi, or a USB stick). Do both after every change.
+        The aircraft must be disarmed.</p>
+      <div class="card">
+        <h2>A · Flight controller (USB cable)</h2>
+        <div class="q">Which USB port is the flight controller plugged into?</div>
+        <div class="inline">
+          <input id="fc-port" list="port-list" placeholder="COM3 or /dev/ttyACM0" aria-label="Flight controller port">
+          <datalist id="port-list"></datalist>
+          <button class="btn ghost" id="fc-refresh">Find ports</button>
+          <button class="btn" id="fc-info">Check connection</button>
+        </div>
+        <p class="help">Plug the USB cable into the flight controller and the battery in. Windows
+          shows it as COM3, COM4…; Linux as /dev/ttyACM0.</p>
+        <div class="row-btns">
+          <button class="btn primary" id="fc-params">1. Send the aircraft settings (parameters)</button>
+          <button class="btn primary" id="fc-script">2. Copy the GPS-loss script</button>
+          <button class="btn primary" id="fc-mission">3. Send the mission</button>
+        </div>
+        <p class="help">After steps 1-2 the first time, unplug the battery and USB for 10 s
+          (reboot) so the flight controller starts the script.</p>
+        <div class="result" id="fc-result" role="status"></div>
+        <details><summary>Or use Mission Planner / QGroundControl instead</summary>
+          <p class="help">Download the files and load them there (parameters: CONFIG &gt; Full
+            Parameter List &gt; Load from file; mission: PLAN &gt; Load).</p>
+          <div class="row-btns">
+            <button class="btn ghost" data-dl="params">Download parameters (.param)</button>
+            <button class="btn ghost" data-dl="mission">Download mission (.waypoints)</button>
+            <button class="btn ghost" data-dl="settings">Download Pi settings (settings.yaml)</button>
+          </div>
+        </details>
+      </div>
+      <div class="card">
+        <h2>B · Aircraft computer over Wi-Fi</h2>
+        <p class="help">Power the aircraft, wait one minute, then join this laptop to the aircraft's
+          Wi-Fi network (named <b>SILM-…</b>, with the password chosen when the Pi was set up).</p>
+        <div class="q">What is the Pi's address on its Wi-Fi?</div>
+        <div class="inline">
+          <input id="pi-address" value="10.42.0.1" aria-label="Pi address">
+          <button class="btn" id="pi-status">Check connection</button>
+          <button class="btn primary" id="pi-send">Send camera settings and mission</button>
+        </div>
+        <div class="result" id="pi-result" role="status"></div>
+        <details><summary>Show the aircraft computer's recent log</summary>
+          <button class="btn ghost" id="pi-log">Load log</button><pre id="pi-log-text" class="log"></pre>
+        </details>
+      </div>
+      <div class="card">
+        <h2>C · Aircraft computer with a USB stick (no Wi-Fi)</h2>
+        <p class="help">Use a USB stick named <b>SILM</b> (FAT32 or exFAT). Write to it here, plug it
+          into the aircraft's Pi and power on; after 10 seconds plug it back in here and press
+          "Read the stick".</p>
+        <div class="q">Where is the USB stick on this laptop?</div>
+        <div class="inline">
+          <input id="usb-path" list="drive-list" placeholder="E:\  or  /Volumes/SILM" aria-label="USB stick folder">
+          <datalist id="drive-list"></datalist>
+          <button class="btn ghost" id="usb-refresh">Find sticks</button>
+          <button class="btn primary" id="usb-write">Write settings to the stick</button>
+          <button class="btn" id="usb-read">Read the stick</button>
+        </div>
+        <div class="result" id="usb-result" role="status"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================== LAUNCH -->
+    <section id="tab-launch" class="page">
+      <h1>Launch</h1>
+      <p class="lead">There is no pilot link: once launched it flies the whole mission, lands
+        and switches itself off. Arm only with the aircraft in your hand, ready to go.</p>
+      <div class="card" id="wind-recap"></div>
+      <div class="card">
+        <h2>Checklist - tick every line</h2>
+        <ul class="checklist" id="checklist"></ul>
+      </div>
+      <div class="card">
+        <div class="q">Which USB port is the flight controller plugged into?</div>
+        <div class="inline">
+          <input id="fc-port-2" list="port-list" placeholder="COM3 or /dev/ttyACM0" aria-label="Flight controller port">
+          <button class="btn danger" id="arm" disabled>ARM for launch</button>
+          <button class="btn" id="disarm">Disarm</button>
+        </div>
+        <p class="help" id="arm-help">After arming: unplug the USB cable, hold it level and nose into
+          the wind, and throw firmly. The motor starts after the throw.</p>
+        <div class="result" id="arm-result" role="status"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================== SIM -->
+    <section id="tab-sim" class="page">
+      <h1>Simulator</h1>
+      <p class="lead">Fly this exact mission, with your aircraft settings and today's wind, in
+        ArduPilot's simulator. Halfway through, the GPS is jammed: it must turn back, land on the
+        strip and switch itself off. Do this before every new mission.</p>
+      <div class="card" id="sim-avail"></div>
+      <div class="card">
+        <div class="q">What should go wrong in the simulated flight?</div>
+        <select id="sim-fault" aria-label="Fault">
+          <option value="jam">GPS jammed (signal scrambled)</option>
+          <option value="disable">GPS lost completely</option>
+        </select>
+        <div class="q">For how long?</div>
+        <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div>
+        <div class="row-btns">
+          <button class="btn primary" id="sim-start">Start the simulated flight</button>
+          <button class="btn ghost" id="sim-stop">Stop</button>
+        </div>
+        <div class="result" id="sim-result" role="status"></div>
+        <div id="sim-checks"></div>
+        <img id="sim-track" alt="Simulated flight track" hidden>
+        <details open><summary>Progress</summary><pre id="sim-log" class="log"></pre></details>
+      </div>
+      <div class="card" id="sim-cmds-card" hidden>
+        <h2>Run it yourself in Ubuntu (WSL2)</h2>
+        <pre id="sim-cmds" class="log"></pre>
+      </div>
+    </section>
+
+    <!-- ======================================================== FLIGHTS -->
+    <section id="tab-flights" class="page wide">
+      <h1>Flights &amp; pictures</h1>
+      <div class="flights">
+        <div class="flist">
+          <div class="card tight">
+            <h2>Bring a flight to this laptop</h2>
+            <button class="btn" id="fl-from-pi">From the aircraft (Wi-Fi)…</button>
+            <button class="btn" id="fl-from-usb">From the USB stick…</button>
+            <div class="q small">Or from a folder (SD card, copied folder):</div>
+            <div class="inline"><input id="fl-folder" placeholder="Folder path" aria-label="Folder"><button class="btn ghost" id="fl-import">Import</button></div>
+            <div class="result" id="fl-result" role="status"></div>
+            <ul class="list" id="fl-remote"></ul>
+          </div>
+          <h2 class="sub">Flights on this laptop</h2>
+          <ul class="list" id="fl-list"></ul>
+        </div>
+        <div class="fview">
+          <div id="fl-empty" class="empty">Choose a flight on the left to see its pictures.</div>
+          <div id="fl-view" hidden>
+            <div class="fhead"><h2 id="fl-title"></h2>
+              <div class="row-btns"><a class="btn ghost" id="fl-geojson">Export map (GeoJSON)</a>
+              <a class="btn ghost" id="fl-csv">Export list (CSV)</a></div></div>
+            <div class="stats" id="fl-stats"></div>
+            <div class="chips" id="fl-chips"></div>
+            <div id="fl-map"></div>
+            <div class="grid" id="fl-grid"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="problems" id="problems" aria-label="Problems">
+    <h2>Before you fly</h2>
+    <ul id="problem-list"></ul>
+  </aside>
+</div>
+
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Picture">
+  <div class="lb-inner">
+    <button class="btn ghost lb-close" id="lb-close" aria-label="Close">✕</button>
+    <div class="lb-img"><img id="lb-img" alt=""><div id="lb-box" class="lb-box"></div></div>
+    <div class="lb-info" id="lb-info"></div>
+    <div class="row-btns"><button class="btn ghost" id="lb-prev">◀ Previous</button><button class="btn ghost" id="lb-next">Next ▶</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -248,6 +248,52 @@ class Sitl:
         return False
 
 
+def battery_cells(params: dict) -> int | None:
+    """Cell count from the parameter file (critical voltage is 3.3 V/cell)."""
+    crt = params.get("BATT_CRT_VOLT") or params.get("BATT_LOW_VOLT")
+    if not crt:
+        return None
+    per = 3.3 if params.get("BATT_CRT_VOLT") else 3.5
+    return max(1, int(round(float(crt) / per)))
+
+
+def sim_battery_mult(measured_v: float, mult_now: float, cells: int) -> float | None:
+    """BATT_VOLT_MULT that makes the simulator's battery read a full pack of
+    `cells` (4.2 V/cell); None if it already does (within 0.3 V)."""
+    target = 4.2 * cells
+    if measured_v <= 1.0 or abs(measured_v - target) <= 0.3:
+        return None
+    return mult_now * target / measured_v
+
+
+def match_sim_battery(s, params: dict) -> None:
+    """SITL's plane has a 3S battery; your file may be for 4S or 6S, and its
+    low/critical-voltage failsafes would then refuse to arm. Scale the
+    SIMULATOR's voltage reading to a full pack of your cell count (simulator
+    only - nothing in your files changes)."""
+    cells = battery_cells(params)
+    if not cells:
+        return
+    v, t0 = None, time.time()
+    while v is None and time.time() - t0 < 10:
+        msg = s.recv(["SYS_STATUS"], timeout=1)
+        if msg is not None and msg.voltage_battery not in (0, 65535):
+            v = msg.voltage_battery / 1000.0
+    mult = s.get_param("BATT_VOLT_MULT")
+    if v is None or not mult:
+        print("WARNING: could not read the simulator's battery voltage")
+        return
+    new = sim_battery_mult(v, mult, cells)
+    if new is None:
+        print(f"simulator battery reads {v:.1f} V = full {cells}S (matches your parameters)")
+        return
+    if s.set_param("BATT_VOLT_MULT", new):
+        print(f"simulator battery read {v:.1f} V; scaled to a full {cells}S pack "
+              f"({4.2 * cells:.1f} V) for your battery failsafes (simulator only)")
+    else:
+        print("WARNING: could not scale the simulator's battery voltage")
+
+
 def build_mission(args, home):
     """Items (items[0] = home) and (land_lat, land_lon, index of DO_LAND_START)."""
     from silm_recon import mavmission as mm
@@ -291,6 +337,7 @@ def run(args) -> int:
     bad = [n for n, v in params if not s.set_param(n, v)]
     if bad:
         print(f"WARNING: could not set {bad}")
+    match_sim_battery(s, dict(params))
 
     slm = s.get_param("SLM_ENABLE")
     if slm is None:
