@@ -395,6 +395,17 @@ User's answers to questions asked:
     is blocked here, so pip fell back to the standard CUDA torch 2.14.1
     (pinned via litert-torch) + nvidia libs, ~1 MB/s here; at 21:01 still
     downloading nvidia_cudnn. Result to be recorded when it ends.
+- **2.2.0 merged and released** (user: "merge it now" / "merge it but do the
+  testing regardless"): PR #4 squash-merged as 4b39006 after green CI; on main
+  onboard tests + app build green; release gs-v2.2.0 published 23:11 with
+  Setup .exe, windows/macos zips, linux tar.gz, source + model zips,
+  SHA256SUMS, and also `pi_software.zip` (the Pi update package from the
+  build folder; harmless, usable for a manual USB update). Branch restarted
+  from main afterwards.
+  - After the merge (on the branch, not yet in a release): the first full
+    training-tools install ran out of disk here ("No space left on device":
+    pip's cache doubled the space). Fix: `--no-cache-dir`, a disk-space
+    message, honest sizes (2-6 GB, keep ~8 GB free). Full install re-running.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
