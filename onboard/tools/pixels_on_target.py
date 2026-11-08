@@ -138,7 +138,7 @@ def main(argv=None) -> int:
             alt = max_altitude(a.object_m, fx, fw, imgsz, t, a.min_px, r)
             print(f"  imgsz {imgsz:4d}, {t}x{t} tiles, region {r:.0%} of the width: "
                   f"fly at or below {alt:5.0f} m")
-        print("  (more tiles / larger imgsz multiply the computing: on a Pi 3 that means a Coral)")
+        print("  (more tiles / larger imgsz multiply the computing: check the speed with tools/preflight.py on the Pi 4)")
     return 0 if pm >= a.min_px / 2 else 1
 
 

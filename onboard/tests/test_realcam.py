@@ -136,10 +136,20 @@ def test_preflight_required_fps_and_bench_run(tmp_path):
     cv2.imwrite(str(imgs / "a.jpg"), np.zeros((108, 192, 3), np.uint8))
     c = {"camera": {"source": "file", "device": str(imgs), "width": 192, "height": 108},
          "detector": {"enabled": False}, "georef": {"lens": "fisheye", "hfov_deg": 160},
-         "storage": {"output_dir": str(tmp_path / "out")}, "telemetry": {"connection": "x"}}
+         "storage": {"output_dir": str(tmp_path / "out")}, "telemetry": {"connection": "x"},
+         "activation": {}}
     p = tmp_path / "c.yaml"
     p.write_text(yaml.safe_dump(c))
     r = subprocess.run([sys.executable, os.path.join(tools, "preflight.py"), "--config", str(p),
-                        "--skip", "fc,gimbal"], capture_output=True, text=True)
+                        "--settings", str(tmp_path / "none.yaml"), "--skip", "fc,gimbal"],
+                       capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
     assert "[PASS] camera" in r.stdout and "[SKIP] model" in r.stdout and "0 FAIL" in r.stdout
+    # an incomplete configuration is a FAIL line, and the other parts are still checked
+    del c["activation"]
+    p.write_text(yaml.safe_dump(c))
+    r = subprocess.run([sys.executable, os.path.join(tools, "preflight.py"), "--config", str(p),
+                        "--settings", str(tmp_path / "none.yaml"), "--skip", "fc,gimbal"],
+                       capture_output=True, text=True)
+    assert r.returncode == 1 and "[FAIL] config" in r.stdout and "activation" in r.stdout
+    assert "[PASS] camera" in r.stdout

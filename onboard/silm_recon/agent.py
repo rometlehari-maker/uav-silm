@@ -109,6 +109,9 @@ class Agent:
         self.wifi_off_when_armed = bool(a.get("wifi_off_when_armed", True))
         self.wifi_back_on_after_s = float(a.get("wifi_back_on_after_s", 20))
         self.usb_mount = os.path.expanduser(a.get("usb_mount", "/mnt/silm_usb"))
+        # Only touch the (auto)mount point when a stick labelled SILM is plugged
+        # in: looking at an automount point with no stick stalls for seconds.
+        self.usb_device = a.get("usb_device", "/dev/disk/by-label/SILM")
         self.copy_flights_to_usb = bool(a.get("copy_flights_to_usb", True))
         self.restart_cmd = restart_cmd or RESTART_CMD
         self.wifi_cmd = wifi_cmd or WIFI_CMD
@@ -314,6 +317,8 @@ class Agent:
         return os.path.join(self.usb_mount, TRANSFER_DIR)
 
     def usb_present(self) -> bool:
+        if self.usb_device and not os.path.exists(self.usb_device):
+            return False
         return os.path.isdir(self.usb_mount) and (
             os.path.ismount(self.usb_mount) or os.path.isdir(self.usb_root()))
 

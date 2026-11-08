@@ -36,7 +36,7 @@ class FireDetector:
         self.detect_smoke = bool(cfg.get("detect_smoke", True))
         # Work on a downscaled copy: flames and smoke plumes are large, the
         # size thresholds are fractions of the frame, and a full 1080p frame
-        # costs a Pi 3 several times more for the same answer.
+        # costs the Pi several times more for the same answer.
         self.proc_width = int(cfg.get("proc_width", 640))
 
     def detect(self, frame_bgr: np.ndarray) -> list[FireHit]:

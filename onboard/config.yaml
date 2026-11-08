@@ -223,4 +223,5 @@ agent:
   wifi_off_when_armed: true
   wifi_back_on_after_s: 20      # disarmed and on the ground this long -> Wi-Fi on again
   usb_mount: /mnt/silm_usb      # where the stick labelled SILM is mounted
+  usb_device: /dev/disk/by-label/SILM   # present only while that stick is plugged in
   copy_flights_to_usb: true

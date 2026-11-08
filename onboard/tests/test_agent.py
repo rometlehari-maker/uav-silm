@@ -37,6 +37,7 @@ def env(tmp_path):
     base["status"] = {"path": str(tmp_path / "run" / "status.json")}
     base["storage"]["output_dir"] = str(tmp_path / "captures")
     base["agent"]["usb_mount"] = str(tmp_path / "usb")
+    base["agent"]["usb_device"] = ""            # no real /dev/disk/by-label in tests
     base["agent"]["wifi_back_on_after_s"] = 5
     cfgp = tmp_path / "config.yaml"
     cfgp.write_text(yaml.safe_dump(base))
@@ -301,3 +302,13 @@ def test_http_log_endpoint(http):
     _, a, rec, url = http
     assert "log" in json.loads(get(url + "/api/log")[1])
     assert rec.calls[-1][0] == "journalctl"
+
+
+def test_mount_point_not_touched_without_a_silm_labelled_stick(env):
+    tmp, a, _ = env
+    usb_settings(tmp)                               # files exist at the mount point...
+    a.usb_device = str(tmp / "dev" / "disk" / "by-label" / "SILM")   # ...but no stick
+    assert not a.usb_present() and not a.usb_tick()["imported"]
+    (tmp / "dev" / "disk" / "by-label").mkdir(parents=True)
+    (tmp / "dev" / "disk" / "by-label" / "SILM").write_text("")      # stick plugged in
+    assert a.usb_present() and a.usb_tick()["imported"]

@@ -1,0 +1,24 @@
+# SILM ground agent on the Raspberry Pi 4: settings in, flights out
+# (Wi-Fi hotspot API on port 8080 + USB stick labelled SILM).
+# Never talks to the flight controller. Installed by pi/install.sh.
+#   journalctl -u silm-agent -f
+
+[Unit]
+Description=SILM ground agent (settings in, flights out over Wi-Fi / USB stick)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@ONBOARD@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@VENV@/bin/python3 -m silm_recon.agent --config @ONBOARD@/config.yaml
+Restart=always
+RestartSec=3
+Nice=5
+MemoryMax=250M
+
+[Install]
+WantedBy=multi-user.target

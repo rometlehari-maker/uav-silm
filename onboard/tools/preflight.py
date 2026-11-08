@@ -258,7 +258,7 @@ def check_model(cfg, frame_size, alt_m, speed_mps):
 
 
 def check_system(cfg):
-    out = cfg.get("storage", {}).get("output_dir", "/home/pi/silm_captures")
+    out = os.path.expanduser(cfg.get("storage", {}).get("output_dir", "~/silm_captures"))
     os.makedirs(out, exist_ok=True)
     free = shutil.disk_usage(out).free / 1e9
     try:
@@ -292,8 +292,25 @@ def main(argv=None) -> int:
     ap.add_argument("--alt-m", type=float, default=100.0, help="mission altitude AGL")
     ap.add_argument("--speed-mps", type=float, default=19.0, help="mission ground speed")
     ap.add_argument("--skip", default="", help="comma list: camera,gimbal,fc,model,system")
+    ap.add_argument("--settings", default=None,
+                    help="Ground Station settings file (default ~/silm-settings/settings.yaml)")
     a = ap.parse_args(argv)
-    cfg = yaml.safe_load(open(a.config))
+    # the same configuration the flight program uses: config.yaml + settings.yaml
+    import run as run_mod  # noqa: E402
+    try:
+        cfg = run_mod.load_checked(a.config, a.settings)
+    except SystemExit as exc:          # invalid config: report it, check the rest anyway
+        report("config", "FAIL", str(exc).replace("\n", " "))
+        with open(a.config, encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh) or {}
+        cfg.setdefault("_settings_file", a.settings or "?")
+        cfg.setdefault("_settings_loaded", False)
+    if cfg.get("_settings_rejected"):
+        report("settings", "FAIL", "the Ground Station settings file was rejected: "
+               + "; ".join(cfg["_settings_rejected"]))
+    else:
+        report("settings", "PASS", f"{cfg['_settings_file']} "
+               + ("loaded" if cfg["_settings_loaded"] else "not present - config.yaml defaults"))
     skip = {s.strip() for s in a.skip.split(",") if s.strip()}
     print(f"preflight check ({a.config}, mission {a.alt_m:.0f} m at {a.speed_mps:.0f} m/s)")
     size = None

@@ -91,8 +91,8 @@ def validate_config(cfg: dict) -> list[str]:
         e.append(f"camera.source must be one of {', '.join(CAMERA_SOURCES)} (got {src!r})")
     if src == "rtsp" and not str(cfg["camera"].get("url") or "").startswith("rtsp://"):
         e.append("camera.url must start with rtsp://")
-    _num(e, cfg, "camera", "width", 160, 7680)
-    _num(e, cfg, "camera", "height", 120, 4320)
+    _num(e, cfg, "camera", "width", 32, 7680)
+    _num(e, cfg, "camera", "height", 32, 4320)
     det = cfg["detector"]
     if det.get("enabled", True):
         for k in ("model", "labels"):

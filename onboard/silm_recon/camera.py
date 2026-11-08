@@ -42,7 +42,7 @@ class CameraError(RuntimeError):
 
 def gstreamer_pipeline(url: str, decoder: str = "v4l2h264dec", latency_ms: int = 0) -> str:
     """Low-latency RTSP -> BGR appsink pipeline. `decoder` = v4l2h264dec
-    (Pi 3/4 hardware) or avdec_h264 (software, any machine)."""
+    (Pi 4 hardware) or avdec_h264 (software, any machine)."""
     return (f"rtspsrc location={url} latency={latency_ms} drop-on-latency=true ! "
             f"rtph264depay ! h264parse ! {decoder} ! videoconvert ! "
             f"video/x-raw,format=BGR ! appsink drop=true max-buffers=1 sync=false")

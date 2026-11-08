@@ -1,6 +1,9 @@
-# Install on the Raspberry Pi 3 (64-bit Raspberry Pi OS, Bookworm or later).
+# Python packages for the aircraft's Raspberry Pi 4 Model B (2 GB),
+# 64-bit Raspberry Pi OS (Bookworm or later).
 #
-#   sudo apt update
+# You don't normally install these by hand: pi/install.sh does everything
+# (system packages, this file, the model, services, Wi-Fi hotspot, USB stick).
+# By hand:
 #   sudo apt install -y python3-opencv python3-numpy python3-yaml python3-venv \
 #       gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
 #   python3 -m venv --system-site-packages ~/silm-venv
@@ -12,18 +15,15 @@
 #    opencv-python has no GStreamer and would shadow it. That's why it is not
 #    listed below, and why the venv uses --system-site-packages.
 #  * Bookworm refuses system-wide `pip install` ("externally managed
-#    environment"), hence the venv; systemd/silm-recon.service runs its python.
-#  * The TFLite interpreter: the detector accepts any of three backends and
-#    picks whichever is installed -- tflite-runtime (classic), ai-edge-litert
-#    (its current renamed successor), or full tensorflow. On a modern Pi OS,
-#    `pip install ai-edge-litert` is the reliable one; older setups use
-#    tflite-runtime (wheels: https://github.com/google-coral/pycoral/releases).
+#    environment"), hence the venv; the systemd services run its python.
+#  * The TFLite interpreter: the detector accepts tflite-runtime,
+#    ai-edge-litert (its current successor; has 64-bit ARM wheels for the Pi 4)
+#    or full tensorflow, whichever is installed.
 #  * picamera2 is only needed if camera.source == picamera (CSI camera).
 #  * For a Coral USB accelerator also install libedgetpu1-std + pycoral.
 #  * TRAINING/EXPORT deps (NOT needed on the Pi -- install on your training box):
 #      pip install ultralytics litert_torch
 #    See training/README.md.
-
 pymavlink>=2.4.37
 numpy>=1.21
 PyYAML>=5.4
