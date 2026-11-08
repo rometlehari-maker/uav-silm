@@ -191,7 +191,11 @@ User's answers to questions asked:
   `#downloads` (nav, menu, rail, ids list, footer, Resources "next"), new
   sources in the numbered list, nav breakpoint 1080 -> 1120 px.
   `tests/test_build_downloads.py` (6). Unpacked zip passes its own tests.
-  **The site deploys from `main`; these changes are on this branch until merged.**
+  Added a "Will it work on my aircraft?" checklist above the cards (fixed-wing
+  ArduPlane with scripting-capable H7/F7 board + airspeed sensor; NOT
+  multirotors, DJI/PX4/iNav, F4 boards). **User said "put it live": merged
+  into `main` via a pull request (the site deploys from `main`; repo has
+  `.nojekyll`, so files are served as-is, including `onboard/`).**
   To refresh after onboard changes: commit, `python3 onboard/tools/build_downloads.py`,
   commit `downloads/` + `index.html`.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
