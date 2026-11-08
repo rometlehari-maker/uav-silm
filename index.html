@@ -1750,26 +1750,10 @@
           <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-macos.zip">macOS (Apple silicon)<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
           <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-linux.tar.gz">Linux<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
         </div>
-        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The files below are for people who want the parts on their own.</p>
+        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The source and the model on their own are attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>; the two files below are for ArduPlane users who don't use the app.</p>
       </div>
       <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
       <div class="cards c2 dl rv">
-        <div>
-          <div class="card-k">Software · MIT + third-party</div>
-          <div class="card-t">UAV SILM software 2.1.0</div>
-          <div class="card-s">ZIP · 5.3 MB</div>
-          <p class="dl-what">Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.</p>
-          <a class="btn ghost dl-btn" href="downloads/uav-silm-software-2.1.0.zip" download>uav-silm-software-2.1.0.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>b63479d113b30d7882f9f0a29b5735e16648ebcb394fe623730002db45fa6a24</code></div>
-        </div>
-        <div>
-          <div class="card-k">Model · AGPL-3.0</div>
-          <div class="card-t">Farm recognition model silm_oi</div>
-          <div class="card-s">ZIP · 3.5 MB</div>
-          <p class="dl-what">The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.</p>
-          <a class="btn ghost dl-btn" href="downloads/silm-oi-farm-model-v1.zip" download>silm-oi-farm-model-v1.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>87da5932d2a5a123c7b86846568169e1957f4d207256288d48ece43e9d644c08</code></div>
-        </div>
         <div>
           <div class="card-k">ArduPilot · MIT</div>
           <div class="card-t">Flight controller settings</div>
@@ -1787,7 +1771,7 @@
           <div class="dl-hash"><span>SHA-256</span><code>84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315</code></div>
         </div>
       </div>
-      <p class="note rv">Version 2.1.0, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/1d196ee249fb0c1ad6529a60e740463bc243341f/onboard"><code>1d196ee249</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
+      <p class="note rv">Version 2.1.1, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/d092ace3bb3bad3b8ac60b0c39c79aa2bb5d2310/onboard"><code>d092ace3bb</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
       <!-- downloads:end -->
       <div class="tabs rv" data-tabs>
         <div class="tablist" role="tablist" aria-label="Using the downloads">
@@ -1799,18 +1783,18 @@
         <div class="panel" role="tabpanel">
           <div class="tblwrap"><table class="tbl"><thead><tr><th>You want to</th><th>Take</th></tr></thead><tbody>
             <tr><td>Plan and fly a survey, see the pictures</td><td>The <b>app</b> above. Its guided setup takes a new aircraft step by step to ready-to-fly; <code>GROUND_STATION.md</code> explains every tab.</td></tr>
-            <tr><td>Change the software, or run it from source</td><td>The software zip. Start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>; <code>FLIGHT_READY.md</code> describes the whole procedure.</td></tr>
+            <tr><td>Change the software, or run it from source</td><td>The source: on <a href="https://github.com/rometlehari-maker/uav-silm">GitHub</a>, or the software zip attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>. Start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>; <code>FLIGHT_READY.md</code> describes the whole procedure.</td></tr>
             <tr><td>Set up the Raspberry Pi 4</td><td>Nothing to download: the app's setup gives you one line to paste on the Pi.</td></tr>
             <tr><td>Only the flight controller settings</td><td>The <code>.param</code> file (Mission Planner: Full Parameter List, Load from file) and the <code>.lua</code> script (SD card, <code>APM/scripts</code>).</td></tr>
-            <tr><td>Recognise tractors and livestock</td><td>The model zip, or choose "Ready-made" on the Ground Station's Camera tab (it is already inside the software).</td></tr>
+            <tr><td>Recognise tractors and livestock</td><td>Choose "Ready-made" on the Ground Station's Camera tab: the model is inside the app. On its own it is attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>.</td></tr>
           </tbody></table></div>
           <p class="summary-box">Read before flying: the software is tested in ArduPilot's simulator but <b>not yet flown on a real aircraft</b>. Fully automatic flight without a radio link needs the EASA "specific" category (an operational authorisation from Transpordiamet in Estonia), and taking pictures of people and property has its own rules. It comes as is, without any warranty.</p>
         </div>
         <div class="panel" role="tabpanel">
-          <p>Each file's SHA-256 checksum is listed above. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
+          <p>Each file's SHA-256 checksum is listed above; for the app and the zips, in <code>SHA256SUMS.txt</code> on the <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">release page</a>. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Computer</th><th>Command (in the folder with the file)</th></tr></thead><tbody>
-            <tr><td>Windows</td><td><code>certutil -hashfile uav-silm-software-2.1.0.zip SHA256</code></td></tr>
-            <tr><td>macOS</td><td><code>shasum -a 256 uav-silm-software-2.1.0.zip</code></td></tr>
+            <tr><td>Windows</td><td><code>certutil -hashfile gps_denied_failsafe.param SHA256</code></td></tr>
+            <tr><td>macOS</td><td><code>shasum -a 256 gps_denied_failsafe.param</code></td></tr>
             <tr><td>Linux</td><td><code>sha256sum -c SHA256SUMS.txt --ignore-missing</code></td></tr>
           </tbody></table></div>
           <p class="note">The files are built from a published commit of our repository, always the same way, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py</code>.</p>
@@ -1828,7 +1812,7 @@
             <tr><td>Standard recognition model (downloaded on the Pi)</td><td>TensorFlow authors, COCO SSD MobileNet v1</td><td>Apache-2.0</td></tr>
             <tr><td>Python libraries (installed separately)</td><td>pymavlink, OpenCV, NumPy, LiteRT, PyYAML, pySerial and others</td><td>LGPL-3.0, Apache-2.0, BSD, MIT</td></tr>
           </tbody></table></div>
-          <p class="note">The full list, with every author and licence text, is in <code>THIRD_PARTY_NOTICES.md</code> inside the software zip. The four test photos in it are credited by name in <code>tests/data/oi_samples/samples.json</code>.</p>
+          <p class="note">The full list, with every author and licence text, is in <code>THIRD_PARTY_NOTICES.md</code>, in the app's folder and in the source. The four test photos in it are credited by name in <code>tests/data/oi_samples/samples.json</code>.</p>
         </div>
       </div>
     </div>
