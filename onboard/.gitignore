@@ -16,3 +16,7 @@ models/*_labels.txt
 training/practice/
 training/to_label/
 .venv/
+
+# the ready-made farm model is committed (4 MB; see models/README.md)
+!models/silm_oi.tflite
+!models/silm_oi_labels.txt

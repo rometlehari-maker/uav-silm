@@ -145,6 +145,16 @@ User's answers to questions asked:
   `head.Detect` kept float (HEAD_REGEX) -> scores match the .pt (ratio 1.01),
   4.4 MB, ~2x faster than float on x86. If the confidence check still fails,
   export.py falls back to the float model. Model input is NCHW (detector handles it).
+- **Ground Station: ready-made models** - `onboard/models/<name>.tflite` with a
+  `<name>.json` (title, finds, classes) + labels is offered on the Camera tab as
+  "Ready-made: ..." and sent to the Pi like a trained model (committed 610f0d1).
+  Plan: commit `models/silm_oi.tflite` (+labels, .json; .gitignore exceptions
+  added) and `tests/test_bundled_model.py` (blank picture -> no detections,
+  labels = classes.yaml, sample photos `tests/data/oi_samples/` CC BY 2.0 with
+  attribution from Open Images' image list - all 298 val photos are CC BY 2.0;
+  metadata in scratchpad `val_meta.csv`). Evaluation script: scratchpad
+  `eval_models.py` (also runs COCO SSD with cow/sheep/horse -> livestock).
+  Licence note to add: weights derive from Ultralytics YOLO11n (AGPL-3.0).
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
