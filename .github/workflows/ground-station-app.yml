@@ -88,6 +88,13 @@ jobs:
           merge-multiple: true
 
       # also under fixed names, so the website can always link to the latest
+      # the source and the model as zips: on the release, not in the repository
+      - name: Software and model zips
+        if: steps.v.outputs.skip != 'true'
+        run: |
+          python3 onboard/tools/build_downloads.py --release --out extra --commit "$GITHUB_SHA"
+          cp extra/*.zip dist/
+
       - name: Name the files and add checksums
         if: steps.v.outputs.skip != 'true'
         run: |
@@ -113,5 +120,6 @@ jobs:
             - **Windows:** `UAV-SILM-Ground-Station-Setup.exe` - double-click, no administrator rights needed. Windows may warn that the publisher is unknown (the app is not code-signed): More info, Run anyway.
             - **macOS (Apple silicon):** `UAV-SILM-Ground-Station-macos.zip` - unzip, drag to Applications. The first time, right-click the app and choose Open (it is not notarised).
             - **Linux:** `UAV-SILM-Ground-Station-linux.tar.gz` - unpack and run `./install.sh`.
+            - **Source:** `uav-silm-software-<version>.zip` (Ground Station, Raspberry Pi software, ArduPilot files, docs, tests; MIT + third-party). **Model only:** `silm-oi-farm-model-v1.zip` (AGPL-3.0).
 
             Check a download against `SHA256SUMS.txt`. Not yet flown on a real aircraft; see www.uavsilm.eu.

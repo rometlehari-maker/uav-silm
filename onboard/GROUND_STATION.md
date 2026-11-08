@@ -31,7 +31,7 @@ simulator and training need Python on the computer; their tabs tell you.
 
 **From the source** (developers, or the simulator on Linux/WSL): install
 **Python 3** (<https://www.python.org/downloads/>; on Windows tick **"Add
-python.exe to PATH"**), get the software (the website's software zip, GitHub
+python.exe to PATH"**), get the software (the software zip attached to each GitHub release, GitHub
 **Code → Download ZIP**, or `git clone https://github.com/rometlehari-maker/uav-silm`), then:
 
 | Computer | Do this |

@@ -232,6 +232,22 @@ User's answers to questions asked:
   - downloads/ rebuilt for 2.1.0; `tools/build_downloads.py` now deletes files
     of older versions and rewrites the software zip's name everywhere on the
     page (the checksum commands). Website app block checked: no errors, phone OK.
+  - **PUBLISHED (8 Nov):** PR rometlehari-maker/uav-silm#2 merged into main
+    (fe453a3); release **gs-v2.1.0** created by the workflow with
+    UAV-SILM-Ground-Station-Setup(-2.1.0).exe (20.8 MB), -windows.zip,
+    -macos.zip (20.4 MB), -linux.tar.gz (36 MB, CI build) and SHA256SUMS.txt;
+    website live (pages deploy succeeded). The website's app buttons use
+    releases/latest/download/<fixed name>. Next version: bump onboard/VERSION
+    and merge to main -> a new release is made automatically.
+    Still not done: seeing the app window on a real Windows/macOS screen (the
+    user should install it once and report).
+  - **Download zips moved off the website** (user agreed): the software zip
+    and model zip had been committed on every rebuild (51 MB of the 65 MB git
+    history). Now `downloads/` holds only the .param and .lua (+ sums), and the
+    release job runs `build_downloads.py --release` to attach both zips to each
+    GitHub release. VERSION 2.1.1 so main publishes a complete release.
+    The old zips are still in git history (51 MB); removing them needs a
+    history rewrite of main + force push - only if the user asks.
   - **User said yes** to publishing the release and putting the site live.
     Branch rebased onto main (PR #1 had merged) and force-with-lease pushed.
     Pushing a tag from this session is refused (HTTP 403: only the working
