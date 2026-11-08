@@ -1,15 +1,15 @@
 {
-  "version": "2.0.0",
-  "commit": "d1b2f093c4ff9d840b01432f3e721a8539b598ba",
-  "commit_short": "d1b2f093c4",
+  "version": "2.1.0",
+  "commit": "1e3f75f7c1959d6cfbe1deafe6b7957c6d226a12",
+  "commit_short": "1e3f75f7c1",
   "date": "2026-11-08",
   "files": [
     {
-      "name": "uav-silm-software-2.0.0.zip",
+      "name": "uav-silm-software-2.1.0.zip",
       "kind": "software",
-      "version": "2.0.0",
-      "bytes": 4500476,
-      "sha256": "074843d4959b6d10eede85cae97c6e3d189abf9307a0d2fbf0278a639748e3cb",
+      "version": "2.1.0",
+      "bytes": 5262285,
+      "sha256": "0b2009003084c6adbf666d4dfed1c2db0c32c33de4e8baeaf893312edcd9ab7c",
       "what": "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.",
       "licence": "MIT + third-party"
     },
@@ -17,15 +17,15 @@
       "name": "silm-oi-farm-model-v1.zip",
       "kind": "model",
       "version": "v1",
-      "bytes": 3519436,
-      "sha256": "9672ae516e96055cbebd7dad6640b3e70c797aec7a4473ab9a9c050e763ad9cc",
+      "bytes": 3519437,
+      "sha256": "06bede48c48e75c73ee51c856db277ee2e1e66718d16f03ebfe103e7395b8f8b",
       "what": "The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.",
       "licence": "AGPL-3.0"
     },
     {
       "name": "gps_denied_failsafe.param",
       "kind": "param",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "bytes": 7630,
       "sha256": "137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d",
       "what": "ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.",
@@ -34,7 +34,7 @@
     {
       "name": "silm_gps_loss.lua",
       "kind": "lua",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "bytes": 13595,
       "sha256": "84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315",
       "what": "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.",
