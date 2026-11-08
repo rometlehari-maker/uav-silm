@@ -51,9 +51,12 @@ LANDING_TYPES = {"belly": "Belly landing (on the fuselage)", "wheels": "On its w
 
 
 def Q(id, q, help="", type="number", unit="", min=None, max=None, step=None, options=None,
-      required=True, group="", tab=""):
+      required=True, group="", tab="", open=False):
+    """open=True: more choices are added at run time (your trained models and
+    their object types), so any simple name is accepted."""
     return {"id": id, "q": q, "help": help, "type": type, "unit": unit, "min": min, "max": max,
-            "step": step, "options": options, "required": required, "group": group, "tab": tab}
+            "step": step, "options": options, "required": required, "group": group, "tab": tab,
+            "open": open}
 
 
 QUESTIONS = [
@@ -138,11 +141,16 @@ QUESTIONS = [
       "planned into the wind.", unit="degrees", min=0, max=359, step=5, required=False,
       tab="mission", group="Wind today"),
     # ------------------------------------------------------------- recognition
+    Q("recognition.model", "Which recognition model should the aircraft use?",
+      "The standard model knows people and vehicles. Models you trained on the Training "
+      "tab know your own objects (tractor, combine ...).", "select",
+      options={"standard": "Standard model (people, cars, trucks ...)"}, open=True,
+      tab="camera", group="What to find"),
     Q("recognition.targets", "What should it look for?",
       "It photographs these. The standard model knows people and vehicles; farm and "
       "forestry objects need your trained model.", "multi",
       options={**{k: k for k in COCO_TARGETS}, **{k: f"{k} (trained model)" for k in FARM_TARGETS}},
-      tab="camera", group="What to find"),
+      open=True, tab="camera", group="What to find"),
     Q("recognition.fire", "Should it look for fire and smoke?",
       "A colour-based check that works without training. It also flags sunsets and "
       "red roofs, so check its pictures.", "bool", tab="camera", group="What to find"),
@@ -208,6 +216,7 @@ def default_project() -> dict:
         },
         "wind": {"speed_mps": None, "from_deg": None},
         "recognition": {
+            "model": "standard",
             "targets": ["person", "car", "truck"], "fire": True, "sensitivity": 45,
             "min_alt_m": 20, "save_all_frames": False, "frame_interval_s": 2,
         },
@@ -266,10 +275,13 @@ def _check_question(q, v, errors):
             errors.append(f"{q['q']} - {v:g} {q['unit']} is below the minimum {q['min']:g}")
         if q["max"] is not None and v > q["max"]:
             errors.append(f"{q['q']} - {v:g} {q['unit']} is above the maximum {q['max']:g}")
-    elif q["type"] == "select" and str(v) not in q["options"]:
+    elif q["type"] == "select" and str(v) not in q["options"] and not (
+            q.get("open") and re.fullmatch(r"[A-Za-z0-9_\-]{1,80}", str(v))):
         errors.append(f"{q['q']} - '{v}' is not one of the choices")
     elif q["type"] == "multi":
-        if not isinstance(v, list) or any(x not in q["options"] for x in v):
+        ok = lambda x: x in q["options"] or (q.get("open") and isinstance(x, str)  # noqa: E731
+                                             and re.fullmatch(r"[a-z0-9_ ]{1,40}", x))
+        if not isinstance(v, list) or not all(ok(x) for x in v):
             errors.append(f"{q['q']} - unknown choice in {v}")
     elif q["type"] == "bool" and not isinstance(v, bool):
         errors.append(f"{q['q']} - must be yes or no")
@@ -315,7 +327,7 @@ def validate(project: dict, for_launch: bool = False) -> tuple[list[str], list[s
     if not r.get("targets") and not r.get("fire"):
         warnings.append("Nothing to look for: no objects chosen and fire detection is off")
     farm = [t for t in r.get("targets") or [] if t in FARM_TARGETS]
-    if farm:
+    if farm and r.get("model", "standard") == "standard":
         warnings.append(f"{', '.join(farm)} need your trained model (the standard model "
                         f"can't see them) - see training/README.md")
     m = project.get("mission", {})
@@ -451,7 +463,8 @@ def make_settings(project: dict) -> dict:
         "gimbal": {"enabled": bool(c.get("gimbal"))},
         "targets": targets,
         "detector": {"enabled": bool(targets),
-                     "score_threshold": round(float(r.get("sensitivity", 45)) / 100.0, 2)},
+                     "score_threshold": round(float(r.get("sensitivity", 45)) / 100.0, 2),
+                     **model_settings(r.get("model", "standard"))},
         "fire": {"enabled": bool(r.get("fire")), "detect_smoke": bool(r.get("fire"))},
         "activation": {"min_alt_m": float(r.get("min_alt_m", 20))},
         "storage": {"save_all_frames": bool(r.get("save_all_frames")),
@@ -459,6 +472,17 @@ def make_settings(project: dict) -> dict:
         "mission_name": project.get("name", ""),
         "aircraft_name": project["aircraft"].get("name", ""),
     }
+
+
+PI_MODELS = "~/silm-settings/models"     # where the agent stores trained models on the Pi
+
+
+def model_settings(model: str) -> dict:
+    """detector.model/labels/format for the chosen model (standard = config.yaml's)."""
+    if not model or model == "standard":
+        return {}
+    return {"model": f"{PI_MODELS}/{model}.tflite", "labels": f"{PI_MODELS}/{model}_labels.txt",
+            "format": "yolo"}
 
 
 def settings_yaml(project: dict) -> str:

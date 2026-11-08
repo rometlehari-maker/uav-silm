@@ -182,3 +182,23 @@ ul.checklist input { width: 20px; height: 20px; flex: none; margin-top: 2px; }
   #map { height: 60vh; }
   header.top { flex-wrap: wrap; }
 }
+
+/* ---------- training */
+.train { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; }
+.drop { display: block; border: 2px dashed var(--line); border-radius: var(--radius); padding: 22px 12px;
+  text-align: center; color: var(--dim); cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+ul.thumbs { max-height: calc(100vh - 470px); overflow-y: auto; }
+ul.thumbs li { cursor: pointer; justify-content: flex-start; padding: 6px; }
+ul.thumbs img { width: 64px; height: 44px; object-fit: cover; border-radius: 4px; flex: none; }
+ul.thumbs .st { font-size: 12px; }
+.st.todo { color: var(--warn); } .st.done { color: var(--ok); }
+.annot { position: relative; display: inline-block; max-width: 100%; user-select: none; cursor: crosshair; line-height: 0; }
+.annot img { max-width: 100%; max-height: 62vh; display: block; border-radius: 6px; }
+.abox { position: absolute; border: 2px solid; box-shadow: 0 0 0 1px rgba(0,0,0,.6); cursor: pointer; }
+.abox span { position: absolute; left: -2px; top: -20px; font-size: 12px; line-height: 18px; padding: 0 5px;
+  color: #000; border-radius: 3px; white-space: nowrap; }
+.abox.sel { border-width: 3px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #000; }
+table.cls { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 6px 0 10px; }
+table.cls td, table.cls th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+@media (max-width: 900px) { .train { grid-template-columns: 1fr; } }

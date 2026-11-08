@@ -67,6 +67,11 @@ def send_settings(address: str, settings_text: str, project: dict, mission_wpl: 
     return _request(address, "/api/settings", payload, timeout=30)
 
 
+def send_model(address: str, payload: dict) -> dict:
+    """A trained model (+ labels) to the Pi: {name, tflite_b64, labels}."""
+    return _request(address, "/api/model", payload, timeout=120)
+
+
 def flights(address: str) -> list:
     return _request(address, "/api/flights").get("flights", [])
 
@@ -138,7 +143,9 @@ def candidate_drives() -> list[str]:
     return found
 
 
-def usb_write(stick: str, settings_text: str, project: dict, mission_wpl: str | None) -> dict:
+def usb_write(stick: str, settings_text: str, project: dict, mission_wpl: str | None,
+              extra_files: dict | None = None) -> dict:
+    """extra_files: {relative path on the stick (under to_aircraft/): local file}."""
     if not stick or not os.path.isdir(stick):
         raise PiError(f"the USB stick folder {stick!r} does not exist - plug it in and pick it")
     d = os.path.join(stick, TRANSFER_DIR, "to_aircraft")
@@ -157,6 +164,12 @@ def usb_write(stick: str, settings_text: str, project: dict, mission_wpl: str | 
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, os.path.join(d, name))
+    for rel, src in (extra_files or {}).items():
+        dst = os.path.join(d, *rel.split("/"))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(src, dst + ".part")
+        os.replace(dst + ".part", dst)
+        files[rel] = ""
     with open(os.path.join(d, "README.txt"), "w", encoding="utf-8") as fh:
         fh.write("Plug this stick (named SILM) into the aircraft's Raspberry Pi, power it on and\n"
                  "wait 10 seconds. The Pi imports these settings and writes import_result.json\n"

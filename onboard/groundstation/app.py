@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, flights, pilink  # noqa: E402
+from groundstation import fc, flights, pilink, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -72,17 +72,43 @@ class Station:
         home = os.path.join(os.path.expanduser("~"), "SILM")
         self.library = library or os.environ.get("SILM_LIBRARY") or os.path.join(home, "flights")
         self.projects = projects or os.environ.get("SILM_PROJECTS") or os.path.join(home, "projects")
+        self.training_root = os.environ.get("SILM_TRAINING") or os.path.join(
+            os.path.dirname(self.projects), "training")
         os.makedirs(self.library, exist_ok=True)
         os.makedirs(self.projects, exist_ok=True)
         self.camera = camera_from_config()
         self.sim = sim or SimRunner()
+        self.dataset = training.Dataset(self.training_root)
+        self.trainer = training.Trainer(os.path.join(self.training_root, "models"))
 
     # ---------------------------------------------------------- meta
     def meta(self) -> dict:
         return {"version": software_version(), "questions": P.QUESTIONS,
                 "default_project": P.default_project(), "max_wind_mps": P.MAX_WIND_MPS,
                 "target_sizes": P.TARGET_SIZES, "library": self.library,
-                "projects_dir": self.projects, "sim": self.sim.available()}
+                "projects_dir": self.projects, "sim": self.sim.available(),
+                "models": self.trainer.list_models(), "training_classes": self.dataset.classes()}
+
+    # ---------------------------------------------------------- training
+    def train_state(self) -> dict:
+        return {"dataset": self.dataset.name, "classes": self.dataset.classes(),
+                "images": self.dataset.list_images(), "stats": self.dataset.stats(),
+                "presets": {k: v["label"] for k, v in training.PRESETS.items()},
+                "tools": training.tools_available(), "models": self.trainer.list_models(),
+                "job": self.trainer.status()}
+
+    def train_upload(self, files: list) -> dict:
+        added, failed = [], []
+        for f in files or []:
+            try:
+                added.append(self.dataset.add_image_b64(f.get("name", "picture.jpg"), f.get("data", "")))
+            except (ValueError, TypeError) as exc:
+                failed.append(str(exc))
+            except Exception as exc:          # broken base64 etc.
+                failed.append(f"{f.get('name')}: {exc}")
+        return {"ok": bool(added) and not failed, "added": added, "failed": failed,
+                "message": f"{len(added)} picture(s) added" + (
+                    "; not added: " + "; ".join(failed) if failed else "")}
 
     # ---------------------------------------------------------- projects
     def _ppath(self, name: str) -> str:
@@ -156,6 +182,9 @@ class Station:
                                     f"INTO the wind (towards {hd:.0f} degrees) - use 'Land into "
                                     f"the wind' on the Mission tab")
         errors += [f"Aircraft computer settings: {e}" for e in P.check_settings_against_config(project)]
+        mdl = (project.get("recognition") or {}).get("model", "standard")
+        if mdl != "standard" and mdl not in {m["name"] for m in self.trainer.list_models()}:
+            errors.append(f"The recognition model '{mdl}' is not on this laptop (Training tab)")
         return {"ok": not errors, "errors": errors, "warnings": warnings, "plan": plan_out,
                 "cg": P.cg_advice(project["aircraft"]),
                 "params": P.make_params(project, plan) if plan else P.make_params(project)}
@@ -218,14 +247,34 @@ class Station:
         raise ValueError(f"unknown action {action}")
 
     # ---------------------------------------------------------- Pi
+    def _model(self, project: dict) -> str | None:
+        m = (project.get("recognition") or {}).get("model", "standard")
+        return None if m == "standard" else m
+
     def pi_send(self, body: dict) -> dict:
         o = self.outputs(body.get("project") or {})
-        return pilink.send_settings(body.get("address"), o["settings_text"], o["project"],
-                                    o["mission_wpl"])
+        model = self._model(o["project"])
+        if model:        # the model first, so the new settings find it installed
+            r = pilink.send_model(body.get("address"),
+                                  training.model_payload(self.trainer.models_dir, model))
+            if not r.get("ok"):
+                return r
+        r = pilink.send_settings(body.get("address"), o["settings_text"], o["project"],
+                                 o["mission_wpl"])
+        if model and r.get("ok"):
+            r["message"] = f"model '{model}' and " + r["message"]
+        return r
 
     def usb_write(self, body: dict) -> dict:
         o = self.outputs(body.get("project") or {})
-        return pilink.usb_write(body.get("path"), o["settings_text"], o["project"], o["mission_wpl"])
+        model = self._model(o["project"])
+        files = None
+        if model:
+            base = os.path.join(self.trainer.models_dir, model)
+            files = {f"models/{model}.tflite": base + ".tflite",
+                     f"models/{model}_labels.txt": base + "_labels.txt"}
+        return pilink.usb_write(body.get("path"), o["settings_text"], o["project"],
+                                o["mission_wpl"], extra_files=files)
 
     # ---------------------------------------------------------- simulator
     def sim_start(self, body: dict) -> dict:
@@ -310,6 +359,19 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, flights.to_csv(fl), "text/csv",
                                       {"Content-Disposition": f'attachment; filename="{name}.csv"'})
                 return self._send(200, fl)
+            if path == "/api/train/state":
+                return self._send(200, st.train_state())
+            if path == "/api/train/status":
+                return self._send(200, st.trainer.status())
+            if path == "/api/train/img":
+                try:
+                    return self._file(st.dataset.image_path((qs.get("n") or [""])[0]))
+                except FileNotFoundError:
+                    return self._send(404, {"error": "not found"})
+            if path == "/api/train/boxes":
+                n = (qs.get("n") or [""])[0]
+                st.dataset.image_path(n)
+                return self._send(200, {"name": n, "boxes": st.dataset.get_boxes(n)})
             if path == "/api/sim/status":
                 return self._send(200, st.sim.status())
             if path == "/api/sim/track.png":
@@ -369,6 +431,21 @@ class Handler(BaseHTTPRequestHandler):
                 names = pilink.import_folder(body.get("folder"), st.library)
                 return self._send(200, {"ok": True, "names": names,
                                         "message": f"imported {len(names)} flight(s)"})
+            if path == "/api/train/upload":
+                return self._send(200, st.train_upload(body.get("files")))
+            if path == "/api/train/class":
+                return self._send(200, {"ok": True, "classes": st.dataset.add_class(body.get("name"))})
+            if path == "/api/train/boxes":
+                n = st.dataset.set_boxes(body.get("name"), body.get("boxes") or [])
+                return self._send(200, {"ok": True, "boxes": n})
+            if path == "/api/train/delete":
+                st.dataset.delete_image(body.get("name"))
+                return self._send(200, {"ok": True})
+            if path == "/api/train/start":
+                return self._send(200, st.trainer.start(st.dataset, body.get("preset", "quick"),
+                                                        body.get("device") or "cpu"))
+            if path == "/api/train/stop":
+                return self._send(200, st.trainer.stop())
             if path == "/api/sim/start":
                 return self._send(200, st.sim_start(body))
             if path == "/api/sim/stop":
@@ -379,6 +456,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "text": commands_for(
                     SAFE_NAME.sub("", pr["name"]).replace(" ", "_"), pr["mission"]["launch"],
                     float(w.get("speed_mps") or 0), float(w.get("from_deg") or 0))})
+        except FileNotFoundError as exc:
+            return self._send(200, {"ok": False, "message": f"not found: {exc}"})
         except (fc.FCError, pilink.PiError, ValueError, KeyError, TypeError, OSError) as exc:
             return self._send(200, {"ok": False, "message": str(exc)})
         except Exception as exc:

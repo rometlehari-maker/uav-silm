@@ -84,7 +84,8 @@ def test_default_project_needs_only_the_cg_and_wind():
     ({"recognition__min_alt_m": 150}, "never take any"),
     ({"mission__alt_m": 150}, "above the 120 m limit"),
     ({"aircraft__weight_g": "heavy"}, "is not a number"),
-    ({"recognition__targets": ["dragon"]}, "unknown choice"),
+    ({"recognition__targets": ["Bad Name!"]}, "unknown choice"),
+    ({"recognition__model": "../../etc"}, "not one of the choices"),
 ])
 def test_wrong_answers_are_errors(over, words):
     errors, _ = P.validate(full_project(**over))
@@ -550,3 +551,158 @@ def test_http_errors_are_messages_not_crashes(http):
 
 import urllib.error  # noqa: E402
 import urllib.parse  # noqa: E402
+
+
+# ------------------------------------------------------------- teaching new objects
+
+from groundstation import training  # noqa: E402
+
+
+def jpeg_bytes(w=160, h=120, val=90):
+    import cv2
+    import numpy as np
+    ok, buf = cv2.imencode(".jpg", np.full((h, w, 3), val, np.uint8))
+    return buf.tobytes()
+
+
+def test_dataset_pictures_boxes_and_export(tmp_path):
+    ds = training.Dataset(str(tmp_path), "fields")
+    classes = ds.classes()
+    assert classes[:5] == ["person", "car", "truck", "tractor", "combine"]
+    assert ds.add_class("Crop Sprayer") == classes + ["crop_sprayer"]
+    assert ds.add_class("crop_sprayer")[-1] == "crop_sprayer"        # no duplicate
+    with pytest.raises(ValueError):
+        ds.add_class("  ")
+    a = ds.add_image("../../tractor 1.jpg", jpeg_bytes(val=10))
+    assert a.startswith("tractor_1_") and a.endswith(".jpg") and "/" not in a
+    assert ds.add_image("again.jpg", jpeg_bytes(val=10)) == a          # same picture: one file
+    b = ds.add_image_b64("empty.png", "data:image/png;base64," + __import__("base64").b64encode(
+        __import__("cv2").imencode(".png", __import__("numpy").zeros((50, 60, 3), "uint8"))[1].tobytes()).decode())
+    with pytest.raises(ValueError, match="not a JPEG or PNG"):
+        ds.add_image("evil.jpg", b"#!/bin/sh\nrm -rf /")
+    assert ds.get_boxes(a) is None                        # not looked at yet
+    n = ds.set_boxes(a, [{"cls": 3, "x0": 0.6, "y0": 0.5, "x1": 0.2, "y1": 0.1},   # drawn backwards
+                         {"cls": 4, "x0": 0.5, "y0": 0.5, "x1": 0.5005, "y1": 0.9},  # a click
+                         {"cls": 4, "x0": -0.2, "y0": 0.7, "x1": 0.3, "y1": 1.4}])   # off the edge
+    assert n == 2
+    bx = ds.get_boxes(a)
+    assert bx[0]["cls"] == 3 and bx[0]["x0"] == pytest.approx(0.2) and bx[0]["y1"] == pytest.approx(0.5)
+    assert bx[1]["x0"] == pytest.approx(0.0) and bx[1]["y1"] == pytest.approx(1.0)
+    with pytest.raises(ValueError, match="unknown object type"):
+        ds.set_boxes(a, [{"cls": 99, "x0": 0, "y0": 0, "x1": 1, "y1": 1}])
+    ds.set_boxes(b, [])                                   # "nothing here"
+    st = ds.stats()
+    assert st["pictures"] == 2 and st["labelled"] == 2 and st["empty"] == 1
+    assert st["per_class"]["tractor"] == {"boxes": 1, "pictures": 1} and not st["ready"]
+    assert any("add at least 30" in x for x in st["advice"])
+    data = yaml.safe_load(open(ds.export()))
+    assert data["names"][3] == "tractor" and data["names"][len(classes)] == "crop_sprayer"
+    lbl = os.path.join(data["path"], "labels")
+    files = [f for sub in ("train", "val") for f in os.listdir(os.path.join(lbl, sub))]
+    assert len(files) >= 2
+    with pytest.raises(FileNotFoundError):
+        ds.image_path("../../../etc/passwd")
+    ds.delete_image(b)
+    assert len(ds.list_images()) == 1
+
+
+def test_dataset_needs_marked_pictures_to_export(tmp_path):
+    ds = training.Dataset(str(tmp_path))
+    ds.add_image("x.jpg", jpeg_bytes())
+    with pytest.raises(ValueError, match="no marked pictures"):
+        ds.export()
+
+
+def fake_model(tmp_dir, name="farm_v1", classes=("tractor", "combine")):
+    os.makedirs(tmp_dir, exist_ok=True)
+    real = os.path.join(ONBOARD, "models", "coco_ssd_mobilenet_v1_quant.tflite")
+    data = open(real, "rb").read() if os.path.isfile(real) else b"\x1c\x00\x00\x00TFL3" + bytes(5000)
+    open(os.path.join(tmp_dir, name + ".tflite"), "wb").write(data)
+    open(os.path.join(tmp_dir, name + "_labels.txt"), "w").write("\n".join(classes) + "\n")
+    json.dump({"classes": list(classes), "map50": 0.71}, open(os.path.join(tmp_dir, name + ".json"), "w"))
+    return data
+
+
+def test_trained_model_goes_to_the_pi_over_wifi(station, pi):
+    agent, addr, tmp, _ = pi
+    data = fake_model(station.trainer.models_dir)
+    p = full_project(recognition__model="farm_v1", recognition__targets=["tractor", "combine"])
+    assert station.check(p)["ok"], station.check(p)["errors"]
+    assert P.make_settings(p)["detector"]["model"] == "~/silm-settings/models/farm_v1.tflite"
+    r = station.pi_send({"project": p, "address": addr})
+    assert r["ok"] and "farm_v1" in r["message"]
+    on_pi = os.path.join(agent.models_dir(), "farm_v1.tflite")
+    assert open(on_pi, "rb").read() == data
+    assert open(os.path.join(agent.models_dir(), "farm_v1_labels.txt")).read() == "tractor\ncombine\n"
+    assert "farm_v1" in pilink.status(addr)["models"]
+    # the Pi's flight program resolves the ~ path to that file
+    import run
+    cfg = run.load_checked(os.path.join(ONBOARD, "config.yaml"), agent.settings_file)
+    assert cfg["detector"]["model"] == os.path.expanduser("~/silm-settings/models/farm_v1.tflite")
+    assert cfg["detector"]["format"] == "yolo" and cfg["targets"] == ["tractor", "combine"]
+
+
+def test_trained_model_goes_to_the_pi_by_usb_stick(station, pi):
+    agent, _, tmp, _ = pi
+    fake_model(station.trainer.models_dir)
+    stick = tmp / "stick"
+    stick.mkdir()
+    p = full_project(recognition__model="farm_v1", recognition__targets=["tractor"])
+    r = station.usb_write({"project": p, "path": str(stick)})
+    assert r["ok"] and "models/farm_v1.tflite" in r["files"]
+    done = agent.usb_tick()
+    assert done["models"] == ["farm_v1"] and done["imported"]
+    assert agent.list_models() == ["farm_v1"]
+    assert agent.usb_tick().get("models") == []              # same model: not reinstalled
+
+
+def test_unknown_model_is_an_error(station):
+    r = station.check(full_project(recognition__model="never_trained"))
+    assert any("not on this laptop" in e for e in r["errors"])
+
+
+def test_pi_refuses_a_file_that_is_not_a_model(pi):
+    agent, addr, tmp, _ = pi
+    r = pilink.send_model(addr, {"name": "x", "tflite_b64": __import__("base64").b64encode(
+        b"MZ" + bytes(5000)).decode(), "labels": "a\n"})
+    assert not r["ok"] and "not a TensorFlow Lite" in r["message"]
+    r = pilink.send_model(addr, {"name": "x", "tflite_b64": "!!!notbase64", "labels": "a"})
+    assert not r["ok"] and "damaged" in r["message"]
+    from silm_recon.status import write_status
+    write_status(agent.status_file, {"armed": True})
+    good = fake_model(str(tmp / "m"))
+    r = pilink.send_model(addr, {"name": "x", "tflite_b64": __import__("base64").b64encode(good).decode(),
+                                 "labels": "a\n"})
+    assert not r["ok"] and "ARMED" in r["message"]
+
+
+def test_training_without_tools_explains_how_to_install(station, monkeypatch):
+    monkeypatch.setattr(training, "tools_available",
+                        lambda: {"available": False, "why": "the training tools are not installed"})
+    st = station.train_state()
+    assert st["tools"]["available"] is False
+    r = station.trainer.start(station.dataset)
+    assert not r["ok"] and "not installed" in r["message"]
+
+
+def test_http_training_endpoints(http):
+    url, st = http
+    import base64
+    r, _ = call(url + "/api/train/upload", {"files": [
+        {"name": "combine.jpg", "data": "data:image/jpeg;base64," + base64.b64encode(jpeg_bytes()).decode()},
+        {"name": "notes.jpg", "data": base64.b64encode(b"hello").decode()}]})
+    assert r["added"] and r["failed"] and "not a JPEG" in r["message"]
+    name = r["added"][0]
+    r, _ = call(url + "/api/train/boxes", {"name": name, "boxes": [{"cls": 4, "x0": .1, "y0": .1, "x1": .5, "y1": .5}]})
+    assert r["ok"] and r["boxes"] == 1
+    b, _ = call(url + "/api/train/boxes?n=" + urllib.parse.quote(name))
+    assert b["boxes"][0]["cls"] == 4
+    img = urllib.request.urlopen(url + "/api/train/img?n=" + urllib.parse.quote(name), timeout=5)
+    assert img.headers["Content-Type"] == "image/jpeg"
+    state, _ = call(url + "/api/train/state")
+    assert state["stats"]["per_class"]["combine"]["boxes"] == 1 and "quick" in state["presets"]
+    r, _ = call(url + "/api/train/class", {"name": "sprayer"})
+    assert r["classes"][-1] == "sprayer"
+    r, _ = call(url + "/api/train/boxes", {"name": "../../x.jpg", "boxes": []})
+    assert r["ok"] is False
+    assert call(url + "/api/train/delete", {"name": name})[0]["ok"]

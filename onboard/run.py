@@ -35,6 +35,8 @@ def resolve(cfg: dict, base_dir: str) -> dict:
     det = cfg.get("detector") or {}
     for k in ("model", "labels"):
         p = det.get(k)
+        if p:
+            p = det[k] = os.path.expanduser(p)
         if p and not os.path.isabs(p):
             det[k] = os.path.join(base_dir, p)
     return cfg

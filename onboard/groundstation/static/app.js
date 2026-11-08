@@ -44,12 +44,23 @@ function showTab(name) {
   if (name === "flights") { loadLibrary(); setTimeout(() => flMap && flMap.invalidateSize(), 50); }
   if (name === "sim") simPoll();
   if (name === "launch") renderLaunch();
+  if (name === "train") loadTrain();
   if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
 }
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
 /* ------------------------------------------------------------------ forms */
+function optionsFor(q) {
+  if (!q.open) return q.options;
+  const o = Object.assign({}, q.options);
+  if (q.id === "recognition.model") (META.models || []).forEach((m) => (o[m.name] = `Your model: ${m.name}` + (m.classes ? ` (${m.classes.join(", ")})` : "")));
+  if (q.id === "recognition.targets") (META.training_classes || []).forEach((c) => { if (!(c in o)) o[c] = `${c} (your model)`; });
+  const v = getv(q.id);
+  (Array.isArray(v) ? v : v != null ? [v] : []).forEach((x) => { if (!(x in o)) o[x] = x; });
+  return o;
+}
 function fieldHTML(q) {
+  q = Object.assign({}, q, { options: optionsFor(q) });
   const id = "f-" + q.id.replace(".", "-");
   let input = "";
   const v = getv(q.id);
@@ -533,3 +544,157 @@ $("fl-import").addEventListener("click", async () => {
   loadDone(); renderForms(); drawPlaces(); fitMission(); listProjects(); runCheck();
   showTab((location.hash || "#start").slice(1));
 })();
+
+/* ------------------------------------------------------------------ training */
+const TR = { state: null, cur: null, boxes: [], sel: -1, cls: 0, imgs: [] };
+const CLS_COLORS = ["#ffd400", "#00e5ff", "#ff4081", "#76ff03", "#ff9100", "#e040fb", "#18ffff", "#ffea00", "#69f0ae", "#ff5252", "#b388ff", "#64ffda", "#ffab40", "#eeff41", "#40c4ff"];
+const clsColor = (c) => CLS_COLORS[c % CLS_COLORS.length];
+async function loadTrain(keep) {
+  TR.state = await api("/api/train/state");
+  const st = TR.state;
+  META.models = st.models; META.training_classes = st.classes;
+  $("tr-classes").innerHTML = st.classes.map((c, i) => `<button class="chip ${i === TR.cls ? "on" : ""}" role="radio" aria-checked="${i === TR.cls}" data-c="${i}"><i style="background:${clsColor(i)}"></i>${esc(c)}</button>`).join("");
+  $("tr-classes").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { TR.cls = +b.dataset.c; loadTrainClasses(); }));
+  TR.imgs = st.images;
+  $("tr-count").textContent = `(${st.images.length})`;
+  $("tr-images").innerHTML = st.images.map((im) => `<li data-n="${esc(im.name)}" class="${TR.cur === im.name ? "active" : ""}"><img loading="lazy" src="/api/train/img?n=${encodeURIComponent(im.name)}" alt="">
+    <span><span class="st ${im.labelled ? "done" : "todo"}">${im.labelled ? (im.boxes ? "✓ " + im.boxes + " box" + (im.boxes > 1 ? "es" : "") : "✓ nothing here") : "not marked yet"}</span><br><span class="meta">${esc(im.classes.join(", "))}</span></span></li>`).join("")
+    || '<li class="meta">No pictures yet.</li>';
+  $("tr-images").querySelectorAll("li[data-n]").forEach((li) => li.addEventListener("click", () => openTrainImage(li.dataset.n)));
+  const s = st.stats, used = Object.entries(s.per_class).filter(([, v]) => v.boxes);
+  $("tr-stats").innerHTML = (used.length ? `<table class="cls"><tr><th>Object type</th><th>Pictures</th><th>Boxes</th></tr>` +
+    used.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${v.pictures}</td><td>${v.boxes}</td></tr>`).join("") + `</table>` : "<p class='help'>No objects marked yet.</p>") +
+    (s.advice.length ? `<ul class="msgs">${s.advice.map((a) => `<li class="warn">${esc(a)}</li>`).join("")}</ul>` : s.ready ? `<p class="result ok">✓ Enough pictures to train.</p>` : "");
+  $("tr-preset").innerHTML = Object.entries(st.presets).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
+  $("tr-models").innerHTML = st.models.map((m) => `<li><span><b>${esc(m.name)}</b><br><span class="meta">${esc((m.classes || []).join(", "))}${m.map50 != null ? " · accuracy (mAP50) " + Math.round(m.map50 * 100) + " %" : ""} · ${m.size_mb} MB</span></span>
+    <button class="btn" data-use="${esc(m.name)}">Use on the aircraft</button></li>`).join("") || '<li class="meta">None yet.</li>';
+  $("tr-models").querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
+    P.recognition.model = b.dataset.use; renderForms(); changed();
+    toast(`The aircraft will use '${b.dataset.use}'. Choose what to look for on the Camera tab, then send it (step 5).`, 6000);
+  }));
+  if (!st.tools.available) setResult("tr-result", { ok: false, message: st.tools.why });
+  trainPoll();
+  if (!keep && !TR.cur && st.images.length) openTrainImage((st.images.find((i) => !i.labelled) || st.images[0]).name);
+}
+function loadTrainClasses() {
+  $("tr-classes").querySelectorAll(".chip").forEach((b) => { const on = +b.dataset.c === TR.cls; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  if (TR.sel >= 0) { TR.boxes[TR.sel].cls = TR.cls; drawBoxes(); saveBoxes(); }
+}
+$("tr-addclass").addEventListener("click", async () => {
+  const r = await api("/api/train/class", { name: $("tr-newclass").value });
+  if (!r.ok) return toast(r.message, 5000);
+  $("tr-newclass").value = ""; TR.cls = r.classes.length - 1; loadTrain(true);
+});
+async function uploadFiles(files) {
+  const list = [...files].filter((f) => /\.(jpe?g|png)$/i.test(f.name));
+  if (!list.length) return setResult("tr-upload-result", { ok: false, message: "Choose JPEG or PNG pictures." });
+  let added = 0, failed = [];
+  for (let i = 0; i < list.length; i += 5) {
+    setResult("tr-upload-result", null, `Adding pictures ${i + 1}-${Math.min(i + 5, list.length)} of ${list.length}…`);
+    const batch = await Promise.all(list.slice(i, i + 5).map((f) => new Promise((res) => { const r = new FileReader(); r.onload = () => res({ name: f.name, data: r.result }); r.readAsDataURL(f); })));
+    const r = await api("/api/train/upload", { files: batch });
+    added += (r.added || []).length; failed = failed.concat(r.failed || []);
+  }
+  setResult("tr-upload-result", { ok: !failed.length, message: `${added} picture(s) added.` + (failed.length ? " Not added: " + failed.join("; ") : "") });
+  loadTrain();
+}
+$("tr-files").addEventListener("change", (e) => uploadFiles(e.target.files));
+const drop = $("tr-drop");
+["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => uploadFiles(e.dataTransfer.files));
+
+async function openTrainImage(name) {
+  TR.cur = name; TR.sel = -1;
+  const r = await api("/api/train/boxes?n=" + encodeURIComponent(name));
+  TR.boxes = (r.boxes || []).map((b) => Object.assign({}, b));
+  $("tr-empty").hidden = true; $("tr-editor").hidden = false;
+  $("tr-img").src = "/api/train/img?n=" + encodeURIComponent(name);
+  $("tr-img").onload = drawBoxes;
+  $("tr-box-result").textContent = r.boxes === null ? "Not marked yet." : r.boxes.length ? "" : "Marked: nothing here.";
+  $("tr-images").querySelectorAll("li[data-n]").forEach((li) => li.classList.toggle("active", li.dataset.n === name));
+}
+function drawBoxes() {
+  const a = $("tr-annot");
+  a.querySelectorAll(".abox").forEach((d) => d.remove());
+  const names = TR.state.classes;
+  TR.boxes.forEach((b, i) => {
+    const d = document.createElement("div");
+    d.className = "abox" + (i === TR.sel ? " sel" : "");
+    Object.assign(d.style, { left: b.x0 * 100 + "%", top: b.y0 * 100 + "%", width: (b.x1 - b.x0) * 100 + "%", height: (b.y1 - b.y0) * 100 + "%", borderColor: clsColor(b.cls) });
+    d.innerHTML = `<span style="background:${clsColor(b.cls)}">${esc(names[b.cls] || b.cls)}</span>`;
+    d.addEventListener("mousedown", (e) => { e.stopPropagation(); TR.sel = i; TR.cls = b.cls; loadTrainClasses(); drawBoxes(); });
+    a.appendChild(d);
+  });
+}
+let saveBoxTimer = null;
+function saveBoxes() {
+  clearTimeout(saveBoxTimer);
+  saveBoxTimer = setTimeout(async () => {
+    const r = await api("/api/train/boxes", { name: TR.cur, boxes: TR.boxes });
+    $("tr-box-result").className = "result " + (r.ok ? "ok" : "err");
+    $("tr-box-result").textContent = r.ok ? `✓ Saved (${r.boxes} box${r.boxes === 1 ? "" : "es"})` : "✗ " + r.message;
+    loadTrain(true);
+  }, 250);
+}
+(function boxDrawing() {
+  const a = $("tr-annot");
+  let start = null, ghost = null;
+  const rel = (e) => { const r = $("tr-img").getBoundingClientRect(); return [Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1)]; };
+  a.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 || !TR.cur) return;
+    e.preventDefault(); start = rel(e); TR.sel = -1; drawBoxes();
+    ghost = document.createElement("div"); ghost.className = "abox sel"; ghost.style.borderColor = clsColor(TR.cls); a.appendChild(ghost);
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!start) return;
+    const p = rel(e);
+    Object.assign(ghost.style, { left: Math.min(start[0], p[0]) * 100 + "%", top: Math.min(start[1], p[1]) * 100 + "%", width: Math.abs(p[0] - start[0]) * 100 + "%", height: Math.abs(p[1] - start[1]) * 100 + "%" });
+  });
+  window.addEventListener("mouseup", (e) => {
+    if (!start) return;
+    const p = rel(e), b = { cls: TR.cls, x0: Math.min(start[0], p[0]), y0: Math.min(start[1], p[1]), x1: Math.max(start[0], p[0]), y1: Math.max(start[1], p[1]) };
+    start = null; ghost.remove(); ghost = null;
+    if (b.x1 - b.x0 < 0.005 || b.y1 - b.y0 < 0.005) return;      // a click, not a box
+    TR.boxes.push(b); TR.sel = TR.boxes.length - 1; drawBoxes(); saveBoxes();
+  });
+})();
+function deleteSelected() { if (TR.sel < 0) return; TR.boxes.splice(TR.sel, 1); TR.sel = -1; drawBoxes(); saveBoxes(); }
+$("tr-delbox").addEventListener("click", deleteSelected);
+document.addEventListener("keydown", (e) => {
+  if (!$("tab-train").classList.contains("active") || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelected(); }
+  else if (e.key === "ArrowRight") trainStep(1); else if (e.key === "ArrowLeft") trainStep(-1);
+});
+$("tr-nothing").addEventListener("click", () => { TR.boxes = []; TR.sel = -1; drawBoxes(); saveBoxes(); });
+function trainStep(d) {
+  const i = TR.imgs.findIndex((im) => im.name === TR.cur);
+  if (TR.imgs.length) openTrainImage(TR.imgs[(i + d + TR.imgs.length) % TR.imgs.length].name);
+}
+$("tr-prev").addEventListener("click", () => trainStep(-1));
+$("tr-next").addEventListener("click", () => trainStep(1));
+$("tr-delimg").addEventListener("click", async () => {
+  if (!TR.cur || !confirm("Remove this picture from the training pictures?")) return;
+  const i = TR.imgs.findIndex((im) => im.name === TR.cur);
+  await api("/api/train/delete", { name: TR.cur });
+  TR.cur = null; await loadTrain(true);
+  if (TR.imgs.length) openTrainImage(TR.imgs[Math.min(i, TR.imgs.length - 1)].name); else { $("tr-editor").hidden = true; $("tr-empty").hidden = false; }
+});
+let trainTimer = null;
+async function trainPoll() {
+  const s = await api("/api/train/status");
+  $("tr-start").disabled = !s.available || s.state === "running";
+  if (s.state && s.state !== "idle") {
+    $("tr-log").textContent = (s.log || []).join("\n"); $("tr-log").scrollTop = 1e9;
+    const msg = { running: `Training '${s.name}': ${s.step} (${Math.round(s.elapsed_s / 60)} min so far)`, done: `✓ Model '${s.name}' trained` + (s.result && s.result.map50 != null ? `: finds ${Math.round((s.result.recall || 0) * 100)} % of the objects in the check pictures, ${Math.round((s.result.precision || 0) * 100)} % of its finds are right.` : "."),
+      failed: "Training failed - see Training progress", stopped: "Stopped" }[s.state];
+    $("tr-result").className = "result " + (s.state === "failed" ? "err" : s.state === "running" ? "busy" : "ok"); $("tr-result").textContent = msg;
+  }
+  clearTimeout(trainTimer);
+  if (s.state === "running") trainTimer = setTimeout(trainPoll, 3000); else if (s.state === "done" && TR.state && !TR.state.models.some((m) => m.name === s.name)) loadTrain(true);
+}
+$("tr-start").addEventListener("click", async () => {
+  const r = await api("/api/train/start", { preset: $("tr-preset").value });
+  setResult("tr-result", r); if (r.ok) { $("tr-log").parentElement.open = true; trainPoll(); }
+});
+$("tr-stop").addEventListener("click", async () => { await api("/api/train/stop", {}); trainPoll(); });

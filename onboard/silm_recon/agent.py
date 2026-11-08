@@ -61,6 +61,7 @@ TO_AIRCRAFT = "to_aircraft"
 FROM_AIRCRAFT = "from_aircraft"
 FLIGHT_RE = re.compile(r"^mission_\d{8}_\d{6}$")
 MAX_SETTINGS_BYTES = 2_000_000
+MAX_MODEL_BYTES = 60_000_000
 
 RESTART_CMD = ["sudo", "-n", "systemctl", "restart", "silm-recon"]
 WIFI_CMD = ["sudo", "-n", "nmcli", "radio", "wifi"]          # + on | off
@@ -173,6 +174,7 @@ class Agent:
             "settings_info": info,
             "free_mb": free, "flights": len(self.list_flights()),
             "usb_stick": self.usb_present(), "wifi": self.wifi_state,
+            "models": self.list_models(),
             "events": self.events[-15:],
         }
 
@@ -236,6 +238,48 @@ class Agent:
             msg += "; the flight program restarted with them" if ok else (
                 f"; could not restart the flight program ({out}) - power-cycle the aircraft")
             return {"ok": True, "restarted": ok, "message": msg, "sha": info["sha"]}
+
+    # ------------------------------------------------------------ models
+
+    def models_dir(self) -> str:
+        return os.path.join(self.settings_dir, "models")
+
+    def install_model(self, name: str, tflite: bytes, labels: str, source: str = "wifi") -> dict:
+        """Store a trained recognition model (+ its labels) on the Pi. The
+        settings then point detector.model at it (sent with the settings)."""
+        with self._lock:
+            if self.flying():
+                return {"ok": False, "message": "the aircraft is ARMED or flying - models can "
+                        "only be changed on the ground, disarmed"}
+            n = re.sub(r"[^A-Za-z0-9_\-]+", "_", name or "").strip("_")
+            if not n:
+                return {"ok": False, "message": "the model needs a name"}
+            if len(tflite) < 1000 or tflite[4:8] != b"TFL3":
+                return {"ok": False, "message": "that is not a TensorFlow Lite model (.tflite)"}
+            if len(tflite) > MAX_MODEL_BYTES:
+                return {"ok": False, "message": "model too large for the Pi"}
+            names = [ln.strip() for ln in (labels or "").splitlines() if ln.strip()]
+            if not names:
+                return {"ok": False, "message": "the model's labels (object names) are missing"}
+            d = self.models_dir()
+            os.makedirs(d, exist_ok=True)
+            tmp = os.path.join(d, f".{n}.tflite.part")
+            with open(tmp, "wb") as fh:
+                fh.write(tflite)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, os.path.join(d, n + ".tflite"))
+            _atomic_write(os.path.join(d, n + "_labels.txt"), "\n".join(names) + "\n")
+            self.log(f"model {n} installed from {source} ({len(tflite) // 1000} kB, "
+                     f"{len(names)} object types)")
+            return {"ok": True, "name": n, "path": os.path.join(d, n + ".tflite"),
+                    "message": f"model '{n}' installed ({len(names)} object types)"}
+
+    def list_models(self) -> list[str]:
+        try:
+            return sorted(f[:-7] for f in os.listdir(self.models_dir()) if f.endswith(".tflite"))
+        except OSError:
+            return []
 
     # ------------------------------------------------------------ flights
 
@@ -339,6 +383,27 @@ class Agent:
             done["skipped"] = "flying"
             return done
         root = self.usb_root()
+        # trained models first, so settings that use one find it installed
+        mdir = os.path.join(root, TO_AIRCRAFT, "models")
+        if os.path.isdir(mdir):
+            done["models"] = []
+            for f in sorted(os.listdir(mdir)):
+                if not f.endswith(".tflite"):
+                    continue
+                n = f[:-7]
+                data = open(os.path.join(mdir, f), "rb").read()
+                lp = os.path.join(mdir, n + "_labels.txt")
+                mark = os.path.join(self.models_dir(), f".{n}.sha")
+                sha = hashlib.sha256(data).hexdigest()[:16]
+                if os.path.isfile(mark) and open(mark).read().strip() == sha:
+                    continue
+                res = self.install_model(n, data, open(lp, encoding="utf-8").read()
+                                         if os.path.isfile(lp) else "", source="usb")
+                if res["ok"]:
+                    _atomic_write(mark, sha)
+                    done["models"].append(n)
+                else:
+                    self.log(f"USB model {n} rejected: {res['message']}")
         src = os.path.join(root, TO_AIRCRAFT, "settings.yaml")
         if os.path.isfile(src):
             text = open(src, encoding="utf-8").read()
@@ -481,16 +546,28 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         a = self.agent
-        if self.path.split("?", 1)[0] != "/api/settings":
+        path = self.path.split("?", 1)[0]
+        if path not in ("/api/settings", "/api/model"):
             return self._json(404, {"error": "not found"})
+        limit = MAX_MODEL_BYTES * 2 if path == "/api/model" else MAX_SETTINGS_BYTES * 3
         try:
             n = int(self.headers.get("Content-Length", 0))
-            if n > MAX_SETTINGS_BYTES * 3:
+            if n > limit:
                 return self._json(413, {"ok": False, "message": "request too large"})
             body = json.loads(self.rfile.read(n) or b"{}")
+            if not isinstance(body, dict):
+                body = {}
         except Exception:
             return self._json(400, {"ok": False, "message": "bad JSON"})
-        res = a.accept_settings(body if isinstance(body, dict) else {}, source="wifi")
+        if path == "/api/model":
+            try:
+                import base64
+                data = base64.b64decode(body.get("tflite_b64") or "", validate=True)
+            except Exception:
+                return self._json(400, {"ok": False, "message": "the model data is damaged"})
+            res = a.install_model(body.get("name"), data, body.get("labels") or "")
+        else:
+            res = a.accept_settings(body, source="wifi")
         self._json(200 if res["ok"] else 409 if "ARMED" in res["message"] else 400, res)
 
 

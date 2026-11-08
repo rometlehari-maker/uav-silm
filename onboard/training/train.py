@@ -35,6 +35,8 @@ def main() -> int:
     ap.add_argument("--device", default=None, help="'' or 0 for GPU, 'cpu' for CPU")
     ap.add_argument("--patience", type=int, default=30)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--project", default=None,
+                    help="folder for the run (default: Ultralytics' runs/detect)")
     args = ap.parse_args()
 
     from ultralytics import YOLO
@@ -49,6 +51,7 @@ def main() -> int:
         device=args.device,
         patience=args.patience,
         resume=args.resume,
+        **({"project": args.project} if args.project else {}),
         # Augmentation tuned for top-down aerial imagery, where targets are
         # small, appear at any rotation, and lighting/scale vary a lot. These
         # materially help real-world generalisation from a modest dataset.
