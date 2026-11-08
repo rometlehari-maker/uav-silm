@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Build the files offered on the website's Downloads section.
+"""Build the download files: the website's two small files, or a release's set.
 
-    python3 onboard/tools/build_downloads.py            # from the repository root
+    python3 onboard/tools/build_downloads.py                       # the website
+    python3 onboard/tools/build_downloads.py --release --out DIR   # a GitHub release
 
-Commit your onboard/ changes first: only committed files are packed. Writes
-`downloads/` at the repository root (the website serves it) and updates the
+Commit your onboard/ changes first: only committed files are packed.
+
+The website (default) gets `downloads/` at the repository root, and the
 download cards in `index.html` (between the downloads:begin/end markers):
+
+    gps_denied_failsafe.param         the flight controller settings
+    silm_gps_loss.lua                 the GPS-loss script
+    SHA256SUMS.txt, downloads.json    checksums; names and sizes for the page
+
+A release (--release, run by the app workflow) also gets the big files, which
+are NOT committed to the repository (they would grow its history every time):
 
     uav-silm-software-<version>.zip   the whole onboard folder: Ground Station,
                                       Pi software, ArduPilot files, docs, tests
     silm-oi-farm-model-v1.zip         the ready-made recognition model only
-    gps_denied_failsafe.param         the flight controller settings
-    silm_gps_loss.lua                 the GPS-loss script
-    SHA256SUMS.txt                    a checksum per file
-    downloads.json                    names, sizes, checksums (for the page)
 
 Safety of the files:
 - Only files **committed to git** are packed, read straight from the commit
@@ -81,7 +86,11 @@ def check_secret(path: str, data: bytes) -> None:
                          "Remove it from the commit before publishing.")
 
 
-def build(out: str, commit: str) -> list[dict]:
+WEBSITE_KINDS = ("param", "lua")                 # small files served by the website itself
+RELEASE_KINDS = ("software", "model", "param", "lua")   # attached to each GitHub release
+
+
+def build(out: str, commit: str, kinds=RELEASE_KINDS) -> list[dict]:
     os.makedirs(out, exist_ok=True)
     version = blob(commit, "onboard/VERSION").decode().strip()
     when = git("log", "-1", "--format=%cs", commit).decode().strip()
@@ -95,6 +104,22 @@ def build(out: str, commit: str) -> list[dict]:
 
     # 1. the whole software
     name = f"uav-silm-software-{version}.zip"
+    if "software" in kinds:
+        files.append(_software_zip(out, commit, name, version, source_note))
+    if "model" in kinds:
+        files.append(_model_zip(out, commit, url, when))
+    if "param" in kinds:
+        files.append(_write(out, "gps_denied_failsafe.param", blob(commit, "onboard/ardupilot/gps_denied_failsafe.param"),
+                            "param", version, "ArduPlane parameters: no-RC operation and all failsafes ending in "
+                            "the automatic landing. Load in Mission Planner or QGroundControl.", "MIT"))
+    if "lua" in kinds:
+        files.append(_write(out, "silm_gps_loss.lua", blob(commit, "onboard/ardupilot/scripts/silm_gps_loss.lua"),
+                            "lua", version, "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting "
+                            "GPS and land on dead reckoning. Copy to APM/scripts on the SD card.", "MIT"))
+    return _finish(out, files, version, commit, short, when)
+
+
+def _software_zip(out, commit, name, version, source_note) -> dict:
     top = f"uav-silm-software-{version}/"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
@@ -103,11 +128,12 @@ def build(out: str, commit: str) -> list[dict]:
             check_secret(p, data)
             add(z, top + p[len("onboard/"):], data, is_executable(commit, p))
         add(z, top + "SOURCE.txt", source_note)
-    files.append(_write(out, name, buf.getvalue(), "software", version,
-                        "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and "
-                        "GPS-loss script, simulator tools, documentation and tests.", "MIT + third-party"))
+    return _write(out, name, buf.getvalue(), "software", version,
+                  "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and "
+                  "GPS-loss script, simulator tools, documentation and tests.", "MIT + third-party")
 
-    # 2. the model alone
+
+def _model_zip(out, commit, url, when) -> dict:
     name = "silm-oi-farm-model-v1.zip"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
@@ -124,18 +150,12 @@ def build(out: str, commit: str) -> list[dict]:
             "Corresponding source (how it was made): onboard/training/ in\n"
             f"{url}/tree/{commit}/onboard/training\n"
             f"Built from commit {commit} ({when}).\n").encode())
-    files.append(_write(out, name, buf.getvalue(), "model", "v1",
-                        "The ready-made recognition model only (tractor, car, truck, livestock), with "
-                        "labels and its description.", "AGPL-3.0"))
+    return _write(out, name, buf.getvalue(), "model", "v1",
+                  "The ready-made recognition model only (tractor, car, truck, livestock), with "
+                  "labels and its description.", "AGPL-3.0")
 
-    # 3. two single files people often want on their own
-    files.append(_write(out, "gps_denied_failsafe.param", blob(commit, "onboard/ardupilot/gps_denied_failsafe.param"),
-                        "param", version, "ArduPlane parameters: no-RC operation and all failsafes ending in "
-                        "the automatic landing. Load in Mission Planner or QGroundControl.", "MIT"))
-    files.append(_write(out, "silm_gps_loss.lua", blob(commit, "onboard/ardupilot/scripts/silm_gps_loss.lua"),
-                        "lua", version, "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting "
-                        "GPS and land on dead reckoning. Copy to APM/scripts on the SD card.", "MIT"))
 
+def _finish(out, files, version, commit, short, when) -> list[dict]:
     keep = {f["name"] for f in files} | {"SHA256SUMS.txt", "downloads.json"}
     for old in os.listdir(out):                    # files from an older version
         if old not in keep and os.path.isfile(os.path.join(out, old)):
@@ -199,8 +219,6 @@ def update_site(index_html: str, meta: dict) -> bool:
     if a < 0 or b < a:
         raise SystemExit(f"{index_html}: download markers not found")
     new = page[:a] + site_block(meta) + page[b + len(SITE_END):]
-    software = next(f["name"] for f in meta["files"] if f["kind"] == "software")
-    new = re.sub(r"uav-silm-software-\d+\.\d+\.\d+\.zip", software, new)   # e.g. the checksum commands
     if new != page:
         with open(index_html, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(new)
@@ -214,6 +232,9 @@ def main(argv=None) -> int:
                     help="git commit to pack (default: the last commit that changed onboard/)")
     ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
                     help="website page whose download cards to update ('' to skip)")
+    ap.add_argument("--release", action="store_true",
+                    help="build every file for a GitHub release (software and model zips too); "
+                         "doesn't touch the website")
     a = ap.parse_args(argv)
     # the handoff notes aren't packed, so a commit that only changes them doesn't count
     commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard",
@@ -222,9 +243,9 @@ def main(argv=None) -> int:
     if git("status", "--porcelain", "--", "onboard").strip():
         print("note: onboard/ has uncommitted changes; they are NOT in the downloads "
               f"(packing commit {commit[:10]})", file=sys.stderr)
-    for f in build(a.out, commit):
+    for f in build(a.out, commit, RELEASE_KINDS if a.release else WEBSITE_KINDS):
         print(f"{f['name']:34s} {f['bytes'] / 1e6:6.2f} MB  {f['sha256']}")
-    if a.site:
+    if a.site and not a.release:
         with open(os.path.join(a.out, "downloads.json"), encoding="utf-8") as fh:
             changed = update_site(a.site, json.load(fh))
         print(f"{a.site}: {'updated' if changed else 'already up to date'}")

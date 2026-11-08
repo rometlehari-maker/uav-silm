@@ -84,15 +84,22 @@ def test_a_secret_stops_the_build():
     bd.check_secret("x.txt", b"bash pi/install.sh --password 'my-secret-123'")   # docs example is fine
 
 
-def test_old_versions_are_removed_and_the_page_names_the_new_file(tmp_path):
+def test_website_gets_only_the_small_files_and_old_ones_go(tmp_path):
     commit = subprocess.run(["git", "log", "-1", "--format=%H", "HEAD", "--", "onboard"], cwd=bd.ROOT,
                             capture_output=True, text=True, check=True).stdout.strip()
     (tmp_path / "uav-silm-software-0.9.0.zip").write_bytes(b"old")
-    files = bd.build(str(tmp_path), commit)
-    assert not (tmp_path / "uav-silm-software-0.9.0.zip").exists()
+    files = bd.build(str(tmp_path), commit, bd.WEBSITE_KINDS)
+    assert {f["name"] for f in files} == {"gps_denied_failsafe.param", "silm_gps_loss.lua"}
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "SHA256SUMS.txt", "downloads.json", "gps_denied_failsafe.param", "silm_gps_loss.lua"]
     page = tmp_path / "index.html"
-    page.write_text("x " + bd.SITE_BEGIN + " " + bd.SITE_END + " certutil -hashfile uav-silm-software-0.9.0.zip SHA256")
-    meta = json.loads((tmp_path / "downloads.json").read_text())
-    assert bd.update_site(str(page), meta)
-    sw = next(f["name"] for f in files if f["kind"] == "software")
-    assert "0.9.0" not in page.read_text() and f"certutil -hashfile {sw}" in page.read_text()
+    page.write_text("x " + bd.SITE_BEGIN + " " + bd.SITE_END + " y")
+    assert bd.update_site(str(page), json.loads((tmp_path / "downloads.json").read_text()))
+    html = page.read_text()
+    assert html.count('class="dl-hash"') == 2 and ".zip" not in html
+
+
+def test_the_repository_holds_no_download_zips():
+    tracked = subprocess.run(["git", "ls-files", "downloads"], cwd=bd.ROOT, capture_output=True,
+                             text=True, check=True).stdout.split()
+    assert tracked and not [f for f in tracked if f.endswith(".zip")]
