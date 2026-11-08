@@ -106,6 +106,14 @@ Pi-health and optional ordinary pictures every few seconds (`frames/`).
 - **Not yet flown on the real aircraft**: everything is tested in software and
   in ArduPilot's simulator (`tests/`, [`FLIGHT_READY.md` §9](FLIGHT_READY.md#9-automated-tests)).
 
+## Licence
+
+MIT for the UAV SILM team's own files ([`LICENSE`](LICENSE)). Parts made by
+others keep their licences and are credited in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); the ready-made model
+`models/silm_oi` is AGPL-3.0. Ready-made downloads with checksums are on
+www.uavsilm.eu (built by `tools/build_downloads.py`).
+
 ## Legal
 
 Fully automatic flight with no RC link needs the EASA **"specific" category**

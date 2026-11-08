@@ -178,6 +178,22 @@ User's answers to questions asked:
   dark OSM tiles (`tiles-dark` CSS filter; satellite untouched), map overlays
   in site colours. No ids changed; e2e browser test passes. OSM tiles are
   blocked in this sandbox, so the dark street map was not seen here.
+- **Downloads on the website** (user request): licence chosen by the user =
+  **MIT** for the team's code (`onboard/LICENSE`); `onboard/THIRD_PARTY_NOTICES.md`
+  credits everything else (Leaflet BSD-2, fonts OFL with full texts also in the
+  site's `fonts/`, silm_oi AGPL-3.0 with `models/LICENSE-silm_oi-AGPL-3.0.txt`,
+  Open Images CC BY, OSM/Esri, ArduPilot GPL, Python libs).
+  `onboard/tools/build_downloads.py` packs a COMMIT (git ls-tree/show, never
+  stray files; HANDOFF.md excluded; stops on secret-looking content),
+  reproducibly (fixed timestamps), into `downloads/` (software zip, model zip,
+  .param, .lua, SHA256SUMS.txt, downloads.json) and rewrites the cards in
+  `index.html` between `downloads:begin/end` markers. New site section
+  `#downloads` (nav, menu, rail, ids list, footer, Resources "next"), new
+  sources in the numbered list, nav breakpoint 1080 -> 1120 px.
+  `tests/test_build_downloads.py` (6). Unpacked zip passes its own tests.
+  **The site deploys from `main`; these changes are on this branch until merged.**
+  To refresh after onboard changes: commit, `python3 onboard/tools/build_downloads.py`,
+  commit `downloads/` + `index.html`.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
