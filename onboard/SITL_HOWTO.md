@@ -10,6 +10,18 @@ This guide has these parts (plus Part 0, basics, a Troubleshooting table and Not
 
 If you're new to Ubuntu or terminals, read **Part 0** first.
 
+> **Shortcut once Part A is done: the Ground Station does Parts B and C for you.**
+> Start the Ground Station *inside Ubuntu* (the simulator runs there):
+> ```bash
+> cd ~/uav-silm/onboard && ./start_ground_station.sh --no-browser
+> ```
+> then open <http://127.0.0.1:8765> in your normal Windows browser, go to tab
+> **7 Simulator** and press **Start the simulated flight**. It starts the
+> simulator at your mission's launch point, sets the battery, restarts once
+> for the script, flies your mission with the GPS jammed and shows the six
+> checks and the track. The rest of this guide is the manual way, and explains
+> what you see.
+
 ---
 
 ## Part 0: Ubuntu and terminal basics
@@ -221,15 +233,15 @@ If you get an error about the console or a display, start it without the window 
 cd ~/sitlrun && ~/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane --custom-location=59.40,24.70,30,0
 ```
 
-### B2. Fix the simulated battery (once, at the `MANUAL>` prompt in Terminal 1, not in the console or map window)
+### B2. The simulated battery: nothing to do
 
-Your param file has **4S** battery thresholds (critical at 13.2 V), but the simulated plane has a **3S** battery (12.6 V). Without this fix it refuses to arm with "Battery 1 critical voltage failsafe". Type this at the MAVProxy prompt:
+The simulated plane has a **3S** battery (12.6 V); your parameter file may be for 4S or 6S, whose low-voltage failsafe would then refuse to arm. **The test does this for you**: it works out your cell count from the parameter file and scales the simulator's voltage reading to a full pack of that size. You'll see a line like:
 
 ```
-param set BATT_VOLT_MULT 13.4667
+simulator battery read 12.6 V; scaled to a full 4S pack (16.8 V) for your battery failsafes (simulator only)
 ```
 
-This makes the simulator report 16.8 V, the same as a full 4S pack. It is saved in `~/sitlrun/eeprom.bin`, so you only do it once. **Never put this line in `gps_denied_failsafe.param`**: it's a simulator-only trick.
+Nothing in your files changes. (Older versions of this guide had you type `param set BATT_VOLT_MULT ...` here - no longer needed.)
 
 ### B3. First test run (Terminal 2)
 
@@ -320,7 +332,7 @@ What each check means:
 | `landed` | It ended on the ground and disarmed by itself |
 | `landed_near_touchdown` | Touchdown was within `--land-radius-m` (default 150 m) of the planned point |
 
-**Done with the first run.** You don't need to repeat B2 or B4 again, unless you delete `~/sitlrun/eeprom.bin` or start SITL with `-w`, which wipes the saved settings.
+**Done with the first run.** You don't need to repeat B4 again, unless you delete `~/sitlrun/eeprom.bin` or start SITL with `-w`, which wipes the saved settings.
 
 ---
 
@@ -440,7 +452,7 @@ The prompt itself shows the current flight mode, for example `MANUAL>`, `AUTO>`,
 
 ### D2. MAVProxy commands (typed at the `MANUAL>` prompt in Terminal 1)
 
-You only *need* `param set BATT_VOLT_MULT 13.4667`, once. The rest are for looking around. **Don't change modes or arm/disarm while a test is running**: the test is flying the aircraft.
+You don't need any of these: they are for looking around. **Don't change modes or arm/disarm while a test is running**: the test is flying the aircraft.
 
 | Command | What it does |
 |---|---|
@@ -619,7 +631,7 @@ python3 -c "import json; print('\n'.join(json.load(open('sitl_jam/result.json'))
 
 | Path | What it is |
 |---|---|
-| `~/sitlrun/eeprom.bin` | SITL's saved parameters. Delete it for a factory-fresh simulator (then redo B2 and B4) |
+| `~/sitlrun/eeprom.bin` | SITL's saved parameters. Delete it for a factory-fresh simulator (then redo B4) |
 | `~/sitlrun/scripts/` | Lua scripts SITL runs at boot |
 | `~/sitlrun/logs/` | Onboard flight logs (`.BIN`), one per boot. Open them in Mission Planner or UAV Log Viewer (plot.ardupilot.org) to see everything the autopilot recorded |
 | `~/sitlrun/terrain/` | Downloaded terrain height data |
@@ -725,7 +737,7 @@ Then **restart SITL** in Terminal 1: Ctrl+C, then `sitl`. The `sitl` shortcut co
 
 | Symptom | Cause, and the fix |
 |---|---|
-| `could not arm` + `Battery 1 critical voltage failsafe` | B2 wasn't done, or the settings were wiped. Run `param set BATT_VOLT_MULT 13.4667` at the MAVProxy prompt |
+| `could not arm` + `Battery 1 critical voltage failsafe` | The test scales the simulator's battery automatically; look for the "simulator battery" line in its output. If it says "could not read the simulator's battery voltage", restart SITL and run again |
 | `could not arm` + another PreArm message | Wait 30-60 s after SITL starts (the EKF and airspeed calibration need time), then run again. If it repeats, the PreArm text says which setting to look at |
 | `ConnectionRefusedError` | SITL isn't running, or was started without MAVProxy. Start it with `sitl` in Terminal 1 first |
 | `script is not running ... restart SITL` | Restart SITL (B4). Check that `~/sitlrun/scripts/silm_gps_loss.lua` exists, and that you start SITL from `~/sitlrun` |
@@ -741,7 +753,7 @@ Then **restart SITL** in Terminal 1: Ctrl+C, then `sitl`. The `sitl` shortcut co
 | The prompt says `root@...` | The user wasn't created on first start. See 0.2 |
 | The console or map window doesn't open | Your Windows doesn't support GUI apps in WSL (needs Windows 11, or `wsl --update`). It's not needed: use the start command without `--console` from B1 |
 | `could not arm` + `PreArm: SILM: waiting for EKF to use GPS` | The EKF never got a GPS position within the test's 2-minute arming window. Restart SITL (C2) and run again. If it repeats, check at the `MANUAL>` prompt that `param show SIM_GPS1_ENABLE` is 1 and `param show SLM_ENABLE` is 1 |
-| You want a completely fresh simulator | `rm ~/sitlrun/eeprom.bin`, then redo B2 and B4 |
+| You want a completely fresh simulator | `rm ~/sitlrun/eeprom.bin`, then redo B4 |
 
 ## Notes
 

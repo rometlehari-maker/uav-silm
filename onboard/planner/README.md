@@ -1,5 +1,12 @@
 # SILM mission planner (laptop GUI)
 
+> **Superseded by the Ground Station** ([`../GROUND_STATION.md`](../GROUND_STATION.md),
+> start with `Start Ground Station.bat` / `./start_ground_station.sh`). It plans
+> the mission the same way (it uses `planner/survey.py`), and also describes the
+> aircraft, sends everything to both of the aircraft's computers, runs the
+> simulator and shows the pictures. This older single-page planner still works
+> and is kept for reference; the survey geometry below applies to both.
+
 The aircraft has **no RC link** (no ExpressLRS) and no telemetry radio. Every
 flight is a fully automatic mission planned here on the laptop, uploaded over
 USB on the ground, and flown from a hand launch to an automatic belly landing.

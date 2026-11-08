@@ -1,44 +1,46 @@
 # Models
 
-The `.tflite` weight files are **not committed** (binary, and easy to fetch).
-Download them onto the Pi once, while it still has internet on the bench.
+The `.tflite` files are **not committed** (binary). `pi/install.sh` downloads
+the standard model onto the Pi; trained models come from the Ground Station
+(tab 9) and are sent to the Pi with the settings (they live in
+`~/silm-settings/models/` there).
 
-## Bundled baseline: SSD-MobileNet-v2, COCO (gives you `car`, `truck`, `person`...)
+## Standard model: COCO SSD MobileNet v1 (quantised)
 
-CPU model (runs on the Pi 3 with no accelerator):
+Recognises 80 everyday object types, among them person, car, truck, bus, boat,
+cattle (`cow`), horse, sheep. Runs on the Pi 4's CPU.
 
 ```bash
 cd onboard/models
-# Quantised COCO SSD MobileNet v2 with the detection post-process op:
-wget -O ssd_mobilenet_v2_coco_quant.tflite \
+curl -fsSL -o /tmp/coco.zip \
   https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
-# (unzip and rename detect.tflite -> ssd_mobilenet_v2_coco_quant.tflite,
-#  and labelmap.txt -> coco_labels.txt if you prefer the shipped labels)
+echo "a809cd290b4d6a2e8a9d5dad076e0bd695b8091974e0eed1052b480b2f21b6dc  /tmp/coco.zip" | sha256sum -c -
+unzip -p /tmp/coco.zip detect.tflite > coco_ssd_mobilenet_v1_quant.tflite
 ```
 
-Edge-TPU model (only if you add a Coral USB stick — optional, makes it ~30 FPS):
+`coco_labels.txt` (committed) matches this model's class numbers: 90 lines,
+COCO's ids 0-89, with `???` at the unused ids. Don't replace it with an
+80-line COCO list: every class after the first gap would get the wrong name.
 
-```bash
-wget -O ssd_mobilenet_v2_coco_quant_edgetpu.tflite \
-  https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
-```
-Then point `detector.model` at the `_edgetpu.tflite` file — the code loads the
-Coral delegate automatically.
+## Your own model (tractor, combine, ...)
 
-## Custom targets: `harvester`, `combine`
+Trained with the Ground Station's tab 9 or `training/` (YOLO, exported to an
+INT8 `.tflite` + `<name>_labels.txt`). In the settings it is
+`detector.format: yolo`; the Ground Station sets this when you press **Use on
+the aircraft**.
 
-These are **not** COCO classes. To recognise them you need a small custom model.
-See `../tools/train_notes.md` for the transfer-learning recipe. Export a
-`*_quant.tflite` (and optionally a `*_edgetpu.tflite`), put it here, write its
-class names into a labels file, and set `detector.model` / `detector.labels` /
-`targets` in `config.yaml`. No pipeline code changes are needed.
+## Coral USB accelerator (optional)
 
-## Checking a model matches its labels
+An `*_edgetpu.tflite` model is used with a Coral stick automatically
+(`training/export.py --edgetpu`). On the Pi 4 the CPU is usually fast enough;
+`tools/preflight.py` measures it.
+
+## Check a model with its labels
 
 ```bash
 python3 - <<'PY'
 from silm_recon.detector import ObjectDetector
-d = ObjectDetector("models/ssd_mobilenet_v2_coco_quant.tflite", "models/coco_labels.txt", 0.3)
-print("input size:", d.input_size, "labels:", len(d.labels))
+d = ObjectDetector("models/coco_ssd_mobilenet_v1_quant.tflite", "models/coco_labels.txt", 0.3)
+print("input size:", d.input_size, "format:", d.fmt, "labels:", len(d.labels))
 PY
 ```
