@@ -246,6 +246,9 @@ User's answers to questions asked:
     history). Now `downloads/` holds only the .param and .lua (+ sums), and the
     release job runs `build_downloads.py --release` to attach both zips to each
     GitHub release. VERSION 2.1.1 so main publishes a complete release.
+    **Done:** PR rometlehari-maker/uav-silm#3 merged (3e5fbcd); release
+    gs-v2.1.1 published with installers + uav-silm-software-2.1.1.zip +
+    silm-oi-farm-model-v1.zip + SHA256SUMS.txt; website live with 2 cards.
     The old zips are still in git history (51 MB); removing them needs a
     history rewrite of main + force push - only if the user asks.
   - **User said yes** to publishing the release and putting the site live.
