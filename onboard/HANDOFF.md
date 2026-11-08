@@ -223,10 +223,16 @@ User's answers to questions asked:
     fixed-name copies (UAV-SILM-Ground-Station-Setup.exe, -macos.zip,
     -linux.tar.gz) + SHA256SUMS. Website Downloads has an app block linking to
     releases/latest/download/... (dead until a release exists).
-  - **Waiting on:** first CI run of ground-station-app.yml (Windows/macOS never
-    built before). Then ASK the user before: pushing tag gs-v2.1.0 (public
-    release) and merging to main (site live). Rebuild downloads/ after merge
-    prep (`python3 onboard/tools/build_downloads.py`, VERSION is 2.1.0 now).
+  - **CI built all three and they pass their self-test** (runs 42494097927,
+    42494485902): Windows installer UAV-SILM-Ground-Station-Setup-2.1.0.exe
+    (20.8 MB), macOS ~20 MB, Linux 22 MB. The self-test also loads the window
+    component (Edge WebView2 / Cocoa) and Windows/macOS builds fail without it
+    (SILM_REQUIRE_WINDOW=1). The window itself has not been seen on a real
+    screen (CI is headless): the user should try it once.
+  - downloads/ rebuilt for 2.1.0.
+  - **Waiting on the user:** OK to push tag `gs-v2.1.0` (public GitHub release
+    with the installers) and to merge to `main` (website live, incl. the app
+    download buttons, which only work once the release exists).
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
