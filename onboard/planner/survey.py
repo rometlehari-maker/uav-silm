@@ -98,8 +98,9 @@ class PlanInput:
     edge_extend_m: float = 40.0                # fly this far past the area at each line end
     takeoff_alt_m: float = 50.0
     takeoff_pitch_deg: float = 15.0
-    approach_len_m: float = 300.0              # straight final approach length
-    approach_alt_m: float = 30.0               # height at the start of the final approach
+    approach_len_m: float = 200.0              # straight final approach length (SITL: shorter
+                                               # = less time in near-ground wind shear when blind)
+    approach_alt_m: float = 25.0               # height at the start of the final approach
     fence_radius_m: float = 1500.0             # FENCE_RADIUS on the aircraft
     alt_limit_m: float = 120.0                 # legal / FENCE_ALT_MAX
     endurance_min: float = 100.0               # design estimate - not yet flown!

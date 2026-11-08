@@ -115,6 +115,21 @@ User's answers to questions asked:
   Simulator tab. Variant A otherwise passed: blind touchdown 129.6 m long
   (limit 150), flare at 2.9 m.
 
+- **Wind experiment results (10 m/s, blind landing):** final approach A 300 m/30 m
+  -> 129.6 m long; B 200 m/25 m -> 106.7 m; C 150 m/20 m -> 100.6 m.
+  **New default: 200 m from 25 m** (`planner/survey.py`, `groundstation/project.py`).
+- **Second safety bug (run C):** even with the EKF kept off GPS, a blind
+  aircraft on the ground "moves" at the learnt wind speed (dead reckoning),
+  ArduPlane's is_flying flickers and it never disarms until GPS returns.
+  Fix in `silm_gps_loss.lua`: during an episode it disarms itself after
+  `SLM_LAND_DIS_S` (15 s) of: armed, AUTO, LAND item, airspeed < 0.8 x stall
+  (AIRSPEED_MIN/1.3), gyros quiet (< 0.1 rad/s), < 5 m above home. 8 new Lua
+  tests incl. the never-disarm-in-flight cases (44 Lua tests pass).
+- **Running now:** final SITL matrix on the Ground Station mission
+  (scratchpad `matrix_gs.py`): w10 blind, w12 blind, w6, w4 from E, w8 from NW,
+  GPS-off w6, w8 blind. Use it to set MAX_WIND_MPS (keep margin) and update the
+  wind numbers in FLIGHT_READY 2.4, README, GROUND_STATION, SITL_HOWTO E1.
+
 ## Still to do (in this order)
 
 1. **Strong-wind landing** (task 4): try shorter/steeper final approach

@@ -55,6 +55,15 @@
       origin was set in the climb and every height after that was ~20 m off
       (landing flare 20 m up). This gate puts that check back, whatever arms
       the aircraft (planner button, ground station, test tool).
+    * Landed without GPS -> disarm. ArduPlane disarms LAND_DISARMDELAY after it
+      decides it is no longer flying, but with no GPS its estimate keeps
+      "moving" at the wind speed it learnt in the air, so in SITL it stayed
+      ARMED on the ground until GPS came back - minutes. So, only while the
+      EKF is off GPS (an episode), the script disarms once ALL of these have
+      held for SLM_LAND_DIS_S: armed, AUTO, on the mission's LAND item,
+      airspeed below 80 % of the stall speed (AIRSPEED_MIN / 1.3) - impossible
+      in flight for that long -, not rotating (gyros quiet) and less than 5 m
+      above home (barometer).
     * If GPS comes back, it announces recovery but does NOT resume the survey:
       after a GPS loss the safe default is to land.
     * If a ground station changes the mode after the script acted, the script
@@ -70,6 +79,8 @@
     SLM_MIN_SATS    minimum satellites for GPS to count as good (default 6)
     SLM_MAX_HDOP    maximum HDOP for GPS to count as good (default 2.5)
     SLM_SRC_SW      1 = use EKF source set 2 (no GPS) during an episode (default 1)
+    SLM_LAND_DIS_S  landed without GPS: disarm after this long certainly on the
+                    ground (default 15 s; 0 = off, see below)
     SLM_GPS_DIFF_M  during an episode, a GPS fix further than this from the
                     EKF's (GPS-free) position counts as bad (default 50 m; 0 = off)
 --]]
@@ -78,12 +89,13 @@ local MAV_SEVERITY = {EMERGENCY=0, ALERT=1, CRITICAL=2, ERROR=3, WARNING=4, NOTI
 local MODE_AUTO = 10
 local MODE_RTL = 11
 local CMD_DO_LAND_START = 189
+local CMD_NAV_LAND = 21
 local GPS_OK_FIX_3D = 3
 local RUN_MS = 200
 
 local PARAM_TABLE_KEY = 61
 local PARAM_TABLE_PREFIX = "SLM_"
-assert(param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 8), "SILM: could not add param table")
+assert(param:add_table(PARAM_TABLE_KEY, PARAM_TABLE_PREFIX, 10), "SILM: could not add param table")
 
 local function bind_add_param(name, idx, default_value)
   assert(param:add_param(PARAM_TABLE_KEY, idx, name, default_value),
@@ -100,6 +112,9 @@ local SLM_MIN_SATS   = bind_add_param("MIN_SATS", 4, 6)
 local SLM_MAX_HDOP   = bind_add_param("MAX_HDOP", 5, 2.5)
 local SLM_SRC_SW     = bind_add_param("SRC_SW", 6, 1)
 local SLM_GPS_DIFF_M = bind_add_param("GPS_DIFF_M", 7, 50)
+local SLM_LAND_DIS_S = bind_add_param("LAND_DIS_S", 8, 15)
+local AIRSPEED_MIN = Parameter()
+if not AIRSPEED_MIN:init("AIRSPEED_MIN") then AIRSPEED_MIN = nil end
 
 local SRC_SET_GPS = 0         -- EK3_SRC1_*: normal, with GPS
 local SRC_SET_NO_GPS = 1      -- EK3_SRC2_*: no GPS (dead reckoning)
@@ -206,6 +221,31 @@ local function maybe_act()
   acted = true
 end
 
+-- landed without GPS: disarm once certainly on the ground (see header)
+local ground_since_ms = nil
+local function landed_blind_disarm(now)
+  local function reset() ground_since_ms = nil end
+  local hold = SLM_LAND_DIS_S:get()
+  if hold <= 0 or not on_no_gps_src or not arming:is_armed()
+      or vehicle:get_mode() ~= MODE_AUTO or mission:get_current_nav_id() ~= CMD_NAV_LAND then
+    return reset()
+  end
+  local stall = ((AIRSPEED_MIN and AIRSPEED_MIN:get()) or 12) / 1.3
+  local aspd = ahrs:airspeed_EAS()
+  local gyro = ahrs:get_gyro()
+  local down = ahrs:get_relative_position_D_home()
+  if aspd == nil or aspd >= 0.8 * stall or gyro == nil or gyro:length() > 0.1
+      or down == nil or -down > 5.0 then
+    return reset()
+  end
+  if ground_since_ms == nil then ground_since_ms = now end
+  if (now - ground_since_ms):tofloat() >= hold * 1000 then
+    gcs:send_text(MAV_SEVERITY.WARNING, "SILM: landed without GPS - disarming")
+    arming:disarm()
+    reset()
+  end
+end
+
 local function update()
   update_arming_gate(gps_good())
   if SLM_ENABLE:get() ~= 1 then
@@ -220,6 +260,7 @@ local function update()
   last_ms = now
 
   local good = gps_good()
+  landed_blind_disarm(now)
   local flying = arming:is_armed() and vehicle:get_likely_flying()
 
   if not in_episode then

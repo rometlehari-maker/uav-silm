@@ -17,9 +17,9 @@ SCRIPT = os.path.join(os.path.dirname(__file__), "..", "ardupilot", "scripts", "
 MOCKS = r"""
 sim = {now=0, gps_status=3, sats=14, hdop=80, armed=true, flying=true, mode=10, msgs={}, mode_changes={},
        src_set=0, src_changes={}, home_set=true, origin=true, auth=nil, auth_calls=0,
-       gps_off_m=0,
+       gps_off_m=0, aspd=17.0, gyro=0.3, down=-50.0, nav_id=16, disarms=0,
        taking_off=false, landing=false, nav_index=3, mission={16, 22, 16, 16, 16, 189, 16, 21}}
-params = {}
+params = {AIRSPEED_MIN = 13}
 
 local U32 = {}
 U32.__index = U32
@@ -40,6 +40,7 @@ function gps:location(i) return setmetatable({x=sim.gps_off_m}, Loc) end
 arming = {}
 function arming:is_armed() return sim.armed end
 function arming:get_aux_auth_id() return 0 end
+function arming:disarm() sim.armed = false; sim.disarms = sim.disarms + 1; return true end
 function arming:set_aux_auth_passed(id) sim.auth = "passed"; sim.auth_calls = sim.auth_calls + 1 end
 function arming:set_aux_auth_failed(id, msg) sim.auth = msg; sim.auth_calls = sim.auth_calls + 1 end
 
@@ -52,6 +53,7 @@ function vehicle:is_landing() return sim.landing end
 
 mission = {}
 function mission:get_current_nav_index() return sim.nav_index end
+function mission:get_current_nav_id() return sim.nav_id end
 function mission:get_item(i)
   local cmd = sim.mission[i + 1]          -- index 0 = home
   if cmd == nil then return nil end
@@ -60,6 +62,9 @@ end
 
 ahrs = {}
 function ahrs:home_is_set() return sim.home_set end
+function ahrs:airspeed_EAS() return sim.aspd end
+function ahrs:get_gyro() return {length = function(self) return sim.gyro end} end
+function ahrs:get_relative_position_D_home() return sim.down end
 function ahrs:get_location() return setmetatable({x=0}, Loc) end
 function ahrs:get_origin() if sim.origin then return {} end return nil end
 function ahrs:set_posvelyaw_source_set(i) sim.src_set = i; table.insert(sim.src_changes, i) end
@@ -491,3 +496,70 @@ def test_genuine_gps_far_from_drifted_estimate_still_recovers():
     sim.run_for(11)
     assert any("recovered" in m for m in sim.msgs())
     assert sim.s.src_set == 0
+
+
+# ---- landed without GPS: disarm (ArduPlane alone stays armed, SITL) -------
+
+def _landed_blind(sim):
+    """GPS-loss episode, then on the ground on the LAND item, stopped."""
+    sim.s.gps_status = 1
+    sim.run_for(6)                          # episode + RTL
+    sim.s.mode, sim.s.nav_id = 10, 21       # AUTO, landing sequence, LAND item
+    sim.s.aspd, sim.s.gyro, sim.s.down = 2.0, 0.02, -0.4
+    sim.s.flying = False                    # ArduPlane's own guess flickers
+
+
+def test_landed_without_gps_disarms_after_15_s():
+    sim = Sim()
+    assert sim.g.params["SLM_LAND_DIS_S"] == 15
+    _landed_blind(sim)
+    sim.run_for(14)
+    assert sim.s.armed and sim.s.disarms == 0
+    sim.run_for(2)
+    assert not sim.s.armed and sim.s.disarms == 1
+    assert any("landed without GPS - disarming" in m for m in sim.msgs())
+
+
+@pytest.mark.parametrize("change", [
+    {"aspd": 12.0},          # still flying faster than 80 % of stall (10 m/s)
+    {"gyro": 0.5},           # still rolling / tumbling
+    {"down": -12.0},         # 12 m up
+    {"nav_id": 16},          # on the approach waypoint, not the LAND item
+    {"mode": 11},            # not in AUTO
+])
+def test_never_disarms_unless_certainly_on_the_ground(change):
+    sim = Sim()
+    _landed_blind(sim)
+    for k, v in change.items():
+        setattr(sim.s, k, v)
+    sim.run_for(60)
+    assert sim.s.armed and sim.s.disarms == 0
+
+
+def test_a_moment_of_movement_restarts_the_15_s():
+    sim = Sim()
+    _landed_blind(sim)
+    sim.run_for(10)
+    sim.s.gyro = 0.4                         # bumped / blown over
+    sim.run_for(1)
+    sim.s.gyro = 0.02
+    sim.run_for(13)
+    assert sim.s.armed
+    sim.run_for(3)
+    assert not sim.s.armed
+
+
+def test_with_good_gps_arduplane_disarms_itself():
+    sim = Sim()                              # no episode: GPS fine
+    sim.s.mode, sim.s.nav_id = 10, 21
+    sim.s.aspd, sim.s.gyro, sim.s.down = 2.0, 0.02, -0.4
+    sim.run_for(60)
+    assert sim.s.disarms == 0
+
+
+def test_landed_disarm_can_be_switched_off():
+    sim = Sim()
+    sim.g.params["SLM_LAND_DIS_S"] = 0
+    _landed_blind(sim)
+    sim.run_for(60)
+    assert sim.s.armed and sim.s.disarms == 0

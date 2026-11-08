@@ -124,7 +124,9 @@ QUESTIONS = [
     Q("mission.takeoff_alt_m", "How high should it climb after launch?", unit="m",
       min=20, max=120, step=5, tab="mission", group="Takeoff and landing"),
     Q("mission.approach_len_m", "How long should the straight final approach be?",
-      "Longer is gentler; the approach must cross nothing tall.", unit="m",
+      "200 m starting 25 m up is the tested default: in the simulator, a shorter, "
+      "steeper approach landed closer to the planned point without GPS in strong wind. "
+      "The approach must cross nothing tall.", unit="m",
       min=100, max=1000, step=25, tab="mission", group="Takeoff and landing"),
     Q("mission.approach_alt_m", "How high should it start the final approach?", unit="m",
       min=10, max=80, step=5, tab="mission", group="Takeoff and landing"),
@@ -211,7 +213,7 @@ def default_project() -> dict:
         "mission": {
             "launch": None, "area": [], "landing": None, "landing_heading_deg": 0,
             "target": "car", "alt_m": 100, "overlap_pct": 20, "line_angle_deg": None,
-            "takeoff_alt_m": 50, "approach_len_m": 300, "approach_alt_m": 30,
+            "takeoff_alt_m": 50, "approach_len_m": 200, "approach_alt_m": 25,
             "alt_limit_m": 120,
         },
         "wind": {"speed_mps": None, "from_deg": None},
