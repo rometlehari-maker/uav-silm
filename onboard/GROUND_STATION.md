@@ -17,24 +17,35 @@ not need the internet except for the map background.
 
 ## 1. Start it
 
-**First time only:** install **Python 3** from <https://www.python.org/downloads/>.
-On Windows, tick **"Add python.exe to PATH"** on the first installer screen.
-Then get the software: on GitHub, **Code → Download ZIP**, and unzip it (or
-`git clone https://github.com/rometlehari-maker/uav-silm`).
+**Easiest: the app.** On www.uavsilm.eu → Downloads (or the GitHub releases):
 
-**Every time:**
+| Computer | Install | Start |
+|---|---|---|
+| **Windows** | `UAV-SILM-Ground-Station-Setup.exe`, double-click, Next, Install. No administrator rights needed. Windows may say the publisher is unknown (the app isn't code-signed): **More info → Run anyway** | the **UAV SILM Ground Station** icon on the desktop or in the Start menu |
+| **macOS** (Apple silicon) | unzip `UAV-SILM-Ground-Station-macos.zip`, drag the app to Applications | the first time **right-click → Open** (it isn't notarised), then as usual |
+| **Linux** | unpack `UAV-SILM-Ground-Station-linux.tar.gz`, run `./install.sh` in it | the applications menu, or `uav-silm-ground-station` |
+
+It opens in its own window (on Linux in the browser, with a small window to
+quit it). Nothing else to install: Python is inside the app. Only the
+simulator and training need Python on the computer; their tabs tell you.
+
+**From the source** (developers, or the simulator on Linux/WSL): install
+**Python 3** (<https://www.python.org/downloads/>; on Windows tick **"Add
+python.exe to PATH"**), get the software (the website's software zip, GitHub
+**Code → Download ZIP**, or `git clone https://github.com/rometlehari-maker/uav-silm`), then:
 
 | Computer | Do this |
 |---|---|
-| **Windows** | Open the `uav-silm\onboard` folder and **double-click `Start Ground Station.bat`** |
+| **Windows** | Open the `onboard` folder and **double-click `Start Ground Station.bat`** |
 | **macOS / Linux** | In a terminal: `cd uav-silm/onboard && ./start_ground_station.sh` |
 
 The first start sets itself up (it needs internet once and takes about a
 minute). Then your browser opens at **http://127.0.0.1:8765**. A black window
 stays open: that is the Ground Station running. **Keep it open** while you use
-it; close it when you're done.
+it; close it when you're done. Starting it again while it's already running
+just opens the page.
 
-Starting it again while it's already running just opens the browser page.
+**The first time, it opens the guided setup** (✦ Setup, below).
 
 ---
 

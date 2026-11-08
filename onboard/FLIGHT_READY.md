@@ -67,14 +67,14 @@ onboard/
 
 ## 1. The laptop: Ground Station
 
-Install Python 3 (<https://www.python.org/downloads/>; on Windows tick **"Add
-python.exe to PATH"**), get the repository (GitHub **Code → Download ZIP**, or
-`git clone https://github.com/rometlehari-maker/uav-silm`), then:
+Install the app from www.uavsilm.eu → Downloads (Windows installer, macOS,
+Linux; nothing else needed) and start it from its icon. Or, from the source:
+install Python 3 (on Windows tick **"Add python.exe to PATH"**), get the
+repository, and double-click `onboard\Start Ground Station.bat` (Windows) or
+run `cd uav-silm/onboard && ./start_ground_station.sh`. Details:
+[`GROUND_STATION.md` §1](GROUND_STATION.md#1-start-it).
 
-- **Windows:** double-click `onboard\Start Ground Station.bat`
-- **macOS / Linux:** `cd uav-silm/onboard && ./start_ground_station.sh`
-
-It opens in your browser at <http://127.0.0.1:8765>, the first time in the
+It opens (in its own window, or the browser at <http://127.0.0.1:8765>), the first time in the
 **guided setup** (✦ Setup), which walks through sections 2 and 3 below one
 screen at a time and checks each part itself. Details:
 [`GROUND_STATION.md`](GROUND_STATION.md).
