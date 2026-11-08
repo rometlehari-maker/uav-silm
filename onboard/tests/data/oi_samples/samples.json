@@ -1,0 +1,45 @@
+{
+  "note": "Photos from Google Open Images (originally on Flickr), CC BY 2.0, resized to 640 px. Used only to check that the ready-made model (models/silm_oi) still recognises them.",
+  "samples": [
+    {
+      "file": "tractor_5b0e4bb3427c7817.jpg",
+      "expect": "tractor",
+      "open_images_id": "5b0e4bb3427c7817",
+      "author": "D. Miller",
+      "title": "FARMALL 400",
+      "source": "https://www.flickr.com/photos/fun_flying/3154575656",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "resized to 640 px"
+    },
+    {
+      "file": "car_1da9ce958687569c.jpg",
+      "expect": "car",
+      "open_images_id": "1da9ce958687569c",
+      "author": "Jason Lawrence",
+      "title": "Honda Accord Coupe",
+      "source": "https://www.flickr.com/photos/27665395@N05/3233781160",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "resized to 640 px"
+    },
+    {
+      "file": "truck_11ce4c4edb03fe0a.jpg",
+      "expect": "truck",
+      "open_images_id": "11ce4c4edb03fe0a",
+      "author": "Frank Deanrdo",
+      "title": "Freightliner Business Class",
+      "source": "https://www.flickr.com/photos/44576730@N06/4752378413",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "resized to 640 px"
+    },
+    {
+      "file": "livestock_0311ae41ff437368.jpg",
+      "expect": "livestock",
+      "open_images_id": "0311ae41ff437368",
+      "author": "spotter_nl",
+      "title": "Lambs resting",
+      "source": "https://www.flickr.com/photos/30733371@N00/13651880464",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "resized to 640 px"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "title": "Farm vehicles and livestock",
+  "finds": [
+    "tractor",
+    "car",
+    "truck",
+    "livestock"
+  ],
+  "classes": [
+    "person",
+    "car",
+    "truck",
+    "tractor",
+    "combine",
+    "harvester",
+    "baler",
+    "hay_bale",
+    "livestock",
+    "silo",
+    "barn",
+    "logging_truck",
+    "timber_stack",
+    "fire",
+    "smoke"
+  ],
+  "imgsz": 320,
+  "epochs": 40,
+  "base": "yolo11n (Ultralytics)",
+  "trained": "2026-11-08",
+  "data": "Open Images V6/V7: 1,800 real photos, mostly taken from the ground",
+  "map50": 0.533,
+  "measured_at_0_35": {
+    "tractor": {
+      "precision": 0.73,
+      "recall": 0.38
+    },
+    "car": {
+      "precision": 0.72,
+      "recall": 0.37
+    },
+    "truck": {
+      "precision": 0.7,
+      "recall": 0.58
+    },
+    "livestock": {
+      "precision": 0.75,
+      "recall": 0.52
+    }
+  },
+  "note": "Ground-level photos: recognises much less from straight above. Retrain with your own aerial pictures (Teach new objects).",
+  "license": "Weights derived from Ultralytics YOLO11n (AGPL-3.0). Training photos CC BY 2.0, boxes CC BY 4.0 (Open Images)."
+}

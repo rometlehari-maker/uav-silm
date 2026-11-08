@@ -30,6 +30,7 @@ datasets, a GPU machine, or to understand what happens.
 
 ```bash
 cd onboard/training
+python3 -m pip install ultralytics litert-torch    # once (~2 GB)
 python3 openimages_dataset.py --per-class 450 --out datasets/openimages
 python3 train.py --data datasets/openimages/data.yaml --model yolo11n.pt \
     --epochs 40 --imgsz 320 --device cpu --name oi_v1
@@ -52,6 +53,57 @@ class numbers of `classes.yaml`. What I checked when building it:
 - **Viewpoint**: these are mostly **ground-level** photos. The model learns the
   objects, but recognises them from straight above much less well. Add your
   own aerial pictures (ordinary pictures saved in flight) and retrain.
+- **Livestock** photos are mostly horses (many with riders), some sheep and
+  cattle.
+
+## Results: the ready-made model `silm_oi`
+
+Trained exactly as above (yolo11n, 320 px, 40 epochs on CPU, ~50 min), exported
+with `export.py` and **committed** as `../models/silm_oi.tflite` (4.4 MB). The
+Ground Station offers it as "Ready-made: Farm vehicles and livestock".
+
+Measured on the **298 held-out photos** (never used for training) through the
+aircraft's own detector code (`silm_recon/detector.py`, whole picture, box must
+overlap the true box by ≥ 50 %), next to the standard model. *Precision* = of
+the boxes it reported, how many were right; *recall* = of the real objects, how
+many it found.
+
+| Object (boxes) | silm_oi at 0.35 | silm_oi at 0.45 | standard model at 0.35 |
+|---|---|---|---|
+| tractor (106) | **0.73** / 0.38 | 0.81 / 0.33 | - / 0.00 (doesn't know tractors) |
+| car (232) | **0.72** / 0.37 | 0.79 / 0.31 | 0.21 / 0.45 |
+| truck (125) | **0.70** / 0.58 | 0.73 / 0.50 | 0.30 / 0.51 |
+| livestock (153) | **0.75** / 0.52 | 0.83 / 0.45 | 0.51 / 0.46 (cow+sheep+horse) |
+
+(precision / recall). Ultralytics' own validation: mAP50 0.53, mAP50-95 0.33.
+
+What this means:
+- About **3 in 4 of its boxes are right**; it finds **about 4 to 6 in 10**
+  of the objects in these photos. The standard model finds a similar share of
+  cars and trucks but with many more false alarms, and no tractors at all.
+- **These are ground-level photos.** The aircraft looks straight down, where
+  this model has never been measured and will do clearly worse. It's a starting
+  point: fly with "save ordinary pictures" on, mark tractors/livestock in your
+  own aerial pictures (tab 9), and retrain.
+- **Speed**: 12 ms per picture on the cloud test machine's CPU (the standard
+  model: 20 ms there). Measure it on the Pi itself with `tools/preflight.py`.
+- **Export fix found on the way**: Ultralytics 8.4's fully-INT8 export pinned
+  every score at 0.50 (all thresholds useless). `export.py` now keeps the
+  detection head in float and checks the scores against the original
+  (ratio 1.00 for this model).
+- `tests/test_bundled_model.py` re-checks the model on four of these photos
+  (`tests/data/oi_samples/`, with their authors and licences), plus that a
+  blank picture gives no detections.
+
+To rebuild and re-measure it:
+
+```bash
+python3 export.py --weights runs/detect/oi_v1/weights/best.pt --imgsz 320 \
+    --model-name silm_oi --data datasets/openimages/data.yaml
+cd .. && python3 tools/threshold_sweep.py --model models/silm_oi.tflite \
+    --labels models/silm_oi_labels.txt --data training/datasets/openimages/data.yaml \
+    --split val --thresholds 0.25,0.35,0.45,0.55
+```
 
 ## Will it work in real situations? (read this)
 

@@ -20,6 +20,7 @@ The best weights land in runs/detect/<name>/weights/best.pt -> feed to export.py
 from __future__ import annotations
 
 import argparse
+import os
 
 
 def main() -> int:
@@ -67,8 +68,10 @@ def main() -> int:
         close_mosaic=10,    # turn mosaic off for the last epochs to settle
     )
     print("\nTraining done.")
-    print("Best weights:", getattr(results, "save_dir", "runs/detect/" + args.name))
-    print("Next: python3 export.py --weights runs/detect/%s/weights/best.pt" % args.name)
+    save_dir = str(getattr(results, "save_dir", None) or os.path.join(args.project or "runs/detect", args.name))
+    best = os.path.join(save_dir, "weights", "best.pt")
+    print("Best weights:", best)
+    print(f"Next: python3 export.py --weights {best} --data {args.data}")
     return 0
 
 
