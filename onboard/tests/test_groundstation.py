@@ -656,6 +656,32 @@ def test_trained_model_goes_to_the_pi_by_usb_stick(station, pi):
     assert agent.usb_tick().get("models") == []              # same model: not reinstalled
 
 
+def test_bundled_model_is_offered_and_sent(station, pi, tmp_path):
+    """A ready-made model shipped in onboard/models (with a .json description)
+    is offered without training and goes to the Pi like a trained one; a model
+    file without a description (the standard COCO model) is not offered, and
+    the user's own model of the same name wins."""
+    agent, addr, _, _ = pi
+    bundled = tmp_path / "bundled"
+    data = fake_model(str(bundled), name="ready_v1", classes=("tractor", "car"))
+    open(bundled / "plain.tflite", "wb").write(data)            # no .json -> not offered
+    station.trainer.bundled_dirs = (str(bundled),)
+    names = {m["name"]: m for m in station.trainer.list_models()}
+    assert "ready_v1" in names and names["ready_v1"]["bundled"] and "plain" not in names
+    p = full_project(recognition__model="ready_v1", recognition__targets=["tractor"])
+    assert station.check(p)["ok"], station.check(p)["errors"]
+    r = station.pi_send({"project": p, "address": addr})
+    assert r["ok"] and "ready_v1" in r["message"]
+    assert open(os.path.join(agent.models_dir(), "ready_v1.tflite"), "rb").read() == data
+    stick = tmp_path / "stick"
+    stick.mkdir()
+    r = station.usb_write({"project": p, "path": str(stick)})
+    assert r["ok"] and "models/ready_v1.tflite" in r["files"]
+    fake_model(station.trainer.models_dir, name="ready_v1", classes=("deer",))
+    mine = [m for m in station.trainer.list_models() if m["name"] == "ready_v1"]
+    assert len(mine) == 1 and not mine[0].get("bundled") and mine[0]["classes"] == ["deer"]
+
+
 def test_unknown_model_is_an_error(station):
     r = station.check(full_project(recognition__model="never_trained"))
     assert any("not on this laptop" in e for e in r["errors"])

@@ -261,26 +261,53 @@ PRESETS = {
 class Trainer:
     """One training run at a time, in the background, with a progress log."""
 
-    def __init__(self, models_dir: str):
+    def __init__(self, models_dir: str, bundled_dirs: tuple = ()):
         self.models_dir = models_dir
+        # Ready-made models shipped with the software (onboard/models): only
+        # those with a <name>.json description and labels are offered.
+        self.bundled_dirs = tuple(d for d in bundled_dirs if d and os.path.isdir(d))
         os.makedirs(models_dir, exist_ok=True)
         self.job: dict | None = None
 
-    def list_models(self) -> list[dict]:
+    @staticmethod
+    def _scan(folder: str, need_info: bool) -> list[dict]:
         out = []
-        for f in sorted(os.listdir(self.models_dir)):
-            if f.endswith(".tflite"):
-                base = f[:-7]
-                info = {}
-                ip = os.path.join(self.models_dir, base + ".json")
-                if os.path.isfile(ip):
-                    try:
-                        info = json.load(open(ip))
-                    except ValueError:
-                        pass
-                out.append({"name": base, "file": f, "size_mb": round(
-                    os.path.getsize(os.path.join(self.models_dir, f)) / 1e6, 1), **info})
+        for f in sorted(os.listdir(folder)):
+            if not f.endswith(".tflite") or f.endswith("_edgetpu.tflite"):
+                continue
+            base = f[:-7]
+            ip = os.path.join(folder, base + ".json")
+            if need_info and not (os.path.isfile(ip) and
+                                  os.path.isfile(os.path.join(folder, base + "_labels.txt"))):
+                continue
+            info = {}
+            if os.path.isfile(ip):
+                try:
+                    with open(ip, encoding="utf-8") as fh:
+                        info = json.load(fh)
+                except ValueError:
+                    pass
+            out.append({"name": base, "file": f, "dir": folder, "size_mb": round(
+                os.path.getsize(os.path.join(folder, f)) / 1e6, 1), **info})
         return out
+
+    def list_models(self) -> list[dict]:
+        """Your trained models, then the bundled ones (yours win on a name clash)."""
+        out = self._scan(self.models_dir, need_info=False)
+        seen = {m["name"] for m in out}
+        for d in self.bundled_dirs:
+            for m in self._scan(d, need_info=True):
+                if m["name"] not in seen:
+                    seen.add(m["name"])
+                    out.append({**m, "bundled": True})
+        return out
+
+    def model_dir(self, name: str) -> str:
+        """The folder holding model <name> (yours first, then the bundled ones)."""
+        for m in self.list_models():
+            if m["name"] == name:
+                return m["dir"]
+        return self.models_dir
 
     def start(self, ds: Dataset, preset: str = "quick", device: str = "cpu",
               base_model: str = "yolo11n.pt") -> dict:

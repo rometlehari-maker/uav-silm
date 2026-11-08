@@ -79,7 +79,8 @@ class Station:
         self.camera = camera_from_config()
         self.sim = sim or SimRunner()
         self.dataset = training.Dataset(self.training_root)
-        self.trainer = training.Trainer(os.path.join(self.training_root, "models"))
+        self.trainer = training.Trainer(os.path.join(self.training_root, "models"),
+                                        bundled_dirs=(os.path.join(ONBOARD, "models"),))
 
     # ---------------------------------------------------------- meta
     def meta(self) -> dict:
@@ -258,7 +259,7 @@ class Station:
         model = self._model(o["project"])
         if model:        # the model first, so the new settings find it installed
             r = pilink.send_model(body.get("address"),
-                                  training.model_payload(self.trainer.models_dir, model))
+                                  training.model_payload(self.trainer.model_dir(model), model))
             if not r.get("ok"):
                 return r
         r = pilink.send_settings(body.get("address"), o["settings_text"], o["project"],
@@ -272,7 +273,7 @@ class Station:
         model = self._model(o["project"])
         files = None
         if model:
-            base = os.path.join(self.trainer.models_dir, model)
+            base = os.path.join(self.trainer.model_dir(model), model)
             files = {f"models/{model}.tflite": base + ".tflite",
                      f"models/{model}_labels.txt": base + "_labels.txt"}
         return pilink.usb_write(body.get("path"), o["settings_text"], o["project"],

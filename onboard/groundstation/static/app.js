@@ -54,7 +54,7 @@ document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () 
 function optionsFor(q) {
   if (!q.open) return q.options;
   const o = Object.assign({}, q.options);
-  if (q.id === "recognition.model") (META.models || []).forEach((m) => (o[m.name] = `Your model: ${m.name}` + (m.classes ? ` (${m.classes.join(", ")})` : "")));
+  if (q.id === "recognition.model") (META.models || []).forEach((m) => (o[m.name] = (m.bundled ? `Ready-made: ${m.title || m.name}` : `Your model: ${m.name}`) + (m.classes ? ` (${(m.finds || m.classes).join(", ")})` : "")));
   if (q.id === "recognition.targets") (META.training_classes || []).forEach((c) => { if (!(c in o)) o[c] = `${c} (your model)`; });
   const v = getv(q.id);
   (Array.isArray(v) ? v : v != null ? [v] : []).forEach((x) => { if (!(x in o)) o[x] = x; });
@@ -571,7 +571,7 @@ async function loadTrain(keep) {
     used.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${v.pictures}</td><td>${v.boxes}</td></tr>`).join("") + `</table>` : "<p class='help'>No objects marked yet.</p>") +
     (s.advice.length ? `<ul class="msgs">${s.advice.map((a) => `<li class="warn">${esc(a)}</li>`).join("")}</ul>` : s.ready ? `<p class="result ok">✓ Enough pictures to train.</p>` : "");
   $("tr-preset").innerHTML = Object.entries(st.presets).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
-  $("tr-models").innerHTML = st.models.map((m) => `<li><span><b>${esc(m.name)}</b><br><span class="meta">${esc((m.classes || []).join(", "))}${m.map50 != null ? " · accuracy (mAP50) " + Math.round(m.map50 * 100) + " %" : ""} · ${m.size_mb} MB</span></span>
+  $("tr-models").innerHTML = st.models.map((m) => `<li><span><b>${esc(m.name)}</b>${m.bundled ? ' <span class="meta">(ready-made, comes with the software)</span>' : ""}<br><span class="meta">${esc((m.finds || m.classes || []).join(", "))}${m.map50 != null ? " · accuracy (mAP50) " + Math.round(m.map50 * 100) + " %" : ""} · ${m.size_mb} MB</span></span>
     <button class="btn" data-use="${esc(m.name)}">Use on the aircraft</button></li>`).join("") || '<li class="meta">None yet.</li>';
   $("tr-models").querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
     P.recognition.model = b.dataset.use; renderForms(); changed();
