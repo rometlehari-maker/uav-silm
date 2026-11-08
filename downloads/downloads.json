@@ -1,15 +1,15 @@
 {
   "version": "2.1.0",
-  "commit": "c59aee6a7816e40cd161e910490e644d6fcc6469",
-  "commit_short": "c59aee6a78",
+  "commit": "1d196ee249fb0c1ad6529a60e740463bc243341f",
+  "commit_short": "1d196ee249",
   "date": "2026-11-08",
   "files": [
     {
       "name": "uav-silm-software-2.1.0.zip",
       "kind": "software",
       "version": "2.1.0",
-      "bytes": 5262666,
-      "sha256": "60ef39a5c41a1be23b3b94d5379ec3251d99734046d68ebef28f9bd9abac40f8",
+      "bytes": 5262731,
+      "sha256": "b63479d113b30d7882f9f0a29b5735e16648ebcb394fe623730002db45fa6a24",
       "what": "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.",
       "licence": "MIT + third-party"
     },
@@ -17,8 +17,8 @@
       "name": "silm-oi-farm-model-v1.zip",
       "kind": "model",
       "version": "v1",
-      "bytes": 3519435,
-      "sha256": "cd6bc7761c772eb55f9ebeb9984a37bebf943a33a27682ab1d2e66219ad19161",
+      "bytes": 3519436,
+      "sha256": "87da5932d2a5a123c7b86846568169e1957f4d207256288d48ece43e9d644c08",
       "what": "The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.",
       "licence": "AGPL-3.0"
     },
