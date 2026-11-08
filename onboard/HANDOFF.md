@@ -64,8 +64,9 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **370 passed**, 1 skipped (ArduPilot
-  source check; set `ARDUPILOT_SRC=/home/user/ardupilot`).
+- `python3 -m pytest -q` in `onboard/`: **394 passed**, 2 skipped (ArduPilot
+  source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
+  `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
   passes. Screenshots with `SILM_E2E_SHOTS=<dir>`.
 - `tests/test_sitl_integration.py` (`SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`):
@@ -130,12 +131,23 @@ User's answers to questions asked:
   PASS 107 m (armed on ground 17 s); GPS-off w6 PASS 55 m (14 s); **w12 blind
   FAIL 151 m** (limit 150). => MAX_WIND_MPS = 10 (question asks for gusts).
   Docs updated (FLIGHT_READY 2.4, README, GROUND_STATION, SITL_HOWTO E1).
-- **Running now:** YOLO training `training/runs/oi_v1` (yolo11n, imgsz 320,
-  40 epochs, CPU, ~1 min/epoch; log in the scratchpad `train_oi.log`).
-  `training/runs/` is git-ignored. Next: export (`training/export.py --weights
-  runs/oi_v1/weights/best.pt --imgsz 320 --model-name silm_oi --data
-  datasets/openimages/data.yaml`), evaluate via `tools/threshold_sweep.py`
-  on the val split, write results into training/README.md, regression test.
+- **Training DONE (task 7):** `training/runs/oi_v1` (git-ignored), yolo11n,
+  320 px, 40 epochs CPU (~50 min). Val mAP50 0.533. Exported -> committed
+  `models/silm_oi.tflite` (4.4 MB, INT8 body + float head) + labels + `silm_oi.json`.
+  Held-out 298 photos via the onboard detector, precision/recall at 0.35:
+  tractor 0.73/0.38, car 0.72/0.37, truck 0.70/0.58, livestock 0.75/0.52
+  (COCO SSD: no tractors; car 0.21/0.45, truck 0.30/0.51, livestock 0.51/0.46).
+  Results + caveats in `training/README.md` ("Results: the ready-made model").
+  `tests/test_bundled_model.py` + 4 CC BY 2.0 sample photos with attribution
+  (`tests/data/oi_samples/samples.json`). Licence note (YOLO11n AGPL-3.0) in
+  `models/README.md`.
+- **Aerial data:** the user asked why ground-level photos. Answer: the only
+  labelled source reachable here. Roboflow Universe has aerial sets but the
+  user declined both the credential form and adding Roboflow hosts to the
+  environment (do NOT propose again); they pasted a key in chat and then
+  regenerated it (old key dead, never stored). Route for them: run
+  `training/fetch_real_data.py --source roboflow` on their PC, or fly with
+  "save ordinary pictures" and label in tab 9.
 - **Export bug found + fixed (`training/export.py`):** Ultralytics 8.4 now exports
   through LiteRT (needs `litert-torch`, which pins torch<2.15 - in this container
   it lives in a scratchpad venv `exportenv` installed with `--no-deps` so the
@@ -163,7 +175,7 @@ User's answers to questions asked:
 ## Still to do (in this order)
 
 1. ~~Strong-wind landing~~ (done: 200 m/25 m approach, limit 10 m/s).
-2. **Training on real images** (task 7): Open Images is reachable
+2. ~~Training on real images~~ (done, see the progress log). Was (task 7): Open Images is reachable
    (storage.googleapis.com + open-images-dataset.s3.amazonaws.com); Hugging
    Face, LVIS and download.pytorch.org are BLOCKED by the network policy.
    Open Images has no tractor *boxes*; plan: images human-verified as
@@ -186,7 +198,7 @@ User's answers to questions asked:
    SILM_TRANSFER/to_aircraft & from_aircraft), flights back to the laptop.
    Update `models/README.md` (new model name), `planner/README.md` (planner
    is superseded by the Ground Station).
-4. **Final full test run** (task 5) + add the new test files' deps to
+4. **Final full test run** (task 5): pytest 394 passed in a clean CI-like venv; CI now also installs Playwright so the browser test runs there. Was: add the new test files' deps to
    `.github/workflows/onboard-tests.yml` (CI already downloads the model and
    installs ai-edge-litert + shellcheck).
 
