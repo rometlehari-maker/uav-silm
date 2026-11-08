@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "commit": "db734975fc9b6f31cc6cc6ddb8e4e2ef50c5aa93",
+  "commit_short": "db734975fc",
+  "date": "2026-11-08",
+  "files": [
+    {
+      "name": "uav-silm-software-2.0.0.zip",
+      "kind": "software",
+      "version": "2.0.0",
+      "bytes": 4500476,
+      "sha256": "a108bd5fac10d60a6647c8532556fdd0047534795a1d9b36f454752b8d6eea06",
+      "what": "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.",
+      "licence": "MIT + third-party"
+    },
+    {
+      "name": "silm-oi-farm-model-v1.zip",
+      "kind": "model",
+      "version": "v1",
+      "bytes": 3519436,
+      "sha256": "c880dd066d12cb9f9a85fa1852847c82551fdaf37f5f3d2c1b6168b4527281b3",
+      "what": "The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.",
+      "licence": "AGPL-3.0"
+    },
+    {
+      "name": "gps_denied_failsafe.param",
+      "kind": "param",
+      "version": "2.0.0",
+      "bytes": 7630,
+      "sha256": "137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d",
+      "what": "ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.",
+      "licence": "MIT"
+    },
+    {
+      "name": "silm_gps_loss.lua",
+      "kind": "lua",
+      "version": "2.0.0",
+      "bytes": 13595,
+      "sha256": "84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315",
+      "what": "ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.",
+      "licence": "MIT"
+    }
+  ]
+}

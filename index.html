@@ -142,7 +142,7 @@
   .menu-btn i::before, .menu-btn i::after{ content:""; position:absolute; left:0; right:0; height:2px; border-radius:2px; background:currentColor; }
   .menu-btn i::before{ top:0; } .menu-btn i::after{ bottom:0; }
   .menu-btn .cur{ color:var(--cyan); font-weight:560; }
-  @media (max-width:1080px){ nav.crumbs{ display:none; } .menu-btn{ display:inline-flex; } }
+  @media (max-width:1120px){ nav.crumbs{ display:none; } .menu-btn{ display:inline-flex; } }
   @media (max-width:600px){ .topbar{ padding:10px 16px; } .brand span{ display:none; } }
 
   /* menu sheet */
@@ -556,6 +556,19 @@
     *, *::before, *::after{ animation:none !important; transition:none !important; }
     .js .rv{ opacity:1; transform:none; }
   }
+
+  /* downloads */
+  .cards.dl > *{ display:flex; flex-direction:column; }
+  .dl-what{ font-size:14.5px; color:var(--dim); margin-top:12px; flex:1; }
+  .dl-btn{ margin-top:18px; align-self:flex-start; font-family:var(--mono); font-size:13.5px; font-weight:500; padding:10px 16px; max-width:100%; overflow-wrap:anywhere; }
+  .dl-btn .ic-arr{ flex:none; }
+  .dl-btn:hover .ic-arr{ transform:translateY(2px); }
+  .dl-hash{ margin-top:14px; display:flex; flex-direction:column; gap:3px; }
+  .dl-hash span{ font-family:var(--mono); font-size:11.5px; color:var(--faint); }
+  .dl-hash code{ font-family:var(--mono); font-size:11.5px; color:var(--dim); word-break:break-all; line-height:1.5; user-select:all; }
+  #downloads code{ font-family:var(--mono); font-size:.88em; }
+  #downloads .dl-hash code{ font-size:11.5px; color:var(--faint); }
+  #downloads .tabs{ margin-top:34px; }
 </style>
 </head>
 <body>
@@ -577,6 +590,7 @@
       <a href="#timeline">Timeline</a>
       <a href="#team">Team</a>
       <a href="#resources">Resources</a>
+      <a href="#downloads">Downloads</a>
     </nav>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true"></span></button>
   </div>
@@ -599,6 +613,7 @@
     <li><a class="mi" href="#timeline"><b>Timeline</b><span>Five stages up to 8 December</span></a></li>
     <li><a class="mi" href="#team"><b>Team</b><span>Who does what</span></a></li>
     <li><a class="mi" href="#resources"><b>Resources</b><span>Tools, parts and references</span></a></li>
+    <li><a class="mi" href="#downloads"><b>Downloads</b><span>Our software, settings and model, free to use</span></a></li>
   </ol>
 </div>
 
@@ -614,6 +629,7 @@
   <a href="#timeline" tabindex="-1"><span>Timeline</span><i></i></a>
   <a href="#team" tabindex="-1"><span>Team</span><i></i></a>
   <a href="#resources" tabindex="-1"><span>Resources</span><i></i></a>
+  <a href="#downloads" tabindex="-1"><span>Downloads</span><i></i></a>
 </nav>
 
 <main id="top">
@@ -1665,8 +1681,100 @@
           <div class="src-item"><div><h4>ArduPilot Plane documentation</h4><p><b>What we took</b>: flight-controller setup and waypoint mission planning.</p></div></div>
           <div class="src-item"><div><h4>Vernier godirect and RPLCD Python libraries</h4><p><b>What we took</b>: reading the force sensor and driving the LCD on the thrust rig.</p></div></div>
           <div class="src-item"><div><h4>three.js (MIT licence) <span class="new">new</span></h4><p><b>What we used it for</b>: the interactive 3D viewers on this site, served from our own domain.</p></div></div>
+          <div class="src-item"><div><h4>Google Open Images V6/V7 (CC BY 4.0; photos CC BY 2.0) <span class="new">new</span></h4><p><b>What we used</b>: about 1,800 labelled photos of tractors, cars, trucks and livestock to train our ready-made recognition model. Each photo belongs to its Flickr author.</p></div></div>
+          <div class="src-item"><div><h4>Ultralytics YOLO11 (AGPL-3.0) <span class="new">new</span></h4><p><b>What we used</b>: the YOLO11n network and training tools; our model is fine-tuned from it and shared under the same licence.</p></div></div>
+          <div class="src-item"><div><h4>ArduPilot SITL simulator and LiteRT <span class="new">new</span></h4><p><b>What we used</b>: flying our missions with GPS jamming in simulation, and running the recognition model on the Raspberry Pi.</p></div></div>
+          <div class="src-item"><div><h4>Leaflet, OpenStreetMap and Esri World Imagery <span class="new">new</span></h4><p><b>What we used</b>: the maps in our Ground Station program (map data &copy; OpenStreetMap contributors, imagery &copy; Esri and its data providers).</p></div></div>
           <div class="src-item"><div><h4>Claude (Anthropic)</h4><p><b>What we used it for</b>: help organising the website content, writing the page's HTML, CSS and JavaScript including the 3D viewers, setting up and running the OpenFOAM CFD of our V4 airframe, and the centre-of-gravity, fit-check and layout calculations.</p></div></div>
         </div></div></div>
+      </div>
+      <div class="next"><a href="#downloads">Next: <b>Downloads</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- ============ DOWNLOADS ============ -->
+  <section class="s" id="downloads">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Downloads</span></div>
+      <h2 class="rv">Download the software</h2>
+      <p class="lead rv">Everything we use to plan a survey, set up the aircraft, fly it in the simulator and look at the pictures afterwards. Our own code is free to use, change and share under the MIT licence; the parts made by others keep their licences and are credited below.</p>
+      <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
+      <div class="cards c2 dl rv">
+        <div>
+          <div class="card-k">Software · MIT + third-party</div>
+          <div class="card-t">UAV SILM software 2.0.0</div>
+          <div class="card-s">ZIP · 4.5 MB</div>
+          <p class="dl-what">Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.</p>
+          <a class="btn ghost dl-btn" href="downloads/uav-silm-software-2.0.0.zip" download>uav-silm-software-2.0.0.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>a108bd5fac10d60a6647c8532556fdd0047534795a1d9b36f454752b8d6eea06</code></div>
+        </div>
+        <div>
+          <div class="card-k">Model · AGPL-3.0</div>
+          <div class="card-t">Farm recognition model silm_oi</div>
+          <div class="card-s">ZIP · 3.5 MB</div>
+          <p class="dl-what">The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.</p>
+          <a class="btn ghost dl-btn" href="downloads/silm-oi-farm-model-v1.zip" download>silm-oi-farm-model-v1.zip<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>c880dd066d12cb9f9a85fa1852847c82551fdaf37f5f3d2c1b6168b4527281b3</code></div>
+        </div>
+        <div>
+          <div class="card-k">ArduPilot · MIT</div>
+          <div class="card-t">Flight controller settings</div>
+          <div class="card-s">PARAM · 8 kB</div>
+          <p class="dl-what">ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.</p>
+          <a class="btn ghost dl-btn" href="downloads/gps_denied_failsafe.param" download>gps_denied_failsafe.param<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d</code></div>
+        </div>
+        <div>
+          <div class="card-k">ArduPilot · MIT</div>
+          <div class="card-t">GPS-loss script</div>
+          <div class="card-s">LUA · 14 kB</div>
+          <p class="dl-what">ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.</p>
+          <a class="btn ghost dl-btn" href="downloads/silm_gps_loss.lua" download>silm_gps_loss.lua<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <div class="dl-hash"><span>SHA-256</span><code>84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315</code></div>
+        </div>
+      </div>
+      <p class="note rv">Version 2.0.0, built 2026-11-08 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/db734975fc9b6f31cc6cc6ddb8e4e2ef50c5aa93/onboard"><code>db734975fc</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
+      <!-- downloads:end -->
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Using the downloads">
+          <button class="tab" role="tab">Start here</button>
+          <button class="tab" role="tab">Check a download</button>
+          <button class="tab" role="tab">Licences and credits</button>
+          <span class="tab-ind"></span>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>You want to</th><th>Take</th></tr></thead><tbody>
+            <tr><td>Plan and fly a survey, see the pictures</td><td>The software zip. Unpack it and start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>. <code>GROUND_STATION.md</code> explains every tab, <code>FLIGHT_READY.md</code> the whole procedure.</td></tr>
+            <tr><td>Set up the Raspberry Pi 4</td><td>The software zip, then <code>bash pi/install.sh</code> on the Pi.</td></tr>
+            <tr><td>Only the flight controller settings</td><td>The <code>.param</code> file (Mission Planner: Full Parameter List, Load from file) and the <code>.lua</code> script (SD card, <code>APM/scripts</code>).</td></tr>
+            <tr><td>Recognise tractors and livestock</td><td>The model zip, or choose "Ready-made" on the Ground Station's Camera tab (it is already inside the software).</td></tr>
+          </tbody></table></div>
+          <p class="summary-box">Read before flying: the software is tested in ArduPilot's simulator but <b>not yet flown on a real aircraft</b>. Fully automatic flight without a radio link needs the EASA "specific" category (an operational authorisation from Transpordiamet in Estonia), and taking pictures of people and property has its own rules. It comes as is, without any warranty.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <p>Each file's SHA-256 checksum is listed above. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Computer</th><th>Command (in the folder with the file)</th></tr></thead><tbody>
+            <tr><td>Windows</td><td><code>certutil -hashfile uav-silm-software-2.0.0.zip SHA256</code></td></tr>
+            <tr><td>macOS</td><td><code>shasum -a 256 uav-silm-software-2.0.0.zip</code></td></tr>
+            <tr><td>Linux</td><td><code>sha256sum -c SHA256SUMS.txt --ignore-missing</code></td></tr>
+          </tbody></table></div>
+          <p class="note">The files are built from a published commit of our repository, always the same way, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py</code>.</p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap"><table class="tbl"><thead><tr><th>Part</th><th>Made by</th><th>Licence</th></tr></thead><tbody>
+            <tr><td>Our software, settings, script and documentation</td><td>UAV SILM team</td><td>MIT</td></tr>
+            <tr><td>Recognition model silm_oi</td><td>UAV SILM team, fine-tuned from Ultralytics YOLO11n (&copy; Ultralytics)</td><td>AGPL-3.0</td></tr>
+            <tr><td>Photos and boxes the model learnt from</td><td>Google Open Images; photos by their Flickr authors</td><td>CC BY 4.0 (boxes), CC BY 2.0 (photos)</td></tr>
+            <tr><td>Map in the Ground Station</td><td>Leaflet (Volodymyr Agafonkin and contributors)</td><td>BSD-2-Clause</td></tr>
+            <tr><td>Map data and tiles</td><td>&copy; OpenStreetMap contributors</td><td>ODbL</td></tr>
+            <tr><td>Satellite imagery</td><td>&copy; Esri and its data providers</td><td>Esri terms of use</td></tr>
+            <tr><td>Fonts (on this site and in the Ground Station)</td><td>Bricolage Grotesque Project Authors; IBM Corp. (IBM Plex Mono)</td><td>SIL Open Font License 1.1 (<a href="fonts/OFL-BricolageGrotesque.txt">text</a>, <a href="fonts/OFL-IBMPlexMono.txt">text</a>)</td></tr>
+            <tr><td>Flight controller firmware and simulator (not included)</td><td>ArduPilot project</td><td>GPL-3.0</td></tr>
+            <tr><td>Standard recognition model (downloaded on the Pi)</td><td>TensorFlow authors, COCO SSD MobileNet v1</td><td>Apache-2.0</td></tr>
+            <tr><td>Python libraries (installed separately)</td><td>pymavlink, OpenCV, NumPy, LiteRT, PyYAML, pySerial and others</td><td>LGPL-3.0, Apache-2.0, BSD, MIT</td></tr>
+          </tbody></table></div>
+          <p class="note">The full list, with every author and licence text, is in <code>THIRD_PARTY_NOTICES.md</code> inside the software zip. The four test photos in it are credited by name in <code>tests/data/oi_samples/samples.json</code>.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -1703,6 +1811,7 @@
         <a href="#progress">Progress report</a>
         <a href="#build">Build and testing</a>
         <a href="#timeline">Timeline</a>
+        <a href="#downloads">Downloads</a>
       </div>
       <div class="fcol">
         <div class="ftag">Team</div>
@@ -1822,8 +1931,8 @@
 
   // scroll progress, active section in nav, menu and rail
   var bar = d.getElementById('scrollbar'), hdr = d.querySelector('header.top');
-  var ids = ['project','design','inside','onboard','cfd','learnt','progress','build','timeline','team','resources'];
-  var names = {project:'Project', design:'Design', inside:'Inside', onboard:'Onboard', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources'};
+  var ids = ['project','design','inside','onboard','cfd','learnt','progress','build','timeline','team','resources','downloads'];
+  var names = {project:'Project', design:'Design', inside:'Inside', onboard:'Onboard', cfd:'CFD', learnt:'Lessons', progress:'Progress', build:'Build', timeline:'Timeline', team:'Team', resources:'Resources', downloads:'Downloads'};
   var secs = ids.map(function(i){ return d.getElementById(i); });
   var navLinks = [].slice.call(d.querySelectorAll('[data-nav] a[href^="#"]'));
   var ticking = false, lastCur = null;
