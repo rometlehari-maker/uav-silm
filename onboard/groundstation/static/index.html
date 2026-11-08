@@ -412,6 +412,59 @@
         <div id="lc-current" class="help"></div>
       </div>
 
+      <div class="card">
+        <h2>Aircraft software</h2>
+        <p class="help">This app carries the aircraft computer's software. Put it on the Pi
+          without internet: over the aircraft's Wi-Fi, or with the USB stick. The Pi checks the
+          new software with its own settings first and keeps the old one, so a bad update
+          changes nothing. Your settings, models and flights stay.</p>
+        <div class="sw-versions" id="sw-versions">
+          <div><span>In this app</span><b id="sw-app">…</b></div>
+          <div><span>On the aircraft</span><b id="sw-pi">press "Compare"</b></div>
+        </div>
+        <div class="row-btns">
+          <button class="btn ghost" id="sw-info">Compare</button>
+          <button class="btn primary" id="sw-wifi">Update over Wi-Fi</button>
+          <button class="btn" id="sw-usb">Write it to the USB stick</button>
+        </div>
+        <div class="result" id="sw-result" role="status"></div>
+        <p class="help">USB stick: the stick chosen on the Send tab (C). Plug it into the Pi on the
+          ground, disarmed; it installs within a minute. Then plug it back in here and press
+          "Read the stick's answer" on the Send tab.</p>
+      </div>
+
+      <div class="card">
+        <h2>Aircraft Wi-Fi</h2>
+        <p class="help">The aircraft makes its own Wi-Fi so this laptop can reach it. Give it your
+          own name and password here; it changes at the aircraft's next start (then join the new
+          name). You can also add your home or workshop Wi-Fi: when it is in range the Pi joins it
+          instead and has internet, for installing Python packages.</p>
+        <div class="row-btns"><button class="btn ghost" id="wf-list">Show the aircraft's networks</button></div>
+        <ul class="list" id="wf-nets"></ul>
+        <h3 class="q small">Aircraft's own Wi-Fi</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-hs-name" maxlength="32" placeholder="New name, e.g. SILM-Tartu" aria-label="Aircraft Wi-Fi name">
+          <input id="wf-hs-pass" type="password" maxlength="63" placeholder="Password, 8 or more characters" aria-label="Aircraft Wi-Fi password">
+          <button class="btn" id="wf-hs-set">Change</button>
+        </div>
+        <h3 class="q small">Home or workshop Wi-Fi (for updates)</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-home-name" maxlength="32" placeholder="Network name" aria-label="Home Wi-Fi name">
+          <input id="wf-home-pass" type="password" maxlength="63" placeholder="Its password" aria-label="Home Wi-Fi password">
+          <button class="btn" id="wf-home-add">Add</button>
+        </div>
+        <h3 class="q small">Country (Wi-Fi channels allowed by law)</h3>
+        <div class="inline wf-inputs">
+          <input id="wf-cc" class="wf-cc" maxlength="2" value="EE" aria-label="Wi-Fi country code">
+          <button class="btn" id="wf-cc-set">Set</button>
+        </div>
+        <div class="result" id="wf-result" role="status"></div>
+        <p class="help">Names may use letters, digits, spaces and . _ - (no other characters).
+          If you forget the new password: plug a keyboard and screen into the Pi and run
+          <code>sudo /usr/local/sbin/silm-wifi hotspot SILM-new NEWPASSWORD</code>, or write the
+          SD card again.</p>
+      </div>
+
       <h2 class="sub">Flight controller (USB cable)</h2>
       <div class="card tight">
         <div class="q small">Which USB port is the flight controller plugged into?</div>

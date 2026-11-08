@@ -81,9 +81,9 @@ MAX_SOFTWARE_BYTES = 40_000_000
 SOFTWARE_REQUIRED = ("VERSION", "run.py", "config.yaml", "silm_recon/agent.py", "silm_recon/recon.py")
 
 
-def software_version() -> str:
+def software_version(root: str = ROOT) -> str:
     try:
-        with open(os.path.join(ROOT, "VERSION")) as fh:
+        with open(os.path.join(root, "VERSION")) as fh:
             return fh.read().strip()
     except OSError:
         return "unknown"
@@ -184,7 +184,7 @@ class Agent:
         except (OSError, ValueError):
             pass
         return {
-            "ok": True, "hostname": socket.gethostname(), "software": software_version(),
+            "ok": True, "hostname": socket.gethostname(), "software": software_version(self.root),
             "aircraft": st, "flying": armed_or_unknown_flying(st),
             "program_running": bool(st.get("fresh")),
             "settings_file": sp, "settings_present": os.path.isfile(sp),
@@ -474,7 +474,7 @@ class Agent:
             if done["copied"]:
                 self.log("copied to USB stick: " + ", ".join(done["copied"]))
         self._usb_status_file({"time": time.strftime("%Y-%m-%d %H:%M:%S"),
-                               "hostname": socket.gethostname(), "software": software_version(),
+                               "hostname": socket.gethostname(), "software": software_version(self.root),
                                "flights": self.list_flights(),
                                "settings_info": self.status().get("settings_info")})
         try:
@@ -624,7 +624,7 @@ class Agent:
         if missing:
             return {"ok": False, "message": f"not a SILM software package (missing {missing})"}
         new_version = z.read("VERSION").decode().strip()
-        old_version = software_version()
+        old_version = software_version(self.root)
         with self._lock:
             root = self.root.rstrip(os.sep)
             staging, backup = root + ".new", root + ".old"
@@ -853,7 +853,7 @@ def main() -> int:
     agent = Agent(args.config, args.settings)
     srv = make_server(agent, args.host)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    agent.log(f"listening on {args.host}:{srv.server_address[1]} (software {software_version()})")
+    agent.log(f"listening on {args.host}:{srv.server_address[1]} (software {software_version(agent.root)})")
     try:
         while True:
             agent.tick()

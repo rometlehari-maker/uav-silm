@@ -64,7 +64,7 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **411 passed**, 2 skipped (ArduPilot
+- `python3 -m pytest -q` in `onboard/`: **439 passed**, 8 skipped (after task 11) (ArduPilot
   source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
   `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
@@ -296,6 +296,39 @@ User's answers to questions asked:
     real ArduPlane SITL, all pass), and the UI was driven against SITL.
     NOT possible from the app: the first ArduPilot install on a new board
     (DFU) -> explained in task 14's guides.
+  - (11) done: Pi software update + Wi-Fi from the app.
+    `groundstation/pisoftware.py` makes a reproducible zip of what the Pi runs
+    (PI_FILES/PI_DIRS; the packaged app carries it prebuilt as
+    `pi_software.zip`, made by `packaging/build_app.py prebuild_pi_package()`).
+    Agent `POST /api/software` {zip_b64} -> `install_software`: refuses while
+    armed, rejects unsafe/incomplete zips, unpacks to `onboard.new`, copies
+    models the package lacks (the downloaded COCO model), runs the NEW
+    `run.py --check` with the Pi's settings, swaps (old kept as `onboard.old`),
+    restarts silm-recon and exits (systemd restarts the agent). USB: stick
+    `SILM_TRANSFER/to_aircraft/software/silm-pi-software.zip`, installed once
+    (sha marker), result in `aircraft_status.json` -> shown by the Send tab's
+    "Read the stick's answer". Wi-Fi: root helper `pi/silm-wifi` (installed
+    to /usr/local/sbin, sudoers allows only it; every value validated) with
+    list / hotspot NAME PASS / home-add / home-remove / country CC; agent
+    `GET/POST /api/wifi`. Ground Station: `POST /api/pi/software`
+    {how: info|wifi|usb}, `POST /api/pi/wifi`; Tools-tab cards "Aircraft
+    software" and "Aircraft Wi-Fi". Docs: GROUND_STATION.md got a "10 · Tools"
+    section (it had none), FLIGHT_READY 3.2 update notes + roll-back command.
+    Bug found by the browser test: the agent reported its module's VERSION,
+    not its software folder's -> `software_version(self.root)`.
+    **Verified for real (not only fakes):** a real agent process started from
+    a folder unpacked from the real package (VERSION set to 0.9.0) was updated
+    through the Ground Station's HTTP route: the real `run.py --check` ran,
+    the agent exited 0, restarted (as systemd would) reporting 2.1.1, `.old`
+    kept, downloaded model kept; a package with a broken config.yaml was
+    refused by its own check and nothing changed (script:
+    scratchpad real_update.py, not committed). The exact nmcli commands of
+    install.sh and silm-wifi were run through real nmcli 1.46 `--offline`
+    (apt network-manager): accepted, keyfiles right (AP, 10.42.0.1/24
+    shared, priority -10 hotspot / 0 home -> home preferred in range). A real
+    PyInstaller build (`packaging/build_app.py --smoke`) passes its self-test,
+    which now also checks the bundled Pi package. Full suite 439 passed,
+    8 skipped.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

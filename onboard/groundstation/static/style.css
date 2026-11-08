@@ -423,3 +423,11 @@ tr.pf-fail td:nth-child(2) b { color: var(--red); } tr.pf-skip td:nth-child(2) b
 .fcj-bar { margin: 6px 0; }
 #fc-job-card { border-color: var(--cyan); }
 @media (max-width: 760px) { .cal-grid { grid-template-columns: 1fr; } }
+.sw-versions { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0 4px; }
+.sw-versions > div { border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px 16px; min-width: 180px; }
+.sw-versions span { display: block; color: var(--faint); font-size: 13px; }
+.sw-versions b { font-family: var(--mono); font-size: 15px; }
+.sw-versions b.old { color: var(--amber); }
+h3.q.small { margin-top: 16px; }
+.wf-inputs input:not(.wf-cc) { flex: 1 1 200px; min-width: 0; }
+.wf-cc { width: 5em; text-transform: uppercase; }

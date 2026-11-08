@@ -251,6 +251,52 @@ Training needs the training tools on the laptop (about 2 GB; the tab tells you
 the command). A computer with an NVIDIA graphics card is 10-50 times faster.
 [`training/README.md`](training/README.md) explains training in depth.
 
+### 10 · Tools
+
+Everything you would otherwise do on the aircraft computer's keyboard or in
+Mission Planner. The aircraft must be **on the ground and disarmed**; the
+aircraft computer refuses changes while it is armed.
+
+**Aircraft computer** (join the laptop to the aircraft's Wi-Fi first):
+
+- **Check everything** - the full hardware check (`tools/preflight.py`) on the
+  Pi: camera, gimbal, flight controller link, GPS, failsafe settings, the
+  GPS-loss script, the mission on board, recognition speed against your height
+  and speed, storage, temperature, clock. PASS / WARN / FAIL per part.
+- **Camera** - the live picture, about once a second.
+- **Lens calibration** - measure the 160° lens with a printed checkerboard
+  (the card lists the steps); **Use this calibration** stores it in the
+  mission, and it goes to the aircraft with the settings.
+- **Aircraft software** - **Compare** shows the version on the aircraft and
+  the one in this app. **Update over Wi-Fi** sends it (about a minute), or
+  **Write it to the USB stick** (the stick chosen in tab 5) and plug that
+  into the Pi. The Pi checks the new software with its own code and your
+  settings before it swaps it in, and keeps the old one - a bad update changes
+  nothing. After a stick update, tab 5 → *Read the stick's answer* shows the
+  result.
+- **Aircraft Wi-Fi** - give the aircraft's own Wi-Fi your **name and password**
+  (from its next start: join the new name then), **add your home Wi-Fi**
+  (joined instead of the hotspot when in range, for internet), **forget** one,
+  and set the **Wi-Fi country** (which channels are legal). Names: letters,
+  digits, spaces, `. _ -`; passwords 8-63 characters. Forgot the new password?
+  Plug a keyboard and screen into the Pi and run
+  `sudo /usr/local/sbin/silm-wifi hotspot SILM-new NEWPASSWORD`.
+
+**Flight controller** (USB cable, battery in, Mission Planner closed):
+
+- **Calibrations** - accelerometer (the card tells you each of the 6
+  positions; press *Done, it's in place*), level, compass (turn the aircraft
+  on every side until it reaches 100 %), airspeed sensor (cover the pitot
+  tube).
+- **Servos** - which output does what, and **Normal / Reversed** per output.
+- **Battery** - the voltage it measures; enter your multimeter's reading and
+  **Calibrate** to correct it.
+- **Logs** - list the flight logs and download them (`~/SILM/logs`).
+- **Update ArduPlane** - download the newest stable firmware for your board
+  (internet) or choose a `.apj` file, then install it over the USB cable. The
+  first install on a brand-new board can't be done this way - see the guide
+  linked on the card.
+
 ---
 
 ## 4. Moving data between the laptop and the aircraft

@@ -190,6 +190,35 @@ let PAGE = null;
   assert((await page.textContent("#lc-current")).includes("No lens calibration yet"), "calibration status");
   await step("11-tools");
   await page.click("#cam-toggle");
+  // aircraft software: compare, write to the stick, update over Wi-Fi
+  await page.waitForFunction(() => /\d/.test(document.getElementById("sw-app").textContent), null, { timeout: 10000 });
+  await page.click("#sw-info");
+  await resultOf("sw-result", "✗|✓", 15000);
+  assert(/this app's software|carries/.test(await page.textContent("#sw-result")), "versions compared: " + await page.textContent("#sw-result"));
+  await page.click("#sw-usb");
+  await resultOf("sw-result", "✗|✓", 15000);
+  assert((await page.textContent("#sw-result")).includes("silm-pi-software.zip"), "written to the stick: " + await page.textContent("#sw-result"));
+  await page.click("#sw-wifi");                                // confirm() accepted
+  await resultOf("sw-result", "✗|✓", 30000);
+  assert((await page.textContent("#sw-result")).includes("0.9.0 -> "), "installed over Wi-Fi: " + await page.textContent("#sw-result"));
+  // aircraft Wi-Fi: list, a bad password refused here, rename, country, forget a home network
+  await page.click("#wf-list");
+  await resultOf("wf-result", "✗|✓", 15000);
+  assert((await page.$$("#wf-nets li")).length === 2 && (await page.textContent("#wf-nets")).includes("home Wi-Fi"), "networks listed");
+  await page.fill("#wf-hs-name", "SILM-Tartu");
+  await page.fill("#wf-hs-pass", "short");
+  await page.click("#wf-hs-set");
+  assert((await page.textContent("#wf-result")).includes("8 to 63"), "short password refused in the app");
+  await page.fill("#wf-hs-pass", "a long password");
+  await page.click("#wf-hs-set");
+  await resultOf("wf-result", "✗|✓", 15000);
+  assert((await page.inputValue("#wf-hs-pass")) === "", "password cleared after use");
+  await page.fill("#wf-cc", "fi");
+  await page.click("#wf-cc-set");
+  await resultOf("wf-result", "✗|✓", 15000);
+  await page.click('[data-wfrm="Farm"]');
+  await resultOf("wf-result", "✗|✓", 15000);
+  await step("12-tools-software-wifi");
   // flight controller tools: boards listed; no flight controller plugged in -> a clear message
   await page.waitForFunction(() => document.querySelectorAll("#fw-board option").length >= 3, null, { timeout: 10000 });
   await page.fill("#tl-port", "");

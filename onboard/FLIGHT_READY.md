@@ -224,7 +224,8 @@ step: sets the Wi-Fi country if none is set (`--country`, default EE), installs 
 video decoder), a Python environment `~/silm-venv`, the recognition model
 (checked by its SHA-256), the two services (`silm-recon`: the flight program;
 `silm-agent`: settings in and flights out), a permission for the agent to
-restart the flight program and switch Wi-Fi on/off (nothing else), the **Wi-Fi
+restart, stop and start the flight program, switch Wi-Fi on/off and run the
+checked Wi-Fi helper `/usr/local/sbin/silm-wifi` (nothing else), the **Wi-Fi
 hotspot** `SILM-<hostname>` at 10.42.0.1, the camera network on the Ethernet
 port and the serial port to the flight controller, and automatic mounting of a
 USB stick named **SILM**. It ends with a configuration check. Then `sudo reboot`.
@@ -234,7 +235,19 @@ Options: `--ssid NAME`, `--password PASS`, `--country CC`, `--no-hotspot`,
 run again.
 
 Your home Wi-Fi (if you set one up) is preferred when in range - handy for
-updates (`cd ~/uav-silm && git pull`). At the field the hotspot comes up instead.
+installing Python packages. At the field the hotspot comes up instead.
+
+**Updating the Pi's software later needs no internet:** the Ground Station
+carries it. Tools tab (10) → *Aircraft software* → **Update over Wi-Fi**, or
+**Write it to the USB stick** and plug the stick into the Pi. The Pi unpacks
+the new software next to the old one, checks it with its own `run.py --check`
+against your settings, and only then swaps it in (the old one stays as
+`onboard.old`; to go back: `cd ~/uav-silm && rm -rf onboard && mv onboard.old
+onboard && sudo systemctl restart silm-recon silm-agent`). Your settings,
+models and flights are kept. If the update needs new Python packages, the
+result says so: connect the Pi to the internet once and run
+`bash ~/uav-silm/onboard/pi/install.sh --skip-apt`. (With internet,
+`cd ~/uav-silm && git pull` still works too.)
 
 ### 3.3 Check it
 

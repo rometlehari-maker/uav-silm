@@ -2,6 +2,7 @@
 flight controller over MAVLink, the Pi over real HTTP and a USB stick, the
 flight library with picture coordinates, and the HTTP API."""
 
+import io
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ import sys
 import threading
 import time
 import urllib.request
+import zipfile
 
 import pytest
 import yaml
@@ -864,3 +866,92 @@ def test_flight_controller_tool_routes(http, tmp_path, monkeypatch):
     assert [f["file"] for f in fw["files"]] == ["plane.apj"] and "MatekH743" in fw["boards"]
     r, _ = call(url + "/api/fc/firmware/upload", {"name": "x.apj", "data_b64": base64.b64encode(b"junk").decode()})
     assert not r["ok"] and "not an ArduPilot firmware" in r["message"]
+
+
+# ------------------------------------------------------------ Tools tab: aircraft software and Wi-Fi
+def _pi_software_root(agent, tmp):
+    """Point the agent at a throw-away software folder (an old version)."""
+    root = tmp / "pi_sw" / "onboard"
+    (root / "models").mkdir(parents=True)
+    (root / "VERSION").write_text("0.9.0\n")
+    (root / "requirements.txt").write_text(open(os.path.join(ONBOARD, "requirements.txt")).read())
+    agent.root = str(root)
+    agent._run_tool = lambda cmd, timeout=15: (True, "config OK")
+    exits = []
+    agent.exit_after_update = lambda: exits.append(1)
+    return root, exits
+
+
+def test_pi_software_package_is_complete_and_reproducible():
+    from groundstation import pisoftware
+    data = pisoftware.build_package()
+    assert data == pisoftware.build_package()                         # same files, same bytes
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        names = set(z.namelist())
+        assert set(pisoftware.REQUIRED) <= names
+        assert {"pi/install.sh", "pi/silm-wifi", "systemd/silm-agent.service", "models/silm_oi.tflite",
+                "tools/preflight.py", "tools/calibrate_camera.py", "LICENSE"} <= names
+        assert not any("__pycache__" in n or n.startswith(("tests/", "groundstation/", "training/"))
+                       for n in names)
+        assert (z.getinfo("pi/silm-wifi").external_attr >> 16) & 0o777 == 0o755
+        assert z.read("VERSION").decode().strip() == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    data2, version = pisoftware.package()
+    assert version == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+
+
+def test_pi_software_update_from_the_app_over_wifi(http, pi):
+    url, _ = http
+    agent, addr, tmp, calls = pi
+    root, exits = _pi_software_root(agent, tmp)
+    version = open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    r, _ = call(url + "/api/pi/software", {"how": "info", "address": addr})
+    assert r["ok"] and r["app_version"] == version and r["pi_version"] == "0.9.0"
+    r, _ = call(url + "/api/pi/software", {"how": "info", "address": "127.0.0.1:9"})
+    assert r["ok"] and r["pi_version"] is None and "Wi-Fi" in r["pi_message"]
+    r, _ = call(url + "/api/pi/software", {"how": "wifi", "address": addr})
+    assert r["ok"] and r["from_version"] == "0.9.0" and r["to_version"] == version, r
+    assert pilink.status(addr)["software"] == version
+    assert (root / "VERSION").read_text().strip() == version and (root / "silm_recon" / "agent.py").exists()
+    assert (tmp / "pi_sw" / "onboard.old" / "VERSION").read_text().strip() == "0.9.0"
+    assert ["sudo", "-n", "systemctl", "restart", "silm-recon"] in calls and exits == [1]
+    assert "new Python packages" not in r["message"]                  # same requirements
+    from silm_recon.status import write_status
+    write_status(agent.status_file, {"armed": True})
+    r, _ = call(url + "/api/pi/software", {"how": "wifi", "address": addr})
+    assert not r["ok"] and "ARMED" in r["message"]
+
+
+def test_pi_software_update_by_usb_stick(http, pi):
+    url, _ = http
+    agent, _, tmp, _ = pi
+    root, exits = _pi_software_root(agent, tmp)
+    stick = tmp / "stick"
+    stick.mkdir()
+    r, _ = call(url + "/api/pi/software", {"how": "usb", "path": str(stick)})
+    assert r["ok"] and r["file"].endswith(os.path.join("to_aircraft", "software", "silm-pi-software.zip"))
+    done = agent.usb_tick()
+    assert "installed" in done["software"] and exits == [1]
+    assert (root / "VERSION").read_text().strip() == open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    back, _ = call(url + "/api/usb/read", {"path": str(stick)})
+    assert back["aircraft"]["software"]["ok"]                          # the answer the Send tab shows
+    r, _ = call(url + "/api/pi/software", {"how": "usb", "path": str(tmp / "no_stick")})
+    assert not r["ok"] and "does not exist" in r["message"]
+
+
+def test_pi_wifi_from_the_app(http, pi):
+    url, _ = http
+    agent, addr, _, calls = pi
+    listing = "silm-hotspot:802-11-wireless:yes\nhome-Farm WiFi:802-11-wireless:yes\nsiyi-camera:802-3-ethernet:yes\n"
+    agent._run = lambda cmd, timeout=15: (calls.append(cmd) or True, listing if cmd[-1] == "list" else "ok")
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "list"})
+    assert r["ok"] and [(n["name"], n["kind"]) for n in r["networks"]] == [
+        ("silm-hotspot", "aircraft"), ("home-Farm WiFi", "home")]
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "hotspot", "name": "SILM-Tartu",
+                                       "password": "long enough"})
+    assert r["ok"] and calls[-1] == ["sudo", "-n", "/usr/local/sbin/silm-wifi", "hotspot", "SILM-Tartu", "long enough"]
+    call(url + "/api/pi/wifi", {"address": addr, "action": "country", "country": "fi"})
+    assert calls[-1][-2:] == ["country", "FI"]
+    call(url + "/api/pi/wifi", {"address": addr, "action": "home-remove", "name": "Farm WiFi"})
+    assert calls[-1][-2:] == ["home-remove", "Farm WiFi"]
+    r, _ = call(url + "/api/pi/wifi", {"address": addr, "action": "reboot"})
+    assert not r["ok"] and "unknown Wi-Fi action" in r["message"]

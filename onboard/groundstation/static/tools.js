@@ -83,9 +83,96 @@ $("lc-reset").addEventListener("click", async () => {
   setResult("lc-result", await lcCall("reset", "Deleting…"));
 });
 
+/* ---------------------------------------------------------------- aircraft software */
+async function swPost(how, busy) {
+  if (busy) setResult("sw-result", null, busy);
+  let r;
+  try { r = await api("/api/pi/software", { how, address: tlAddr(), path: P.link.usb_path || "" }); } catch (e) { r = { ok: false, message: String(e) }; }
+  return r;
+}
+async function swInfo(ask) {
+  const r = await swPost("info", ask ? "Asking the aircraft…" : null);
+  if (!r.ok) { if (ask) setResult("sw-result", r); return r; }
+  $("sw-app").textContent = r.app_version;
+  if (!ask) return r;
+  const pi = $("sw-pi");
+  pi.textContent = r.pi_version || "no answer";
+  pi.classList.toggle("old", !!r.pi_version && r.pi_version !== r.app_version);
+  setResult("sw-result", r.pi_version
+    ? { ok: true, message: r.pi_version === r.app_version ? "The aircraft has this app's software." : `The aircraft has ${r.pi_version}; this app carries ${r.app_version}.` }
+    : { ok: false, message: r.pi_message || "No answer from the aircraft computer." });
+  return r;
+}
+$("sw-info").addEventListener("click", () => swInfo(true));
+$("sw-wifi").addEventListener("click", async () => {
+  if (!confirm(`Install software ${$("sw-app").textContent} on the aircraft computer at ${tlAddr()}? It takes about a minute; the aircraft must be on the ground, disarmed.`)) return;
+  const b = $("sw-wifi"); b.disabled = true;
+  const r = await swPost("wifi", "Sending and checking (about a minute)…");
+  b.disabled = false;
+  setResult("sw-result", r);
+  if (r.ok) { $("sw-pi").textContent = r.to_version; $("sw-pi").classList.remove("old"); }
+});
+$("sw-usb").addEventListener("click", async () => {
+  if (!P.link.usb_path) return setResult("sw-result", { ok: false, message: "Choose the USB stick on the Send tab (C) first." });
+  setResult("sw-result", await swPost("usb", "Writing to the stick…"));
+});
+
+/* ---------------------------------------------------------------- aircraft Wi-Fi */
+const WF_KIND = { aircraft: "the aircraft's own Wi-Fi", home: "home Wi-Fi (joined when in range)", other: "other" };
+async function wfPost(body, busy) {
+  if (busy) setResult("wf-result", null, busy);
+  let r;
+  try { r = await api("/api/pi/wifi", Object.assign({ address: tlAddr() }, body)); } catch (e) { r = { ok: false, message: String(e) }; }
+  return r;
+}
+async function wfList(quiet) {
+  const r = await wfPost({ action: "list" }, quiet ? null : "Asking the aircraft…");
+  const ul = $("wf-nets");
+  if (!r.ok) { setResult("wf-result", r); ul.innerHTML = ""; return; }
+  if (!quiet) setResult("wf-result", { ok: true, message: `${r.networks.length} Wi-Fi network(s) on the aircraft` });
+  ul.innerHTML = r.networks.map((n) => {
+    const home = n.kind === "home" ? n.name.slice(5) : null;
+    return `<li><span><b>${esc(home || n.name)}</b><br><span class="meta">${esc(WF_KIND[n.kind] || n.kind)}${n.auto ? "" : " · not automatic"}</span></span>`
+      + (home ? `<button class="btn ghost" data-wfrm="${esc(home)}">Forget</button>` : "") + "</li>";
+  }).join("");
+  ul.querySelectorAll("[data-wfrm]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Forget the home Wi-Fi '${b.dataset.wfrm}' on the aircraft?`)) return;
+    const res = await wfPost({ action: "home-remove", name: b.dataset.wfrm }, "Forgetting…");
+    setResult("wf-result", res); if (res.ok) wfList(true);
+  }));
+}
+const WF_NAME = /^[A-Za-z0-9 ._-]{1,32}$/;
+function wfCheck(name, pass) {
+  if (!WF_NAME.test(name)) return "The name must be 1 to 32 letters, digits, spaces or . _ -";
+  if (pass.length < 8 || pass.length > 63) return "The password must be 8 to 63 characters.";
+  return null;
+}
+$("wf-list").addEventListener("click", () => wfList(false));
+$("wf-hs-set").addEventListener("click", async () => {
+  const name = $("wf-hs-name").value.trim(), pass = $("wf-hs-pass").value;
+  const bad = wfCheck(name, pass); if (bad) return setResult("wf-result", { ok: false, message: bad });
+  if (!confirm(`Rename the aircraft's Wi-Fi to '${name}'? From its next start, join '${name}' with the new password. Write the password down.`)) return;
+  const r = await wfPost({ action: "hotspot", name, password: pass }, "Changing…");
+  setResult("wf-result", r);
+  if (r.ok) $("wf-hs-pass").value = "";
+});
+$("wf-home-add").addEventListener("click", async () => {
+  const name = $("wf-home-name").value.trim(), pass = $("wf-home-pass").value;
+  const bad = wfCheck(name, pass); if (bad) return setResult("wf-result", { ok: false, message: bad });
+  const r = await wfPost({ action: "home-add", name, password: pass }, "Adding…");
+  setResult("wf-result", r);
+  if (r.ok) { $("wf-home-pass").value = ""; wfList(true); }
+});
+$("wf-cc-set").addEventListener("click", async () => {
+  const cc = $("wf-cc").value.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return setResult("wf-result", { ok: false, message: "Two letters, e.g. EE, FI, DE." });
+  setResult("wf-result", await wfPost({ action: "country", country: cc }, "Setting…"));
+});
+
 function toolsOnTab(name) {
   if (name !== "tools") { if (TL.camOn) camStop(); return; }
   lcCurrent();
+  swInfo(false);
 }
 
 /* ================================================================ flight controller */

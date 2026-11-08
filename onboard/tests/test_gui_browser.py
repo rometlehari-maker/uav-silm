@@ -44,9 +44,24 @@ def test_ground_station_in_a_browser(tmp_path):
     base["agent"]["usb_device"] = ""
     (tmp_path / "pi").mkdir()
     (tmp_path / "pi" / "config.yaml").write_text(yaml.safe_dump(base))
-    agent = Agent(str(tmp_path / "pi" / "config.yaml"), runner=lambda c, timeout=15: (True, ""))
+    wifi_calls = []
+
+    def runner(c, timeout=15):                           # systemctl, and the Wi-Fi helper
+        if "/usr/local/sbin/silm-wifi" in c:
+            wifi_calls.append(c[3:])
+            return True, ("silm-hotspot:802-11-wireless:yes\nhome-Farm:802-11-wireless:yes\n"
+                          if c[-1] == "list" else "done")
+        return True, ""
+    agent = Agent(str(tmp_path / "pi" / "config.yaml"), runner=runner)
+    sw_root = tmp_path / "pi_sw" / "onboard"            # software updates go here, not into this checkout
+    (sw_root / "models").mkdir(parents=True)
+    (sw_root / "VERSION").write_text("0.9.0\n")
+    agent.root = str(sw_root)
+    agent.exit_after_update = lambda: None
 
     def preflight_tool(cmd, timeout=15):                 # the hardware check, without hardware
+        if "--check" in cmd:                             # the new software's own check
+            return True, "config OK"
         with open(cmd[cmd.index("--json") + 1], "w") as fh:
             json.dump({"results": [{"part": "camera", "status": "PASS", "message": "1920x1080 at 30 fps"},
                                    {"part": "fc", "status": "WARN", "message": "no GPS fix (indoors)"}],
@@ -88,3 +103,9 @@ def test_ground_station_in_a_browser(tmp_path):
         == ["person", "car", "bus"]
     assert st.dataset.stats()["per_class"]["tractor"]["boxes"] == 1
     assert {p["name"] for p in st.list_projects()} >= {"New mission", "Field B"}
+    # the software update and the Wi-Fi changes the browser made
+    version = open(os.path.join(ONBOARD, "VERSION")).read().strip()
+    assert (sw_root / "VERSION").read_text().strip() == version
+    assert (stick / "SILM_TRANSFER" / "to_aircraft" / "software" / "silm-pi-software.zip").stat().st_size > 100_000
+    assert ["hotspot", "SILM-Tartu", "a long password"] in wifi_calls and ["country", "FI"] in wifi_calls
+    assert ["home-remove", "Farm"] in wifi_calls

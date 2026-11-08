@@ -359,6 +359,7 @@ $("usb-read").addEventListener("click", async () => {
   if (!r.present) return setResult("usb-result", { ok: false, message: "No SILM_TRANSFER folder on this stick yet - write the settings first." });
   const ir = r.import_result;
   const msg = (ir ? (ir.ok ? `The aircraft imported the settings at ${ir.time}: ${ir.message}.` : `The aircraft REJECTED the settings at ${ir.time}: ${ir.message}`) : "The aircraft has not read this stick yet (plug it into the Pi, power on, wait 10 s).")
+    + (r.aircraft && r.aircraft.software ? `\nSoftware update: ${r.aircraft.software.ok ? "" : "NOT installed - "}${r.aircraft.software.message}` : "")
     + (r.flights.length ? `\nFlights on the stick: ${r.flights.join(", ")} (import them on the Flights tab).` : "");
   setResult("usb-result", { ok: !!(ir && ir.ok), message: msg });
   if (ir && ir.ok) markDone("pi");

@@ -6,8 +6,8 @@
     or:             python -m groundstation          (from the onboard folder)
 
 It opens in your web browser (http://127.0.0.1:8765) but runs only on this
-computer. Tabs: Start, Aircraft, Mission, Camera, Send to aircraft, Launch,
-Simulator, Flights & pictures.
+computer. Tabs: Setup, Start, Aircraft, Mission, Camera, Send to aircraft, Launch,
+Simulator, Flights & pictures, Teach new objects, Tools.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, fctools, flights, pilink, training  # noqa: E402
+from groundstation import fc, fctools, flights, pilink, pisoftware, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -316,6 +316,24 @@ class Station:
         return pilink.usb_write(body.get("path"), o["settings_text"], o["project"],
                                 o["mission_wpl"], extra_files=files)
 
+    def pi_software(self, body: dict) -> dict:
+        """The aircraft's software update: info | wifi (send it) | usb (write it to the stick)."""
+        how = body.get("how", "info")
+        data, version = pisoftware.package()
+        if how == "info":
+            out = {"ok": True, "app_version": version, "size": len(data), "pi_version": None}
+            if body.get("address"):
+                try:
+                    out["pi_version"] = pilink.status(body["address"]).get("software")
+                except pilink.PiError as exc:
+                    out["pi_message"] = str(exc)
+            return out
+        if how == "wifi":
+            return pilink.software_update(body.get("address"), data)
+        if how == "usb":
+            return pilink.usb_write_software(body.get("path"), data)
+        raise ValueError(f"unknown way {how!r}")
+
     # ---------------------------------------------------------- simulator
     def sim_start(self, body: dict) -> dict:
         o = self.outputs(body.get("project") or {})
@@ -509,6 +527,12 @@ class Handler(BaseHTTPRequestHandler):
                 pr = P.merge_defaults(body.get("project") or {})
                 return self._send(200, pilink.preflight(body.get("address"), float(pr["mission"].get("alt_m") or 100),
                                                         float(pr["aircraft"].get("cruise_mps") or 19)))
+            if path == "/api/pi/software":
+                return self._send(200, st.pi_software(body))
+            if path == "/api/pi/wifi":
+                return self._send(200, pilink.wifi(body.get("address"), body.get("action", "list"),
+                                                   **{k: body[k] for k in ("name", "password", "country")
+                                                      if k in body}))
             if path == "/api/pi/download":
                 d = pilink.download_flight(body.get("address"), body.get("name"), st.library)
                 return self._send(200, {"ok": True, "message": f"downloaded to {d}",
