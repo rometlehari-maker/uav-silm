@@ -400,3 +400,124 @@ def test_http_camera_calibration_preflight(http):
     agent._run_tool = lambda cmd, timeout=15: (False, "boom")
     code, r = post(url + "/api/preflight", {"alt_m": 80})
     assert code == 200 and not r["ok"] and "did not finish" in r["message"]
+
+
+# ------------------------------------------------------------ software update, Wi-Fi
+
+def _soft_env(env, tmp_path):
+    """The agent pointed at a throw-away software folder."""
+    _, agent, rec = env
+    root = tmp_path / "pi_software" / "onboard"
+    (root / "models").mkdir(parents=True)
+    (root / "VERSION").write_text("1.0.0\n")
+    (root / "requirements.txt").write_text("pyyaml\n")
+    (root / "models" / "coco_ssd_mobilenet_v1_quant.tflite").write_bytes(b"TFL3 downloaded model")
+    agent.root = str(root)
+    agent._run_tool = lambda cmd, timeout=15: (True, "config OK")
+    exits = []
+    agent.exit_after_update = lambda: exits.append(1)
+    return agent, rec, root, exits
+
+
+def _package():
+    import sys
+    sys.path.insert(0, os.path.join(HERE, ".."))
+    from groundstation.pisoftware import build_package
+    return build_package()
+
+
+def test_software_update_is_checked_then_swapped_and_keeps_downloaded_models(env, tmp_path):
+    agent, rec, root, exits = _soft_env(env, tmp_path)
+    data = _package()
+    new_version = open(os.path.join(HERE, "..", "VERSION")).read().strip()
+    r = agent.install_software(data)
+    assert r["ok"] and r["to_version"] == new_version, r
+    assert (root / "VERSION").read_text().strip() == new_version
+    assert (root / "silm_recon" / "agent.py").exists() and os.access(root / "pi" / "silm-wifi", os.X_OK)
+    assert (root / "models" / "coco_ssd_mobilenet_v1_quant.tflite").read_bytes() == b"TFL3 downloaded model"
+    assert (tmp_path / "pi_software" / "onboard.old" / "VERSION").read_text().strip() == "1.0.0"
+    assert not (tmp_path / "pi_software" / "onboard.new").exists()
+    assert rec.calls[-1][-1] == "silm-recon" and exits == [1]          # both programs restart
+    assert "new Python packages" in r["message"]                         # requirements changed
+
+
+def test_software_update_refusals_change_nothing(env, tmp_path):
+    agent, rec, root, exits = _soft_env(env, tmp_path)
+    assert "damaged zip" in agent.install_software(b"not a zip")["message"]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("../../etc/evil", "x")
+    assert "unsafe" in agent.install_software(buf.getvalue())["message"]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("VERSION", "9.9.9")
+    assert "missing" in agent.install_software(buf.getvalue())["message"]
+    agent._run_tool = lambda cmd, timeout=15: (False, "ImportError: broken")
+    r = agent.install_software(_package())
+    assert not r["ok"] and "failed its check" in r["message"] and "broken" in r["message"]
+    assert (root / "VERSION").read_text().strip() == "1.0.0" and not (tmp_path / "pi_software" / "onboard.new").exists()
+    set_aircraft(tmp_path, armed=True)
+    assert "ARMED" in agent.install_software(_package())["message"]
+    assert exits == [] and rec.calls == []
+
+
+def test_software_update_from_the_usb_stick_once(env, tmp_path):
+    agent, rec, root, exits = _soft_env(env, tmp_path)
+    sw = tmp_path / "usb" / "SILM_TRANSFER" / "to_aircraft" / "software"
+    sw.mkdir(parents=True)
+    (sw / "silm-pi-software.zip").write_bytes(_package())
+    agent.usb_present = lambda: True
+    done = agent.usb_tick()
+    assert "installed" in done["software"] and exits == [1]
+    agent.root = str(root)
+    assert "software" not in agent.usb_tick()                           # same package: not again
+
+
+def test_wifi_goes_through_the_checked_helper(env, tmp_path):
+    _, agent, rec = env
+    rec.calls.clear()
+    r = agent.wifi("hotspot", name="SILM-field", password="longsecret")
+    assert r["ok"] and rec.calls[-1] == ["sudo", "-n", "/usr/local/sbin/silm-wifi", "hotspot", "SILM-field", "longsecret"]
+    agent.wifi("country", country="ee")
+    assert rec.calls[-1][-2:] == ["country", "EE"]
+    assert not agent.wifi("rm -rf /")["ok"]
+    agent._run = lambda cmd, timeout=15: (True, "silm-hotspot:802-11-wireless:yes\nhome-Lab:802-11-wireless:yes\nWired:802-3-ethernet:yes\n")
+    nets = agent.wifi("list")["networks"]
+    assert [(n["name"], n["kind"]) for n in nets] == [("silm-hotspot", "aircraft"), ("home-Lab", "home")]
+    set_aircraft(tmp_path, armed=True)
+    assert "ARMED" in agent.wifi("home-add", name="x", password="12345678")["message"]
+
+
+def _helper(tmp_path, *args):
+    import subprocess
+    log = tmp_path / "nm.log"
+    fake = tmp_path / "fake-nmcli"
+    fake.write_text(f'#!/bin/sh\necho "$@" >> {log}\n')
+    fake.chmod(0o755)
+    env = dict(os.environ, SILM_NMCLI=str(fake), SILM_RASPI_CONFIG=str(fake))
+    r = subprocess.run(["bash", os.path.join(HERE, "..", "pi", "silm-wifi"), *args], env=env,
+                       capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr, (log.read_text() if log.exists() else "")
+
+
+def test_wifi_helper_checks_every_value(tmp_path):
+    code, out, log = _helper(tmp_path, "hotspot", "SILM-field", "longsecret1")
+    assert code == 0 and "con modify silm-hotspot 802-11-wireless.ssid SILM-field wifi-sec.psk longsecret1" in log
+    code, out, log = _helper(tmp_path, "home-add", "Home Net", "password9")
+    assert code == 0 and "con-name home-Home Net ssid Home Net" in log
+    for bad in (["hotspot", "a;rm -rf /", "longsecret1"], ["hotspot", "ok", "short"], ["country", "estonia"],
+                ["home-remove"], ["evil"], ["hotspot", "x" * 40, "longsecret1"]):
+        code, out, _ = _helper(tmp_path, *bad)
+        assert code == 2 and "silm-wifi:" in out, (bad, out)
+    code, out, log = _helper(tmp_path, "country", "EE")
+    assert code == 0 and "nonint do_wifi_country EE" in log
+
+
+def test_wifi_helper_passes_shellcheck():
+    import shutil
+    import subprocess
+    sc = shutil.which("shellcheck")
+    if sc is None:
+        pytest.skip("shellcheck not installed")
+    r = subprocess.run([sc, os.path.join(HERE, "..", "pi", "silm-wifi")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout

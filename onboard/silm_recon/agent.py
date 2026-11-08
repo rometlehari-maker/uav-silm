@@ -19,6 +19,8 @@ Two ways to reach it from the laptop Ground Station:
            GET  /api/calibration       lens calibration: pictures taken so far
            POST /api/calibration/capture|compute|reset   lens calibration
            POST /api/preflight         the full hardware check (tools/preflight.py)
+           POST /api/software          install a software update package (zip)
+           GET/POST /api/wifi          the Pi's Wi-Fi networks (via pi/silm-wifi)
          Wi-Fi is switched OFF while the aircraft is armed or airborne, so
          nothing transmits in flight, and back on once it has been disarmed
          on the ground for agent.wifi_back_on_after_s.
@@ -74,6 +76,9 @@ LOG_CMD = ["journalctl", "-u", "silm-recon", "-n", "150", "--no-pager", "-o", "s
 STOP_CMD = ["sudo", "-n", "systemctl", "stop", "silm-recon"]
 START_CMD = ["sudo", "-n", "systemctl", "start", "silm-recon"]
 PREVIEW_MAX_AGE_S = 5.0
+WIFI_HELPER = ["sudo", "-n", "/usr/local/sbin/silm-wifi"]
+MAX_SOFTWARE_BYTES = 40_000_000
+SOFTWARE_REQUIRED = ("VERSION", "run.py", "config.yaml", "silm_recon/agent.py", "silm_recon/recon.py")
 
 
 def software_version() -> str:
@@ -128,6 +133,8 @@ class Agent:
         self.log_cmd = log_cmd or LOG_CMD
         self._run = runner
         self._run_tool = tool_runner          # long jobs (preflight); real by default
+        self.root = ROOT                       # the software folder an update replaces
+        self.exit_after_update = lambda: threading.Timer(2.0, os._exit, (0,)).start()
         self.settings_file = settings_path(self.base_cfg, settings)
         self.settings_dir = os.path.dirname(self.settings_file)
         self.status_file = status_path(self.base_cfg)
@@ -393,6 +400,19 @@ class Agent:
             done["skipped"] = "flying"
             return done
         root = self.usb_root()
+        # a software update first (the agent restarts itself after it)
+        sw = os.path.join(root, TO_AIRCRAFT, "software", "silm-pi-software.zip")
+        if os.path.isfile(sw):
+            data = open(sw, "rb").read()
+            mark = os.path.join(self.settings_dir, ".usb_software")
+            sha = hashlib.sha256(data).hexdigest()[:16]
+            if not (os.path.isfile(mark) and open(mark).read().strip() == sha):
+                res = self.install_software(data, source="usb")
+                _atomic_write(mark, sha)           # don't retry a bad package on every tick
+                done["software"] = res["message"]
+                self._usb_status_file({"software": res})
+                if res["ok"]:
+                    return done
         # trained models first, so settings that use one find it installed
         mdir = os.path.join(root, TO_AIRCRAFT, "models")
         if os.path.isdir(mdir):
@@ -581,6 +601,97 @@ class Agent:
         return {"ok": True, **res,
                 "message": f"{res['fails']} FAIL, {res['warns']} WARN" + (" - fix the FAILs before flying" if res["fails"] else "")}
 
+    # ------------------------------------------------------------ software update
+
+    def install_software(self, data: bytes, source: str = "wifi") -> dict:
+        """Install an update package: unpack next to the running software,
+        check it with its own code, then swap (the old one is kept as
+        <folder>.old) and restart both programs."""
+        if self.flying():
+            return {"ok": False, "message": "the aircraft is ARMED or flying: update on the ground"}
+        if len(data) > MAX_SOFTWARE_BYTES:
+            return {"ok": False, "message": "the update package is too large"}
+        import io
+        try:
+            z = zipfile.ZipFile(io.BytesIO(data))
+            names = z.namelist()
+        except zipfile.BadZipFile:
+            return {"ok": False, "message": "not an update package (damaged zip)"}
+        bad = [n for n in names if n.startswith(("/", "\\")) or ".." in n.replace("\\", "/").split("/")]
+        if bad:
+            return {"ok": False, "message": f"unsafe file names in the package: {bad[:3]}"}
+        missing = [f for f in SOFTWARE_REQUIRED if f not in names]
+        if missing:
+            return {"ok": False, "message": f"not a SILM software package (missing {missing})"}
+        new_version = z.read("VERSION").decode().strip()
+        old_version = software_version()
+        with self._lock:
+            root = self.root.rstrip(os.sep)
+            staging, backup = root + ".new", root + ".old"
+            shutil.rmtree(staging, ignore_errors=True)
+            z.extractall(staging)
+            for n in names:                        # keep the executable bits
+                mode = (z.getinfo(n).external_attr >> 16) & 0o777
+                if mode:
+                    os.chmod(os.path.join(staging, n), mode)
+            # things the package doesn't carry: downloaded models, local notes
+            mdir = os.path.join(root, "models")
+            if os.path.isdir(mdir):
+                os.makedirs(os.path.join(staging, "models"), exist_ok=True)
+                for f in os.listdir(mdir):
+                    dst = os.path.join(staging, "models", f)
+                    if os.path.isfile(os.path.join(mdir, f)) and not os.path.exists(dst):
+                        shutil.copy2(os.path.join(mdir, f), dst)
+            ok, text = self._run_tool([sys.executable, os.path.join(staging, "run.py"), "--check",
+                                       "--config", os.path.join(staging, "config.yaml"),
+                                       "--settings", self.settings_file], timeout=120)
+            if not ok:
+                shutil.rmtree(staging, ignore_errors=True)
+                return {"ok": False, "message": "the new software failed its check, nothing was changed: "
+                                                + text[-300:]}
+            req_changed = False
+            try:
+                req_changed = (open(os.path.join(root, "requirements.txt")).read()
+                               != open(os.path.join(staging, "requirements.txt")).read())
+            except OSError:
+                pass
+            shutil.rmtree(backup, ignore_errors=True)
+            os.rename(root, backup)
+            os.rename(staging, root)
+        self.log(f"software {old_version} -> {new_version} installed from {source}")
+        self._run(self.restart_cmd)                # the flight program, with the new code
+        self.exit_after_update()                   # and this agent (systemd starts it again)
+        msg = f"software {old_version} -> {new_version} installed; both programs restart"
+        if req_changed:
+            msg += (". NOTE: it needs new Python packages: connect the Pi to the internet and run "
+                    "bash pi/install.sh --skip-apt once")
+        return {"ok": True, "from_version": old_version, "to_version": new_version, "message": msg}
+
+    # ------------------------------------------------------------ Wi-Fi
+
+    def wifi(self, action: str, **kw) -> dict:
+        """The Pi's Wi-Fi through the root helper pi/silm-wifi (which checks every value)."""
+        if action != "list" and self.flying():
+            return {"ok": False, "message": "the aircraft is ARMED or flying"}
+        args = {"list": [], "hotspot": [kw.get("name", ""), kw.get("password", "")],
+                "home-add": [kw.get("name", ""), kw.get("password", "")],
+                "home-remove": [kw.get("name", "")], "country": [str(kw.get("country", "")).upper()]}
+        if action not in args:
+            return {"ok": False, "message": f"unknown Wi-Fi action {action!r}"}
+        ok, text = self._run(WIFI_HELPER + [action] + args[action])
+        if action == "list":
+            nets = []
+            for line in text.splitlines():
+                parts = line.rsplit(":", 2)
+                if len(parts) == 3 and "wireless" in parts[1]:
+                    nets.append({"name": parts[0], "auto": parts[2] == "yes",
+                                 "kind": "aircraft" if parts[0] == "silm-hotspot" else
+                                         "home" if parts[0].startswith("home-") else "other"})
+            return {"ok": ok, "networks": nets, "message": "" if ok else text[-300:]}
+        if ok:
+            self.log(f"Wi-Fi: {action} {args[action][0] if args[action] else ''}")
+        return {"ok": ok, "message": text.strip()[-300:] or ("done" if ok else "failed")}
+
     # ------------------------------------------------------------ loop
 
     def tick(self) -> None:
@@ -634,6 +745,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"log": a.recent_log()})
             if path == "/api/calibration":
                 return self._json(200, a.calib_state())
+            if path == "/api/wifi":
+                return self._json(200, a.wifi("list"))
             if path == "/api/camera.jpg":
                 jpg = a.preview_jpg()
                 if jpg is None:
@@ -668,9 +781,10 @@ class Handler(BaseHTTPRequestHandler):
         a = self.agent
         path = self.path.split("?", 1)[0]
         if path not in ("/api/settings", "/api/model", "/api/preflight", "/api/calibration/capture",
-                        "/api/calibration/compute", "/api/calibration/reset"):
+                        "/api/calibration/compute", "/api/calibration/reset", "/api/software", "/api/wifi"):
             return self._json(404, {"error": "not found"})
-        limit = MAX_MODEL_BYTES * 2 if path == "/api/model" else MAX_SETTINGS_BYTES * 3
+        limit = (MAX_MODEL_BYTES * 2 if path == "/api/model" else MAX_SOFTWARE_BYTES * 2
+                 if path == "/api/software" else MAX_SETTINGS_BYTES * 3)
         try:
             n = int(self.headers.get("Content-Length", 0))
             if n > limit:
@@ -681,6 +795,16 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._json(400, {"ok": False, "message": "bad JSON"})
         try:
+            if path == "/api/software":
+                import base64
+                try:
+                    data = base64.b64decode(body.get("zip_b64") or "", validate=True)
+                except Exception:
+                    return self._json(400, {"ok": False, "message": "the update data is damaged"})
+                return self._json(200, a.install_software(data))
+            if path == "/api/wifi":
+                return self._json(200, a.wifi(str(body.get("action", "")),
+                                              **{k: body[k] for k in ("name", "password", "country") if k in body}))
             if path == "/api/preflight":
                 return self._json(200, a.preflight(body.get("alt_m", 100), body.get("speed_mps", 19)))
             if path.startswith("/api/calibration/"):

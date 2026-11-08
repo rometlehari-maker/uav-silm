@@ -155,6 +155,7 @@ $USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl stop silm-recon
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl start silm-recon
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi on
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi off
+$USER_NAME ALL=(root) NOPASSWD: /usr/local/sbin/silm-wifi
 EOF
 if [ "$DRY" = 1 ]; then
   echo "    [dry-run] install /etc/sudoers.d/silm:"; sed 's/^/      /' "$SUDOERS_TMP"
@@ -163,7 +164,9 @@ else
   sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/silm
 fi
 rm -f "$SUDOERS_TMP"
-ok "rules installed (/etc/sudoers.d/silm)"
+# the Wi-Fi helper the agent may run as root (it checks every value itself)
+run sudo install -m 0755 -o root -g root "$ONBOARD/pi/silm-wifi" /usr/local/sbin/silm-wifi
+ok "rules installed (/etc/sudoers.d/silm) and the Wi-Fi helper (/usr/local/sbin/silm-wifi)"
 
 # ---------------------------------------------------------------- 6. hotspot
 if [ "$HOTSPOT" = 1 ]; then
