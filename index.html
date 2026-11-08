@@ -557,6 +557,13 @@
     .js .rv{ opacity:1; transform:none; }
   }
 
+  .cards.fit ul{ list-style:none; margin-top:12px; display:grid; gap:7px; }
+  .cards.fit li{ position:relative; padding-left:20px; font-size:14.5px; color:var(--dim); line-height:1.5; }
+  .cards.fit li::before{ content:""; position:absolute; left:2px; top:.62em; width:7px; height:7px; border-radius:50%; background:var(--cyan); }
+  .cards.fit > div:nth-child(2) li::before{ background:var(--red); border-radius:1px; transform:rotate(45deg); }
+  .cards.fit li b{ color:var(--text); font-weight:600; }
+  .card-k.warn{ color:var(--red); }
+  .fit-note{ font-size:13.5px; color:var(--faint); margin-top:14px; }
   /* downloads */
   .cards.dl > *{ display:flex; flex-direction:column; }
   .dl-what{ font-size:14.5px; color:var(--dim); margin-top:12px; flex:1; }
@@ -1698,6 +1705,28 @@
       <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Downloads</span></div>
       <h2 class="rv">Download the software</h2>
       <p class="lead rv">Everything we use to plan a survey, set up the aircraft, fly it in the simulator and look at the pictures afterwards. Our own code is free to use, change and share under the MIT licence; the parts made by others keep their licences and are credited below.</p>
+      <div class="cards c2 fit rv">
+        <div>
+          <div class="card-k">Will it work on my aircraft? Yes, with</div>
+          <ul>
+            <li>a <b>fixed-wing plane</b> running <b>ArduPlane</b> (ArduPilot)</li>
+            <li>a flight controller that can run Lua scripts (H7 or F7 boards such as the Matek H743)</li>
+            <li>an <b>airspeed sensor</b>, GPS with compass and a battery monitor</li>
+            <li>for recognition: a <b>Raspberry Pi 4</b> and a network (RTSP) or USB camera; other cameras need a lens calibration</li>
+            <li>a laptop with Windows, macOS or Linux</li>
+          </ul>
+        </div>
+        <div>
+          <div class="card-k warn">It will not work with</div>
+          <ul>
+            <li><b>quadcopters and other multirotors</b></li>
+            <li>DJI, PX4 or iNav flight controllers</li>
+            <li>small F4 boards that cannot run scripts</li>
+            <li>planes without an airspeed sensor</li>
+          </ul>
+          <p class="fit-note">Even on the right aircraft: answer every question about <i>your</i> plane in the Ground Station, fly the mission in its simulator first, check the control directions on the bench, and get your flight authorisation.</p>
+        </div>
+      </div>
       <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
       <div class="cards c2 dl rv">
         <div>
