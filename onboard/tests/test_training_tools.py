@@ -381,3 +381,39 @@ def test_openimages_selection_rules():
     assert with_combine["harv"] == [("combine", .2, .2, .6, .6)]
     names = oi.silm_classes()
     assert {"tractor", "car", "truck", "livestock", "combine"} <= set(names)
+
+
+def test_export_keeps_only_the_detection_head_in_float():
+    """Fully-INT8 YOLO exports pin every class score at ~0.50. export.py keeps
+    the head in float; the regex must match the head's tensors (names as
+    litert-torch writes them) and NOT the backbone, or nothing gets quantised."""
+    import re
+    import export
+    pre = "ultralytics.utils.export.engine._NormalizeCoords/ultralytics.nn.tasks.DetectionModel_model/"
+    head = [
+        pre + "ultralytics.nn.modules.head.Detect_23/torch.nn.modules.container.Sequential_0/torch.nn.modules.conv.Conv2d_2;6",
+        pre + "ultralytics.nn.modules.head.Detect_23/ultralytics.nn.modules.block.DFL_dfl;3",
+        pre + "ultralytics.nn.modules.head.Detect_23;28",
+        "ultralytics.utils.export.engine._NormalizeCoords;1",
+        "serving_default_output_0_output",
+    ]
+    body = [
+        pre + "ultralytics.nn.modules.conv.Conv_5/torch.nn.modules.activation.SiLU_act;",
+        pre + "ultralytics.nn.modules.block.C3k2_2/torch.nn.modules.conv.Conv2d_conv;2",
+    ]
+    rx = re.compile(export.HEAD_REGEX)
+    assert all(rx.fullmatch(n) for n in head)
+    assert not any(rx.fullmatch(n) for n in body)
+
+
+def test_export_calibration_images_are_letterboxed_nchw(tmp_path):
+    import cv2
+    import numpy as np
+    import export
+    p = tmp_path / "wide.jpg"
+    cv2.imwrite(str(p), np.full((100, 400, 3), 255, np.uint8))
+    x = export._letterbox_nchw(str(p), 320)
+    assert x.shape == (1, 3, 320, 320) and x.dtype == np.float32
+    assert abs(float(x[0, 0, 160, 160]) - 1.0) < 1e-3          # picture
+    assert abs(float(x[0, 0, 5, 160]) - 114 / 255) < 1e-3      # grey padding
+    assert export._letterbox_nchw(str(tmp_path / "missing.jpg"), 320) is None

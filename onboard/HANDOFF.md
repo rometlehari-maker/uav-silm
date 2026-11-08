@@ -136,6 +136,19 @@ User's answers to questions asked:
   runs/oi_v1/weights/best.pt --imgsz 320 --model-name silm_oi --data
   datasets/openimages/data.yaml`), evaluate via `tools/threshold_sweep.py`
   on the val split, write results into training/README.md, regression test.
+- **Export bug found + fixed (`training/export.py`):** Ultralytics 8.4 now exports
+  through LiteRT (needs `litert-torch`, which pins torch<2.15 - in this container
+  it lives in a scratchpad venv `exportenv` installed with `--no-deps` so the
+  system torch 2.15 used by training is untouched). Its fully-INT8 export clips
+  every class score at ~0.50 (also when only the decode ops are float). Fix:
+  export float, then `ai_edge_quantizer` static INT8 for the body with the whole
+  `head.Detect` kept float (HEAD_REGEX) -> scores match the .pt (ratio 1.01),
+  4.4 MB, ~2x faster than float on x86. If the confidence check still fails,
+  export.py falls back to the float model. Model input is NCHW (detector handles it).
+- The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
+  their Remote Control list but offers no folders to cloud sessions
+  (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
+  continue there instead.
 
 ## Still to do (in this order)
 

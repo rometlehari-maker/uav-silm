@@ -325,4 +325,4 @@ On the aircraft's Pi: settings in `~/silm-settings/` (`settings.yaml`,
 | "Not answered: …" | Answer that question (outlined in red) |
 | ARM greyed out | Fix the red problems on the right and tick every checklist line |
 | Simulator tab: "runs on Linux" | Run the Ground Station in Ubuntu (WSL2), or copy the commands shown |
-| Training: "tools are not installed" | Run the command the tab shows, once (`python -m pip install ultralytics`) |
+| Training: "tools are not installed" | Run the command the tab shows, once (`python -m pip install ultralytics litert-torch`; `litert-torch` turns the trained model into the file the Pi runs) |

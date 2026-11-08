@@ -247,7 +247,7 @@ def tools_available() -> dict:
     except Exception:
         return {"available": False,
                 "why": "the training tools are not installed on this laptop. Install them once "
-                       "(about 2 GB): python -m pip install ultralytics litert_torch  "
+                       "(about 2 GB): python -m pip install ultralytics litert-torch  "
                        "- a computer with an NVIDIA graphics card trains 10-50x faster."}
 
 
