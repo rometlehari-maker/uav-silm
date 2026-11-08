@@ -223,18 +223,37 @@ $("fcj-done").addEventListener("click", async () => { $("fcj-done").hidden = tru
 $("fcj-cancel").addEventListener("click", async () => { await api("/api/fc/job/cancel", {}); fcJobPoll(); });
 document.querySelectorAll("[data-fcjob]").forEach((b) => b.addEventListener("click", () => fcJobStart(b.dataset.fcjob)));
 
-/* ---------------- servos */
+/* ---------------- servos: each output's job and direction */
 $("sv-read").addEventListener("click", async () => {
   const r = await fcPost("/api/fc/servos", {}, "sv-result", "Reading the outputs…");
   const t = $("sv-table");
   if (!r.ok) { t.hidden = true; return; }
-  setResult("sv-result", { ok: true, message: `${r.servos.length} outputs in use` });
-  t.tBodies[0].innerHTML = r.servos.map((s) => `<tr><td>${s.n}</td><td>${esc(s.name)}</td><td><div class="yesno" data-sv="${s.n}"><button type="button" data-v="0" class="${s.reversed ? "" : "on"}">Normal</button><button type="button" data-v="1" class="${s.reversed ? "on" : ""}">Reversed</button></div></td></tr>`).join("");
+  const used = r.servos.filter((s) => s.used).length;
+  setResult("sv-result", { ok: true, message: `${r.servos.length} outputs, ${used} in use` });
+  const opts = (f) => Object.entries(r.functions).map(([k, l]) => `<option value="${k}" ${+k === f ? "selected" : ""}>${esc(l)}</option>`).join("")
+    + (r.functions[f] === undefined ? `<option value="${f}" selected>function ${f}</option>` : "");
+  t.tBodies[0].innerHTML = r.servos.map((s) => `<tr class="${s.used ? "" : "sv-off"}"><td>S${s.n}</td><td><select data-svf="${s.n}" aria-label="Output ${s.n} drives">${opts(s.function)}</select></td><td><div class="yesno" data-sv="${s.n}"><button type="button" data-v="0" class="${s.reversed ? "" : "on"}">Normal</button><button type="button" data-v="1" class="${s.reversed ? "on" : ""}">Reversed</button></div></td></tr>`).join("");
   t.hidden = false;
+  t.querySelectorAll("[data-svf]").forEach((sel) => sel.addEventListener("change", async () => {
+    const res = await fcPost("/api/fc/servo_function", { n: Number(sel.dataset.svf), function: Number(sel.value) }, "sv-result", "Setting…");
+    if (res.ok) sel.closest("tr").classList.toggle("sv-off", sel.value === "0");
+  }));
   t.querySelectorAll("[data-sv]").forEach((g) => g.querySelectorAll("button").forEach((b) => b.addEventListener("click", async () => {
     const res = await fcPost("/api/fc/servo_reverse", { n: Number(g.dataset.sv), reversed: b.dataset.v === "1" }, "sv-result", "Setting…");
     if (res.ok) g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
   })));
+});
+
+/* ---------------- airspeed sensor */
+$("as-read").addEventListener("click", async () => {
+  const r = await fcPost("/api/fc/airspeed", {}, "as-result", "Asking the flight controller…");
+  if (r.types && !$("as-type").options.length) $("as-type").innerHTML = Object.entries(r.types).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
+  if (r.type != null) $("as-type").value = String(r.type);
+  if (r.bus != null) $("as-bus").value = String(r.bus);
+});
+$("as-set").addEventListener("click", () => {
+  if (!$("as-type").options.length) return setResult("as-result", { ok: false, message: "Press Check first." });
+  fcPost("/api/fc/airspeed_set", { type: Number($("as-type").value), bus: Number($("as-bus").value) }, "as-result", "Setting…");
 });
 
 /* ---------------- battery */

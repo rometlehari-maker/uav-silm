@@ -239,6 +239,21 @@ let PAGE = null;
   await resultOf("fcj-result", "✗|✓", 15000);
   assert((await page.textContent("#fcj-result")).includes("choose the flight controller's port"), "job without a port fails clearly");
 
+  // ---------------- guides: from a link in the Tools tab, and the list
+  await tab("tools");
+  await page.click('#tab-tools [data-guide="firmware-first"]');
+  await page.waitForFunction(() => document.getElementById("tab-guides").classList.contains("active")
+    && /_with_bl\.hex/.test(document.getElementById("gd-body").textContent), null, { timeout: 10000 });
+  assert((await page.$$("#gd-list .gd-item")).length >= 12, "guides listed");
+  await page.click('#gd-list [data-gd="wiring"]');
+  await page.waitForFunction(() => /RX1/.test(document.getElementById("gd-body").textContent), null, { timeout: 5000 });
+  assert((await page.$$("#gd-body table")).length >= 2, "wiring tables shown");
+  assert(page.url().endsWith("#guides/wiring"), "guide in the address: " + page.url());
+  await step("13-guides");
+  await tab("aircraft");
+  await page.click('[data-qid="aircraft.cg_mm"] [data-guide="cg"]');
+  await page.waitForFunction(() => /Balance point/.test(document.getElementById("gd-body").textContent), null, { timeout: 5000 });
+
   // ---------------- saved missions
   await tab("start");
   await page.click("#save");

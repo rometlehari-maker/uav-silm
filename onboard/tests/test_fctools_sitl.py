@@ -57,6 +57,31 @@ def test_servo_outputs_and_reversing(sitl):
     fctools.set_reversed(PORT, ail["n"], not flip)
 
 
+def test_output_jobs_and_airspeed_sensor(sitl):
+    r = fctools.servos(PORT)
+    free = next(s for s in r["servos"] if not s["used"])                # e.g. S5..S16 on SITL
+    assert free["name"] == "Disabled" and len(r["servos"]) >= 8
+    res = fctools.set_function(PORT, free["n"], 70)                     # a throttle there
+    assert res["ok"] and "1000-2000" in res["message"]
+    m = fc.connect(PORT)
+    assert int(mm.get_param(m, f"SERVO{free['n']}_FUNCTION")) == 70
+    assert int(mm.get_param(m, f"SERVO{free['n']}_TRIM")) == 1000
+    m.close()
+    assert fctools.set_function(PORT, free["n"], 0)["ok"]
+    with pytest.raises(ValueError):
+        fctools.set_function(PORT, free["n"], 999)
+    a = fctools.airspeed(PORT)                                          # SITL's simulated (analog) sensor
+    assert a["type"] == 2 and a["found"] and a["healthy"] and a["ok"], a
+    assert a["airspeed"] is not None and "working" in a["message"]
+    bus = a["bus"]
+    res = fctools.set_airspeed(PORT, 1, 0)                              # change and put back
+    assert res["ok"] and res["reboot_needed"]
+    m = fc.connect(PORT)
+    assert int(mm.get_param(m, "ARSPD_TYPE")) == 1 and int(mm.get_param(m, "ARSPD_BUS")) == 0
+    assert mm.set_param(m, "ARSPD_TYPE", a["type"]) and mm.set_param(m, "ARSPD_BUS", bus)
+    m.close()
+
+
 def test_battery_voltage_calibration(sitl):
     b = fctools.battery(PORT)
     assert b["ok"] and 5 < b["voltage"] < 60, b

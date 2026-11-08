@@ -38,7 +38,7 @@ UPLOADER = os.path.join(HERE, "vendor", "ardupilot_uploader.py")
 
 # ArduPlane SERVOn_FUNCTION values for the outputs a plane uses
 SERVO_FUNCTIONS = {
-    1: "RC passthrough", 2: "Flap", 3: "Flap (auto)", 4: "Aileron", 16: "Differential spoiler",
+    0: "Disabled", 1: "RC passthrough", 2: "Flap", 3: "Flap (auto)", 4: "Aileron", 16: "Differential spoiler",
     19: "Elevator", 21: "Rudder", 24: "Flaperon left", 25: "Flaperon right", 26: "Ground steering",
     33: "Motor 1", 34: "Motor 2", 70: "Throttle", 73: "Throttle left", 74: "Throttle right",
     77: "Elevon left", 78: "Elevon right", 79: "V-tail left", 80: "V-tail right",
@@ -91,6 +91,7 @@ def _open_disarmed(port, baud):
 
 # ---------------------------------------------------------------- servos
 def servos(port: str, baud: int = 115200) -> dict:
+    """Every output with its job (SERVOn_FUNCTION); unused ones as 'Disabled'."""
     m = _open_disarmed(port, baud)
     try:
         out = []
@@ -98,14 +99,33 @@ def servos(port: str, baud: int = 115200) -> dict:
             f = mm.get_param(m, f"SERVO{n}_FUNCTION", timeout=2.0)
             if f is None:
                 break
-            if int(f) == 0:
-                continue
-            row = {"n": n, "function": int(f), "name": SERVO_FUNCTIONS.get(int(f), f"function {int(f)}")}
+            row = {"n": n, "function": int(f), "used": int(f) != 0,
+                   "name": SERVO_FUNCTIONS.get(int(f), f"function {int(f)}")}
             for k in ("REVERSED", "MIN", "MAX", "TRIM"):
                 v = mm.get_param(m, f"SERVO{n}_{k}", timeout=2.0)
                 row[k.lower()] = None if v is None else int(v)
             out.append(row)
-        return {"ok": True, "servos": out}
+        return {"ok": True, "servos": out, "functions": SERVO_FUNCTIONS}
+    finally:
+        m.close()
+
+
+def set_function(port: str, n: int, function: int, baud: int = 115200) -> dict:
+    """Give output n a job (SERVOn_FUNCTION): aileron, elevator, throttle..."""
+    n, function = int(n), int(function)
+    if not 1 <= n <= 16:
+        raise ValueError("output number must be 1-16")
+    if function not in SERVO_FUNCTIONS:
+        raise ValueError(f"unknown output job {function}")
+    m = _open_disarmed(port, baud)
+    try:
+        ok = mm.set_param(m, f"SERVO{n}_FUNCTION", function)
+        if ok and function == 70:               # throttle: the fixed ESC range
+            for k, v in (("MIN", 1000), ("MAX", 2000), ("TRIM", 1000)):
+                ok = mm.set_param(m, f"SERVO{n}_{k}", v) and ok
+        return {"ok": ok, "message": f"output {n}: {SERVO_FUNCTIONS[function]}"
+                + (" (1000-2000 µs, stopped at 1000)" if function == 70 else "") if ok
+                else f"could not set SERVO{n}_FUNCTION"}
     finally:
         m.close()
 
@@ -118,6 +138,65 @@ def set_reversed(port: str, n: int, reversed_: bool, baud: int = 115200) -> dict
         ok = mm.set_param(m, f"SERVO{int(n)}_REVERSED", 1 if reversed_ else 0)
         return {"ok": ok, "message": f"output {n} {'reversed' if reversed_ else 'normal'}" if ok
                 else f"could not set SERVO{n}_REVERSED"}
+    finally:
+        m.close()
+
+
+# ---------------------------------------------------------------- airspeed sensor
+AIRSPEED_TYPES = {0: "None", 1: "MS4525 (I2C) - e.g. Matek ASPD-4525", 2: "Analog", 3: "MS5525 (I2C)",
+                  6: "SDP3X (I2C)", 7: "DLVR 5 inch (I2C) - e.g. Matek ASPD-DLVR", 9: "DLVR 10 inch (I2C)",
+                  15: "ASP5033 (I2C)", 8: "DroneCAN"}
+DIFF_PRESSURE = 0x20                      # MAV_SYS_STATUS_SENSOR_DIFFERENTIAL_PRESSURE
+
+
+def airspeed(port: str, baud: int = 115200) -> dict:
+    """The airspeed sensor: its type and bus, whether the flight controller
+    found it, and the speed it reads now."""
+    m = fc.connect(port, baud)
+    try:
+        typ, bus = mm.get_param(m, "ARSPD_TYPE"), mm.get_param(m, "ARSPD_BUS")
+        found = healthy = None
+        speed = None
+        t0 = time.time()
+        while time.time() - t0 < 4.0 and (found is None or speed is None):
+            msg = m.recv_match(type=["SYS_STATUS", "VFR_HUD"], blocking=True, timeout=0.5)
+            if msg is None:
+                continue
+            if msg.get_type() == "SYS_STATUS":
+                found = bool(msg.onboard_control_sensors_present & DIFF_PRESSURE)
+                healthy = bool(msg.onboard_control_sensors_health & DIFF_PRESSURE)
+            else:
+                speed = round(float(msg.airspeed), 1)
+        t = None if typ is None else int(typ)
+        name = AIRSPEED_TYPES.get(t, f"type {t}")
+        if not t:
+            msg = "no airspeed sensor is set: choose its type below"
+        elif found and healthy:
+            msg = f"{name} on bus {int(bus or 0)}: working, reads {speed} m/s"
+        elif found:
+            msg = f"{name} on bus {int(bus or 0)}: found but NOT healthy (check the tubes and wires)"
+        else:
+            msg = (f"{name} on bus {int(bus or 0)}: NOT found - check the wires, try the other bus, "
+                   "and restart the flight controller after changing")
+        return {"ok": bool(t and found and healthy), "type": t, "bus": None if bus is None else int(bus),
+                "found": found, "healthy": healthy, "airspeed": speed, "message": msg}
+    finally:
+        m.close()
+
+
+def set_airspeed(port: str, typ: int, bus: int, baud: int = 115200) -> dict:
+    typ, bus = int(typ), int(bus)
+    if typ not in AIRSPEED_TYPES:
+        raise ValueError(f"unknown airspeed sensor type {typ}")
+    if bus not in (0, 1, 2, 3):
+        raise ValueError("the I2C bus is 0-3")
+    m = _open_disarmed(port, baud)
+    try:
+        ok = mm.set_param(m, "ARSPD_TYPE", typ) and mm.set_param(m, "ARSPD_BUS", bus)
+        return {"ok": ok, "reboot_needed": ok,
+                "message": f"airspeed sensor set to {AIRSPEED_TYPES[typ]} on bus {bus}. Restart the flight "
+                           "controller (battery and USB out for 10 s), then press Check." if ok
+                else "could not set ARSPD_TYPE / ARSPD_BUS"}
     finally:
         m.close()
 

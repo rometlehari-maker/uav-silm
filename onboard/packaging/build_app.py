@@ -59,7 +59,7 @@ def data_files() -> list[tuple[str, str]]:
     Ground Station reads at run time, nothing it doesn't."""
     d = [("groundstation/static", "groundstation/static"), ("ardupilot", "ardupilot")]
     for f in ("config.yaml", "VERSION", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md",
-              "GROUND_STATION.md", "FLIGHT_READY.md", "SITL_HOWTO.md"):
+              "GROUND_STATION.md", "FLIGHT_READY.md", "SITL_HOWTO.md", "GUIDES.md"):
         d.append((f, "."))
     for f in ("silm_oi.tflite", "silm_oi_labels.txt", "silm_oi.json", "LICENSE-silm_oi-AGPL-3.0.txt",
               "coco_labels.txt", "README.md"):
@@ -82,7 +82,7 @@ def pyinstaller_args() -> list[str]:
     for m in ("groundstation.app", "groundstation.desktop", "groundstation.fc", "groundstation.flights",
               "groundstation.pilink", "groundstation.project", "groundstation.sim",
               "groundstation.training", "groundstation.runtime", "groundstation.fctools",
-              "groundstation.vendor.ardupilot_uploader", "groundstation.pisoftware", "groundstation.piinstall", "paramiko", "survey", "silm_recon.mavmission",
+              "groundstation.vendor.ardupilot_uploader", "groundstation.pisoftware", "groundstation.piinstall", "groundstation.guides", "groundstation.toolsetup", "paramiko", "survey", "silm_recon.mavmission",
               "silm_recon.config", "pymavlink.mavutil", "pymavlink.mavftp",
               "pymavlink.dialects.v20.ardupilotmega", "pymavlink.dialects.v10.ardupilotmega",
               "serial.tools.list_ports") + (("webview.platforms.edgechromium",) if SYSTEM == "windows" else

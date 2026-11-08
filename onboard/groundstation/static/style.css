@@ -442,3 +442,28 @@ h3.q.small { margin-top: 16px; }
 .pin-log { max-height: 260px; overflow: auto; }
 .wz-byhand { margin: 14px 0; color: var(--dim); }
 .wz-byhand summary { cursor: pointer; font-weight: 560; }
+
+/* ---------- training tools install (Teach tab) */
+.tt-box { border: 1px solid var(--amber); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.tt-box > b { color: var(--amber); }
+#tt-job { margin-top: 10px; }
+tr.sv-off td:first-child { color: var(--faint); }
+.as-inputs { gap: 18px; margin: 10px 0 4px; color: var(--dim); font-size: 14px; }
+.as-inputs label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---------- guides */
+.gd-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; align-items: start; }
+.gd-list { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 80px; }
+.gd-item { text-align: left; background: none; border: 1px solid transparent; border-radius: 10px; padding: 8px 12px;
+  color: var(--dim); font: inherit; font-size: 14px; cursor: pointer; }
+.gd-item:hover { border-color: var(--line); color: var(--text); }
+.gd-item.on { border-color: var(--cyan); color: var(--text); background: var(--okbg); }
+.gd-body { line-height: 1.6; }
+.gd-body h3 { margin: 20px 0 6px; font-size: 16px; }
+.gd-body li { margin: 4px 0; }
+.gd-body code { font-family: var(--mono); font-size: 13px; background: var(--deep); padding: 1px 5px; border-radius: 5px; }
+.gd-table { overflow-x: auto; margin: 10px 0; }
+.gd-table table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.gd-table th, .gd-table td { border-bottom: 1px solid var(--line-soft); padding: 7px 10px; text-align: left; vertical-align: top; }
+.gd-table th { color: var(--faint); font-weight: 560; }
+@media (max-width: 900px) { .gd-layout { grid-template-columns: 1fr; } .gd-list { position: static; flex-direction: row; flex-wrap: wrap; } }

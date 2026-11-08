@@ -30,6 +30,7 @@
     <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
     <button data-tab="train" class="tab"><b>9</b> Teach new objects</button>
     <button data-tab="tools" class="tab"><b>10</b> Tools</button>
+    <button data-tab="guides" class="tab tab-guides"><b>?</b> Guides</button>
   </nav>
 
   <main>
@@ -202,7 +203,7 @@
         <h2>C · Aircraft computer with a USB stick (no Wi-Fi)</h2>
         <p class="help">Use a USB stick named <b>SILM</b> (FAT32 or exFAT). Write to it here, plug it
           into the aircraft's Pi and power on; after 10 seconds plug it back in here and press
-          "Read the stick".</p>
+          "Read the stick". <a href="#guides" data-guide="usb-stick">How to name a stick SILM</a></p>
         <div class="q">Where is the USB stick on this laptop?</div>
         <div class="inline">
           <input id="usb-path" list="drive-list" placeholder="E:\  or  /Volumes/SILM" aria-label="USB stick folder">
@@ -220,7 +221,8 @@
       <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>6 · Launch</span></div>
       <h1>Launch</h1>
       <p class="lead">There is no pilot link: once launched it flies the whole mission, lands
-        and switches itself off. Arm only with the aircraft in your hand, ready to go.</p>
+        and switches itself off. Arm only with the aircraft in your hand, ready to go.
+        Flying it needs an authorisation: <a href="#guides" data-guide="legal">permission to fly</a>.</p>
       <div class="card" id="wind-recap"></div>
       <div class="card">
         <h2>Checklist - tick every line</h2>
@@ -349,6 +351,16 @@
           <div class="card">
             <h2>4 · Train and send to the aircraft</h2>
             <div id="tr-stats"></div>
+            <div class="tt-box" id="tt-box" hidden>
+              <b>The training tools are needed once.</b>
+              <p class="help" id="tt-why"></p>
+              <p class="help">No Python on this laptop yet? <a href="#guides" data-guide="python">Installing Python</a></p>
+              <div class="row-btns"><button class="btn primary" id="tt-install">Install the training tools</button>
+                <button class="btn ghost" id="tt-cancel" hidden>Stop</button></div>
+              <div id="tt-job" hidden><div class="wz-bar"><i id="tt-bar"></i></div><div class="help" id="tt-step"></div>
+                <details><summary>Messages</summary><pre class="log" id="tt-log"></pre></details></div>
+              <div class="result" id="tt-result" role="status"></div>
+            </div>
             <div class="q">How thoroughly should it train?</div>
             <select id="tr-preset" aria-label="Training length"></select>
             <div class="row-btns"><button class="btn primary" id="tr-start">Start training</button><button class="btn ghost" id="tr-stop">Stop</button></div>
@@ -358,6 +370,16 @@
             <ul class="list" id="tr-models"></ul>
           </div>
         </div>
+      </div>
+    </section>
+    <!-- ======================================================== GUIDES -->
+    <section id="tab-guides" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>Guides</span></div>
+      <h1>Guides</h1>
+      <div class="lead" id="gd-intro"></div>
+      <div class="gd-layout">
+        <nav class="gd-list" id="gd-list" aria-label="Guides"></nav>
+        <article class="card gd-body" id="gd-body"></article>
       </div>
     </section>
     <!-- ======================================================== TOOLS -->
@@ -390,7 +412,8 @@
 
       <div class="card">
         <h2>Camera</h2>
-        <p class="help">The camera's live picture, about once a second, straight from the aircraft computer.</p>
+        <p class="help">The camera's live picture, about once a second, straight from the aircraft computer.
+          <a href="#guides" data-guide="camera">Camera setup and firmware</a></p>
         <div class="row-btns"><button class="btn" id="cam-toggle">Show the live picture</button></div>
         <div class="cam-view" id="cam-view" hidden><img id="cam-img" alt="Camera picture"><div class="cam-msg" id="cam-msg">Waiting for a picture…</div></div>
       </div>
@@ -505,11 +528,30 @@
       </div>
 
       <div class="card">
-        <h2>Control surface directions</h2>
-        <p class="help">If a surface moves the wrong way in the bench check (Setup, step 6), reverse its output here.</p>
+        <h2>Servos and motor: what each output does</h2>
+        <p class="help">Tell the flight controller what is plugged into each output (S1, S2, …): the motor's
+          ESC is <b>Throttle</b>, each aileron servo <b>Aileron</b>, and so on. If a surface moves the wrong
+          way in the bench check (Setup, step 6), set it to <b>Reversed</b>. Propeller OFF.
+          <a href="#tools" data-guide="servos-esc">How to connect ESC and servos</a></p>
         <div class="row-btns"><button class="btn" id="sv-read">Read the outputs</button></div>
         <div class="result" id="sv-result" role="status"></div>
         <table class="cls" id="sv-table" hidden><thead><tr><th>Output</th><th>Drives</th><th>Direction</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Airspeed sensor</h2>
+        <p class="help">Which sensor is fitted, and is it working? Without GPS the aircraft navigates on
+          airspeed, so it must work. <a href="#tools" data-guide="airspeed">How to mount and connect it</a></p>
+        <div class="row-btns"><button class="btn" id="as-read">Check</button></div>
+        <div class="inline as-inputs">
+          <label>Sensor <select id="as-type" aria-label="Airspeed sensor type"></select></label>
+          <label>I2C bus <select id="as-bus" aria-label="I2C bus">
+            <option value="1">1 - Matek H743: pads SDA1 / SCL1</option>
+            <option value="0">0 - Matek H743: pads SDA2 / SCL2</option>
+            <option value="2">2</option><option value="3">3</option></select></label>
+          <button class="btn" id="as-set">Set</button>
+        </div>
+        <div class="result" id="as-result" role="status"></div>
       </div>
 
       <div class="card">
@@ -568,5 +610,6 @@
 <script src="/static/app.js"></script>
 <script src="/static/wizard.js"></script>
 <script src="/static/tools.js"></script>
+<script src="/static/guides.js"></script>
 </body>
 </html>

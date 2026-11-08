@@ -64,7 +64,7 @@ User's answers to questions asked:
 
 ## Test status (last run)
 
-- `python3 -m pytest -q` in `onboard/`: **447 passed**, 9 skipped (after task 12; +1 skip = real-SSH test without SILM_SSH_TEST) (ArduPilot
+- `python3 -m pytest -q` in `onboard/`: **455 passed**, 10 skipped (after task 14; skips include the real-SSH test without SILM_SSH_TEST) (ArduPilot
   source check: set `ARDUPILOT_SRC=/home/user/ardupilot`; SITL: set
   `SILM_SITL_TESTS=1 SILM_ARDUPILOT=/home/user/ardupilot`).
 - Browser end-to-end `tests/test_gui_browser.py` (Node Playwright, real agent):
@@ -355,6 +355,34 @@ User's answers to questions asked:
     groundstation/requirements.txt, build_app hidden imports, the desktop
     self-test, THIRD_PARTY_NOTICES (also a new section listing what the
     desktop installers bundle - that was missing). Full suite 447 passed.
+  - (14) done: training-tools installer + guides.
+    `groundstation/toolsetup.py` `ToolInstall`: makes ~/SILM/training-venv with
+    the found Python, pip-installs ultralytics litert-torch ai-edge-litert
+    ai-edge-quantizer (on Linux without nvidia-smi first CPU-only torch from
+    download.pytorch.org, tolerated if unreachable), verifies the imports;
+    `runtime.training_python()` prefers that venv; routes GET /api/train/tools,
+    POST /api/train/tools/{install,cancel}; Teach tab "Install the training
+    tools" box. Tests: real venv + pip install of a small package, re-use,
+    cancel. The FULL install was run for real here in the background (see the
+    progress log below for the result).
+    `GUIDES.md` (12 guides: parts, wiring with the H743-WING SERIAL map from
+    ArduPilot's hwdef, firmware-first via STM32CubeProgrammer + _with_bl.hex,
+    sd-card, usb-stick, python, simulator, camera, servos-esc, cg, airspeed,
+    legal/Transpordiamet) is the one source: `groundstation/guides.py`
+    converts its Markdown subset (escaped) for the new **Guides** tab;
+    `data-guide="<id>"` links anywhere open a guide (wizard steps, Tools,
+    Teach, Send C, Launch, question help via Q(..., guide=)). Test: every
+    data-guide id exists. Facts checked: SIYI A2 mini 12 V (web), DFU
+    procedure (web search; ardupilot.org itself is blocked here),
+    Transpordiamet routes + 10 EUR yearly operator registration (web search;
+    transpordiamet.ee blocked here), ARSPD_TUBE_ORDR and I2C bus order from
+    the ArduPilot source.
+    Also new in Tools (the guides promised them): each output's job
+    (SERVOn_FUNCTION select; Throttle sets 1000-2000/trim 1000) and an
+    Airspeed sensor card (ARSPD_TYPE/ARSPD_BUS, found/healthy from SYS_STATUS
+    bit 0x20, VFR_HUD airspeed). Both verified against ArduPlane SITL
+    (test_fctools_sitl.py 7/7). Wizard fc_connect text no longer sends people
+    to Mission Planner. Full suite 455 passed, 10 skipped.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

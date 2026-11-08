@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(ONBOARD, "planner"))
 import yaml  # noqa: E402
 
 import survey  # noqa: E402
-from groundstation import fc, fctools, flights, piinstall, pilink, pisoftware, training  # noqa: E402
+from groundstation import fc, fctools, flights, guides, piinstall, pilink, pisoftware, toolsetup, training  # noqa: E402
 from groundstation import project as P  # noqa: E402
 from groundstation.sim import SimRunner, commands_for  # noqa: E402
 from silm_recon import mavmission as mm  # noqa: E402
@@ -80,6 +80,7 @@ class Station:
         self.sim = sim or SimRunner()
         self.dataset = training.Dataset(self.training_root)
         self.piinstall = piinstall.PiInstall()
+        self.toolinstall = toolsetup.ToolInstall()
         self.fcjobs = fctools.FCJobs(log_dir=os.path.join(os.path.dirname(self.projects), "fc_logs"))
         self.trainer = training.Trainer(os.path.join(self.training_root, "models"),
                                         bundled_dirs=(os.path.join(ONBOARD, "models"),))
@@ -402,6 +403,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.load_project(urllib.parse.unquote(path[14:])))
             if path == "/api/setup":
                 return self._send(200, st.setup_state())
+            if path == "/api/guides":
+                return self._send(200, guides.load())
             if path == "/api/fc/job":
                 return self._send(200, st.fcjobs.status())
             if path == "/api/pi/install":
@@ -440,6 +443,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.train_state())
             if path == "/api/train/status":
                 return self._send(200, st.trainer.status())
+            if path == "/api/train/tools":
+                return self._send(200, {**st.toolinstall.status(), "tools": training.tools_available()})
             if path == "/api/train/img":
                 try:
                     return self._file(st.dataset.image_path((qs.get("n") or [""])[0]))
@@ -487,6 +492,14 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/fc/servo_reverse":
                 return self._send(200, fctools.set_reversed(port, int(body.get("n", 0)),
                                                             bool(body.get("reversed")), baud))
+            if path == "/api/fc/servo_function":
+                return self._send(200, fctools.set_function(port, int(body.get("n", 0)),
+                                                            int(body.get("function", -1)), baud))
+            if path == "/api/fc/airspeed":
+                return self._send(200, {**fctools.airspeed(port, baud), "types": fctools.AIRSPEED_TYPES})
+            if path == "/api/fc/airspeed_set":
+                return self._send(200, fctools.set_airspeed(port, int(body.get("type", -1)),
+                                                            int(body.get("bus", 1)), baud))
             if path == "/api/fc/battery":
                 return self._send(200, fctools.battery(port, baud))
             if path == "/api/fc/battery_cal":
@@ -558,6 +571,10 @@ class Handler(BaseHTTPRequestHandler):
                 names = pilink.import_folder(body.get("folder"), st.library)
                 return self._send(200, {"ok": True, "names": names,
                                         "message": f"imported {len(names)} flight(s)"})
+            if path == "/api/train/tools/install":
+                return self._send(200, st.toolinstall.start())
+            if path == "/api/train/tools/cancel":
+                return self._send(200, st.toolinstall.cancel())
             if path == "/api/train/upload":
                 return self._send(200, st.train_upload(body.get("files")))
             if path == "/api/train/class":

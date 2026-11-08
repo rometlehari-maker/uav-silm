@@ -10,6 +10,7 @@ Afterwards the laptop shows every picture on a map with its coordinates.
 | Start here | |
 |---|---|
 | **[`GROUND_STATION.md`](GROUND_STATION.md)** | the laptop program: every tab, sending to the aircraft, the pictures |
+| **[`GUIDES.md`](GUIDES.md)** | what the app can't do for you: parts, wiring, first firmware, the Pi's card, Python, simulator, camera, servos, balance point, airspeed sensor, permission to fly |
 | **[`FLIGHT_READY.md`](FLIGHT_READY.md)** | the procedure from a new aircraft to the pictures, and the flight-day checklist |
 | [`SITL_HOWTO.md`](SITL_HOWTO.md) | flying your mission in ArduPilot's simulator on Windows (WSL2) / Linux |
 | [`training/README.md`](training/README.md) | training the recognition model on your objects |

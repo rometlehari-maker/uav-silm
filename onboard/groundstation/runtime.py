@@ -41,12 +41,26 @@ def python_cmd() -> tuple[str, ...] | None:
     return None
 
 
-def has_module(module: str) -> bool:
-    """Can the helper Python import `module`?"""
-    cmd = python_cmd()
+def training_python() -> tuple[str, ...] | None:
+    """The Python that trains: the training tools' own environment if the app
+    installed it (~/SILM/training-venv), else the helper Python."""
+    from groundstation import toolsetup
+    vpy = toolsetup.venv_python()
+    return (vpy,) if os.path.isfile(vpy) else python_cmd()
+
+
+def forget() -> None:
+    """Look again (after installing something)."""
+    python_cmd.cache_clear()
+
+
+def has_module(module: str, cmd: tuple[str, ...] | None = None) -> bool:
+    """Can the helper Python (or `cmd`) import `module`?"""
+    in_process = cmd is None and not frozen()
+    cmd = cmd or python_cmd()
     if cmd is None:
         return False
-    if not frozen():
+    if in_process or tuple(cmd) == (sys.executable,):
         try:
             __import__(module)
             return True

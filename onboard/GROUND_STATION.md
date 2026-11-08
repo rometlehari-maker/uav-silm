@@ -247,8 +247,11 @@ The standard model doesn't know tractors or combines. To teach it:
    appears under "Trained models" with how many objects it finds; press **Use
    on the aircraft**, then send it (tab 5 - the model goes with the settings).
 
-Training needs the training tools on the laptop (about 2 GB; the tab tells you
-the command). A computer with an NVIDIA graphics card is 10-50 times faster.
+Training needs the training tools on the laptop (about 2 GB, once): the tab
+shows **Install the training tools**, which puts them in their own folder
+(`~/SILM/training-venv`; delete it to remove them) using the Python on this
+computer - see the guide *Installing Python* if there is none. A computer with
+an NVIDIA graphics card is 10-50 times faster.
 [`training/README.md`](training/README.md) explains training in depth.
 
 ### 10 · Tools
@@ -295,7 +298,12 @@ aircraft computer refuses changes while it is armed.
   positions; press *Done, it's in place*), level, compass (turn the aircraft
   on every side until it reaches 100 %), airspeed sensor (cover the pitot
   tube).
-- **Servos** - which output does what, and **Normal / Reversed** per output.
+- **Servos and motor** - every output (S1, S2, …): choose what it drives
+  (Throttle, Aileron, Elevator, Elevon, V-tail…; Throttle also sets the fixed
+  1000-2000 µs ESC range) and **Normal / Reversed**.
+- **Airspeed sensor** - **Check** says which sensor is set, whether the flight
+  controller found it and the speed it reads; choose the type and I2C bus and
+  **Set** (then restart the flight controller).
 - **Battery** - the voltage it measures; enter your multimeter's reading and
   **Calibrate** to correct it.
 - **Logs** - list the flight logs and download them (`~/SILM/logs`).
@@ -303,6 +311,15 @@ aircraft computer refuses changes while it is armed.
   (internet) or choose a `.apj` file, then install it over the USB cable. The
   first install on a brand-new board can't be done this way - see the guide
   linked on the card.
+
+### ? · Guides
+
+How to do what the app can't do for you: the shopping list, wiring (with the
+Matek H743-WING's ports), the first ArduPilot install on a new board, writing
+the Pi's memory card, naming the USB stick, installing Python, the simulator
+on Windows, the camera, ESC and servos, the balance point, the airspeed sensor,
+and permission to fly. The app links to the right guide wherever a step needs
+one. The same text is [`GUIDES.md`](GUIDES.md).
 
 ---
 
