@@ -498,7 +498,7 @@ def make_settings(project: dict) -> dict:
     """The Pi's settings.yaml: the sections config.yaml has, with your answers."""
     r, c, link = project["recognition"], project["camera"], project["link"]
     targets = list(r.get("targets") or [])
-    return {
+    out = {
         "program": {"mode": project.get("program", {}).get("mode", "flight")},
         "telemetry": {"connection": link.get("pi_serial", "/dev/serial0"),
                       "baud": int(link.get("pi_baud") or 115200)},
@@ -515,6 +515,9 @@ def make_settings(project: dict) -> dict:
         "mission_name": project.get("name", ""),
         "aircraft_name": project["aircraft"].get("name", ""),
     }
+    if c.get("calibration"):            # measured on the Tools tab (lens calibration)
+        out["georef"] = {"calibration": c["calibration"]}
+    return out
 
 
 PI_MODELS = "~/silm-settings/models"     # where the agent stores trained models on the Pi

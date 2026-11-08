@@ -262,6 +262,23 @@ User's answers to questions asked:
     test_groundstation.py, once in the full suite), never reproduced in 8+
     runs, also not under full CPU load. Name not captured yet; if it shows up
     again, run with `-rf` and note it here.
+- **"Absolutely everything from the app"** (latest request; tasks 10-14):
+  plan = (10) Pi tools: preflight, live camera, lens calibration [DONE];
+  (11) Pi software update + Wi-Fi settings from the app; (12) Pi install over
+  SSH; (13) flight-controller tools: servo reversing, level/accel/compass/
+  airspeed calibration, battery voltage calibration, log download, firmware
+  update via bootloader; (14) training-tools installer + detailed in-app
+  guides for what can't be done from an app (hardware, first firmware flash
+  via DFU, Pi card, simulator on Windows, Python, legal).
+  - (10) done: agent `/api/camera.jpg` (recon writes preview.jpg next to the
+    status file, 1/s, only on the ground, only while the agent's
+    preview_request is <15 s old), `/api/calibration{,/capture,/compute,/reset}`
+    (uses tools/calibrate_camera.py; shots in ~/silm-settings/calibration),
+    `/api/preflight` (stops silm-recon, runs preflight.py --json, restarts it;
+    new sudo rules stop/start). Ground Station: new tab "10 Tools"
+    (static/tools.js), calibration stored in project camera.calibration and
+    sent as georef.calibration. Bug caught by tests: capture result's "ok"
+    was overwritten by the state's "ok": True.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

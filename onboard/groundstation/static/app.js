@@ -50,6 +50,7 @@ function showTab(name) {
   if (name === "launch") renderLaunch();
   if (name === "train") loadTrain();
   if (typeof wzOnTab === "function") wzOnTab(name);
+  if (typeof toolsOnTab === "function") toolsOnTab(name);
   if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
 }
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));

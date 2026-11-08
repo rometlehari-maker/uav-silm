@@ -29,6 +29,7 @@
     <button data-tab="sim" class="tab"><b>7</b> Simulator</button>
     <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
     <button data-tab="train" class="tab"><b>9</b> Teach new objects</button>
+    <button data-tab="tools" class="tab"><b>10</b> Tools</button>
   </nav>
 
   <main>
@@ -359,6 +360,58 @@
         </div>
       </div>
     </section>
+    <!-- ======================================================== TOOLS -->
+    <section id="tab-tools" class="page">
+      <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>10 · Tools</span></div>
+      <h1>Tools</h1>
+      <p class="lead">Check, calibrate and look after the aircraft from here. For the aircraft
+        computer, join this laptop to the aircraft's Wi-Fi (<b>SILM-…</b>); for the flight
+        controller, plug in its USB cable. The aircraft must be on the ground and disarmed.</p>
+
+      <h2 class="sub">Aircraft computer (Raspberry Pi)</h2>
+      <div class="card">
+        <h2>Check everything</h2>
+        <p class="help">Tests the camera, gimbal, the link to the flight controller (GPS, failsafe
+          settings, GPS-loss script, the mission on board), the recognition speed against your
+          height and speed, storage, temperature and clock. About a minute; the Pi stops taking
+          pictures meanwhile.</p>
+        <div class="row-btns"><button class="btn primary" id="pf-run">Check everything</button></div>
+        <div class="result" id="pf-result" role="status"></div>
+        <table class="cls pf-table" id="pf-table" hidden><thead><tr><th>Part</th><th>Result</th><th>Details</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Camera</h2>
+        <p class="help">The camera's live picture, about once a second, straight from the aircraft computer.</p>
+        <div class="row-btns"><button class="btn" id="cam-toggle">Show the live picture</button></div>
+        <div class="cam-view" id="cam-view" hidden><img id="cam-img" alt="Camera picture"><div class="cam-msg" id="cam-msg">Waiting for a picture…</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Lens calibration</h2>
+        <p class="help">The 160° lens bends straight lines; measuring it makes the coordinates of
+          objects near the picture edges right. You need a printed checkerboard, flat on something
+          stiff (a clipboard or board).</p>
+        <ol class="steps">
+          <li><b>Print</b> a checkerboard with 10 × 7 squares (it has 9 × 6 inner corners), squares about 35 mm, and <b>measure one square</b> with a ruler.</li>
+          <li><b>Show the live picture</b> above. Hold the board in front of the camera, 0.5 to 1.5 m away, the <b>whole board</b> visible.</li>
+          <li>Press <b>Take this picture</b>. Move the board and repeat: <b>20 to 30 pictures</b>, with the board in the middle, near every edge and in every corner, and tilted different ways.</li>
+          <li><b>Calculate</b>, then <b>Use this calibration</b>, then send the settings to the aircraft (Send tab).</li>
+        </ol>
+        <div class="inline lc-inputs">
+          <label>Inner corners <input type="number" id="lc-cols" value="9" min="3" max="30" aria-label="Inner corners across"> ×
+            <input type="number" id="lc-rows" value="6" min="3" max="30" aria-label="Inner corners down"></label>
+          <label>Square size <input type="number" id="lc-sq" value="35" min="5" max="200" step="0.5" aria-label="Square size in millimetres"> <span class="unit">mm</span></label>
+        </div>
+        <div class="row-btns">
+          <button class="btn primary" id="lc-capture">Take this picture</button>
+          <button class="btn" id="lc-compute">Calculate</button>
+          <button class="btn ghost" id="lc-reset">Start again</button>
+        </div>
+        <div class="result" id="lc-result" role="status"></div>
+        <div id="lc-current" class="help"></div>
+      </div>
+    </section>
   </main>
 
   <aside class="problems" id="problems" aria-label="Problems">
@@ -381,5 +434,6 @@
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/wizard.js"></script>
+<script src="/static/tools.js"></script>
 </body>
 </html>

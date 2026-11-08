@@ -15,6 +15,10 @@ Two ways to reach it from the laptop Ground Station:
            GET  /api/flights           list of recorded flights
            GET  /api/flights/<name>.zip  one flight (photos + logs), zipped
            GET  /api/log               the flight program's recent log
+           GET  /api/camera.jpg        the camera's newest picture (on the ground)
+           GET  /api/calibration       lens calibration: pictures taken so far
+           POST /api/calibration/capture|compute|reset   lens calibration
+           POST /api/preflight         the full hardware check (tools/preflight.py)
          Wi-Fi is switched OFF while the aircraft is armed or airborne, so
          nothing transmits in flight, and back on once it has been disarmed
          on the ground for agent.wifi_back_on_after_s.
@@ -42,6 +46,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -66,6 +71,9 @@ MAX_MODEL_BYTES = 60_000_000
 RESTART_CMD = ["sudo", "-n", "systemctl", "restart", "silm-recon"]
 WIFI_CMD = ["sudo", "-n", "nmcli", "radio", "wifi"]          # + on | off
 LOG_CMD = ["journalctl", "-u", "silm-recon", "-n", "150", "--no-pager", "-o", "short-iso"]
+STOP_CMD = ["sudo", "-n", "systemctl", "stop", "silm-recon"]
+START_CMD = ["sudo", "-n", "systemctl", "start", "silm-recon"]
+PREVIEW_MAX_AGE_S = 5.0
 
 
 def software_version() -> str:
@@ -100,7 +108,8 @@ def _atomic_write(path: str, text: str) -> None:
 
 class Agent:
     def __init__(self, config_path: str, settings: str | None = None,
-                 restart_cmd=None, wifi_cmd=None, log_cmd=None, runner=_run):
+                 restart_cmd=None, wifi_cmd=None, log_cmd=None, runner=_run,
+                 tool_runner=_run):
         self.config_path = os.path.abspath(config_path)
         self._settings_override = settings
         self.base_cfg = load_config(self.config_path, settings="/nonexistent/silm.yaml")
@@ -118,6 +127,7 @@ class Agent:
         self.wifi_cmd = wifi_cmd or WIFI_CMD
         self.log_cmd = log_cmd or LOG_CMD
         self._run = runner
+        self._run_tool = tool_runner          # long jobs (preflight); real by default
         self.settings_file = settings_path(self.base_cfg, settings)
         self.settings_dir = os.path.dirname(self.settings_file)
         self.status_file = status_path(self.base_cfg)
@@ -474,6 +484,103 @@ class Agent:
                     return copied
         return copied
 
+    # ------------------------------------------------------------ camera, lens, checks
+
+    def _status_dir(self) -> str:
+        return os.path.dirname(self.status_file) or "."
+
+    def preview_jpg(self) -> bytes | None:
+        """The camera's newest picture. Asking for it makes the flight program
+        save one every second for the next 15 s (only on the ground)."""
+        try:
+            os.makedirs(self._status_dir(), exist_ok=True)
+            with open(os.path.join(self._status_dir(), "preview_request"), "w") as fh:
+                fh.write(str(time.time()))
+        except OSError:
+            pass
+        p = os.path.join(self._status_dir(), "preview.jpg")
+        try:
+            if time.time() - os.path.getmtime(p) > PREVIEW_MAX_AGE_S:
+                return None
+            with open(p, "rb") as fh:
+                return fh.read()
+        except OSError:
+            return None
+
+    def calib_dir(self) -> str:
+        return os.path.join(self.settings_dir, "calibration")
+
+    def calib_state(self) -> dict:
+        d = self.calib_dir()
+        shots = sorted(f for f in os.listdir(d) if f.endswith(".jpg")) if os.path.isdir(d) else []
+        return {"ok": True, "shots": len(shots)}
+
+    def calib_reset(self) -> dict:
+        shutil.rmtree(self.calib_dir(), ignore_errors=True)
+        return {"ok": True, "shots": 0, "message": "calibration pictures deleted"}
+
+    def calib_capture(self, cols: int, rows: int) -> dict:
+        """Keep the newest camera picture if the whole checkerboard is in it."""
+        if self.flying():
+            return {"ok": False, "message": "the aircraft is ARMED or flying"}
+        jpg = self.preview_jpg()
+        if jpg is None:
+            return {"ok": False, "message": "no picture from the camera yet (is it on and connected?)"}
+        import numpy as np
+        import cv2
+        cc = _calib_tool()
+        img = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_COLOR)
+        if img is None or cc.find_corners(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cols, rows) is None:
+            return {**self.calib_state(), "ok": False, "found": False,
+                    "message": f"the checkerboard ({cols} x {rows} inner corners) is not fully in the picture"}
+        os.makedirs(self.calib_dir(), exist_ok=True)
+        n = self.calib_state()["shots"] + 1
+        with open(os.path.join(self.calib_dir(), f"shot_{n:03d}.jpg"), "wb") as fh:
+            fh.write(jpg)
+        return {"ok": True, "found": True, "shots": n, "message": f"picture {n} kept"}
+
+    def calib_compute(self, cols: int, rows: int, square_mm: float, fisheye: bool = True) -> dict:
+        import cv2
+        cc = _calib_tool()
+        d = self.calib_dir()
+        files = sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith(".jpg")) if os.path.isdir(d) else []
+        imgs = [im for im in (cv2.imread(f) for f in files) if im is not None]
+        try:
+            cal = cc.calibrate(imgs, cols, rows, square_mm / 1000.0, fisheye=fisheye)
+        except Exception as exc:
+            return {"ok": False, "message": f"calibration failed: {exc}"}
+        quality = "good" if cal["rms_px"] < 0.5 else "ok" if cal["rms_px"] < 1.0 else "poor"
+        block = {k: cal[k] for k in ("model", "width", "height", "camera_matrix", "dist_coeffs")}
+        return {"ok": True, "calibration": block, "rms_px": cal["rms_px"], "quality": quality,
+                "views_used": cal["views_used"], "hfov_deg": cal["hfov_deg"],
+                "message": f"error {cal['rms_px']} px ({quality}), {cal['views_used']} pictures used, "
+                           f"field of view {cal['hfov_deg']} deg"}
+
+    def preflight(self, alt_m: float = 100.0, speed_mps: float = 19.0) -> dict:
+        """Run tools/preflight.py. The flight program is paused meanwhile (two
+        programs can't share the flight controller's serial port)."""
+        if self.flying():
+            return {"ok": False, "message": "the aircraft is ARMED or flying"}
+        with self._lock:
+            out = os.path.join(tempfile.gettempdir(), f"silm-preflight-{os.getpid()}.json")
+            self._run(STOP_CMD)
+            try:
+                ok, text = self._run_tool([sys.executable, os.path.join(ROOT, "tools", "preflight.py"),
+                                           "--config", self.config_path, "--settings", self.settings_file,
+                                           "--alt-m", str(float(alt_m)), "--speed-mps", str(float(speed_mps)),
+                                           "--json", out], timeout=300)
+            finally:
+                self._run(START_CMD)
+            try:
+                with open(out, encoding="utf-8") as fh:
+                    res = json.load(fh)
+                os.remove(out)
+            except (OSError, ValueError):
+                return {"ok": False, "message": "the check did not finish: " + text[-400:]}
+        self.log(f"preflight: {res['fails']} FAIL, {res['warns']} WARN")
+        return {"ok": True, **res,
+                "message": f"{res['fails']} FAIL, {res['warns']} WARN" + (" - fix the FAILs before flying" if res["fails"] else "")}
+
     # ------------------------------------------------------------ loop
 
     def tick(self) -> None:
@@ -525,6 +632,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"flights": a.list_flights()})
             if path == "/api/log":
                 return self._json(200, {"log": a.recent_log()})
+            if path == "/api/calibration":
+                return self._json(200, a.calib_state())
+            if path == "/api/camera.jpg":
+                jpg = a.preview_jpg()
+                if jpg is None:
+                    return self._json(503, {"ok": False, "message": "waiting for a picture from the camera"})
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Length", str(len(jpg)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(jpg)
+                return
             m = re.match(r"^/api/flights/([^/]+)\.zip$", path)
             if m:
                 if a.flight_dir(m.group(1)) is None:
@@ -547,7 +667,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         a = self.agent
         path = self.path.split("?", 1)[0]
-        if path not in ("/api/settings", "/api/model"):
+        if path not in ("/api/settings", "/api/model", "/api/preflight", "/api/calibration/capture",
+                        "/api/calibration/compute", "/api/calibration/reset"):
             return self._json(404, {"error": "not found"})
         limit = MAX_MODEL_BYTES * 2 if path == "/api/model" else MAX_SETTINGS_BYTES * 3
         try:
@@ -559,6 +680,18 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
         except Exception:
             return self._json(400, {"ok": False, "message": "bad JSON"})
+        try:
+            if path == "/api/preflight":
+                return self._json(200, a.preflight(body.get("alt_m", 100), body.get("speed_mps", 19)))
+            if path.startswith("/api/calibration/"):
+                cols, rows = int(body.get("cols", 9)), int(body.get("rows", 6))
+                act = path.rsplit("/", 1)[1]
+                res = (a.calib_capture(cols, rows) if act == "capture" else a.calib_reset() if act == "reset"
+                       else a.calib_compute(cols, rows, float(body.get("square_mm", 35)),
+                                            bool(body.get("fisheye", True))))
+                return self._json(200, res)
+        except Exception as exc:
+            return self._json(500, {"ok": False, "message": str(exc)})
         if path == "/api/model":
             try:
                 import base64
@@ -569,6 +702,16 @@ class Handler(BaseHTTPRequestHandler):
         else:
             res = a.accept_settings(body, source="wifi")
         self._json(200 if res["ok"] else 409 if "ARMED" in res["message"] else 400, res)
+
+
+def _calib_tool():
+    """tools/calibrate_camera.py as a module (checkerboard finding, calibration)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("silm_calibrate_camera",
+                                                  os.path.join(ROOT, "tools", "calibrate_camera.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def make_server(agent: Agent, host="0.0.0.0", port=None) -> ThreadingHTTPServer:

@@ -176,6 +176,21 @@ let PAGE = null;
   assert(/^4\/10$/.test((await page.textContent("#setup-badge")).trim()), "progress badge 4/10: " + await page.textContent("#setup-badge"));
   await step("10-setup");
 
+  // ---------------- tools: the aircraft computer
+  await tab("tools");
+  await page.click("#pf-run");
+  await resultOf("pf-result", "FAIL|WARN|✗", 20000);
+  assert((await page.textContent("#pf-result")).includes("0 FAIL, 1 WARN"), "check summary");
+  assert((await page.$$("#pf-table tbody tr")).length === 2, "check results listed");
+  await page.click("#cam-toggle");
+  await page.waitForFunction(() => { const i = document.getElementById("cam-img"); return !i.hidden && i.naturalWidth > 0; }, null, { timeout: 15000 });
+  await page.click("#lc-capture");
+  await resultOf("lc-result", "not fully in the picture|kept|✗", 15000);
+  assert((await page.textContent("#lc-result")).includes("not fully in the picture"), "no board: picture not kept");
+  assert((await page.textContent("#lc-current")).includes("No lens calibration yet"), "calibration status");
+  await step("11-tools");
+  await page.click("#cam-toggle");
+
   // ---------------- saved missions
   await tab("start");
   await page.click("#save");

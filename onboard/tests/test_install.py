@@ -31,6 +31,8 @@ def test_dry_run_reaches_every_step_and_changes_nothing(tmp_path):
     assert "ssid SILM-test mode ap" in out and "10.42.0.1/24" in out
     assert "LABEL=SILM /mnt/silm_usb" in out
     assert "NOPASSWD: /usr/bin/systemctl restart silm-recon" in out
+    assert "NOPASSWD: /usr/bin/systemctl stop silm-recon" in out      # preflight from the app
+    assert "NOPASSWD: /usr/bin/systemctl start silm-recon" in out
     assert "nmcli radio wifi off" in out
     assert "run.py --check" in out
 

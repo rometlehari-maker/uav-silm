@@ -146,11 +146,13 @@ run sudo systemctl enable silm-recon.service silm-agent.service
 ok "services installed and enabled (start at every power-on)"
 
 # ---------------------------------------------------------------- 5. sudo rules
-step "5/9 Permissions for the agent (restart the program, switch Wi-Fi)"
+step "5/9 Permissions for the agent (pause/restart the program, switch Wi-Fi)"
 SUDOERS_TMP="$(mktemp)"
 cat >"$SUDOERS_TMP" <<EOF
 # SILM ground agent: exactly these commands, nothing else
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl restart silm-recon
+$USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl stop silm-recon
+$USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl start silm-recon
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi on
 $USER_NAME ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi off
 EOF

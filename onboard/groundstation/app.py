@@ -382,6 +382,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.load_project(urllib.parse.unquote(path[14:])))
             if path == "/api/setup":
                 return self._send(200, st.setup_state())
+            if path == "/api/pi/camera.jpg":
+                try:
+                    jpg = pilink.camera_jpg((qs.get("address") or [""])[0])
+                except pilink.PiError as exc:
+                    return self._send(502, {"ok": False, "message": str(exc)})
+                if jpg is None:
+                    return self._send(503, {"ok": False, "message": "waiting for a picture from the camera"})
+                return self._send(200, jpg, "image/jpeg")
             if path == "/api/ports":
                 return self._send(200, fc.list_ports())
             if path == "/api/drives":
@@ -460,6 +468,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "flights": pilink.flights(body.get("address"))})
             if path == "/api/pi/log":
                 return self._send(200, {"ok": True, "log": pilink.recent_log(body.get("address"))})
+            if path == "/api/pi/calibration":
+                return self._send(200, pilink.calibration(body.get("address"), body.get("action", "state"),
+                                                          {k: body[k] for k in ("cols", "rows", "square_mm", "fisheye")
+                                                           if k in body}))
+            if path == "/api/pi/preflight":
+                pr = P.merge_defaults(body.get("project") or {})
+                return self._send(200, pilink.preflight(body.get("address"), float(pr["mission"].get("alt_m") or 100),
+                                                        float(pr["aircraft"].get("cruise_mps") or 19)))
             if path == "/api/pi/download":
                 d = pilink.download_flight(body.get("address"), body.get("name"), st.library)
                 return self._send(200, {"ok": True, "message": f"downloaded to {d}",

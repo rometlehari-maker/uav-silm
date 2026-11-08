@@ -402,3 +402,16 @@ table.cls td + td { font-family: var(--mono); font-size: 13px; }
   .wz-steps span { display: none; }
   .wz-card { padding: 22px 18px; }
 }
+
+/* ---------- tools */
+.cam-view { position: relative; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  background: var(--deep); min-height: 200px; display: grid; place-items: center; }
+.cam-view img { width: 100%; display: block; }
+.cam-msg { color: var(--faint); padding: 30px 20px; text-align: center; font-size: 14px; }
+.pf-table td:nth-child(2) b { font-family: var(--mono); font-size: 12.5px; }
+tr.pf-pass td:nth-child(2) b { color: var(--cyan); } tr.pf-warn td:nth-child(2) b { color: var(--amber); }
+tr.pf-fail td:nth-child(2) b { color: var(--red); } tr.pf-skip td:nth-child(2) b { color: var(--faint); }
+.lc-inputs { gap: 22px; margin: 6px 0 4px; color: var(--dim); font-size: 14px; }
+.lc-inputs label { display: inline-flex; align-items: center; gap: 8px; }
+.lc-inputs input[type=number] { width: 84px; }
+.result .btn { margin-top: 10px; }

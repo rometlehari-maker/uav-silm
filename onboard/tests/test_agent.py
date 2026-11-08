@@ -312,3 +312,91 @@ def test_mount_point_not_touched_without_a_silm_labelled_stick(env):
     (tmp / "dev" / "disk" / "by-label").mkdir(parents=True)
     (tmp / "dev" / "disk" / "by-label" / "SILM").write_text("")      # stick plugged in
     assert a.usb_present() and a.usb_tick()["imported"]
+
+
+# ------------------------------------------------------------ camera, lens, checks
+
+def _jpg(img):
+    import cv2
+    return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])[1].tobytes()
+
+
+def _put_preview(tmp_path, data, age_s=0.0):
+    p = tmp_path / "run" / "preview.jpg"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(data)
+    t = time.time() - age_s
+    os.utime(p, (t, t))
+
+
+def test_camera_picture_is_requested_and_only_fresh_ones_served(env):
+    tmp_path, agent, _ = env
+    assert agent.preview_jpg() is None
+    assert (tmp_path / "run" / "preview_request").exists()      # asks the flight program
+    _put_preview(tmp_path, b"\xff\xd8old", age_s=30)
+    assert agent.preview_jpg() is None                           # too old: camera stopped
+    _put_preview(tmp_path, b"\xff\xd8new")
+    assert agent.preview_jpg() == b"\xff\xd8new"
+
+
+def test_lens_calibration_from_camera_pictures(env):
+    pytest.importorskip("cv2")
+    import numpy as np
+    import sys
+    sys.path.insert(0, HERE)
+    from test_calibration import COLS, ROWS, SQ_M, render_views
+    tmp_path, agent, _ = env
+    _put_preview(tmp_path, _jpg(np.full((480, 640, 3), 128, np.uint8)))
+    r = agent.calib_capture(COLS, ROWS)
+    assert not r["ok"] and r["found"] is False and "not fully in the picture" in r["message"]
+    assert not agent.calib_compute(COLS, ROWS, SQ_M * 1000, fisheye=False)["ok"]   # nothing yet
+    for i, view in enumerate(render_views(14, seed=3)):
+        _put_preview(tmp_path, _jpg(view))
+        r = agent.calib_capture(COLS, ROWS)
+        assert r["ok"] and r["shots"] == i + 1, r
+    res = agent.calib_compute(COLS, ROWS, SQ_M * 1000, fisheye=False)
+    assert res["ok"] and res["rms_px"] < 1.0 and res["views_used"] >= 8, res
+    k = res["calibration"]["camera_matrix"]
+    assert abs(k[0][0] - 420) < 15 and res["calibration"]["width"] == 640
+    assert agent.calib_reset()["shots"] == 0 and agent.calib_state()["shots"] == 0
+    set_aircraft(tmp_path, armed=True)
+    assert "ARMED" in agent.calib_capture(COLS, ROWS)["message"]
+
+
+def test_preflight_pauses_the_flight_program_and_reports(env):
+    tmp_path, agent, rec = env
+    seen = {}
+
+    def tool(cmd, timeout=15):
+        seen["cmd"] = cmd
+        seen["between"] = [c[-1] for c in rec.calls]            # stopped before, not yet started
+        out = cmd[cmd.index("--json") + 1]
+        with open(out, "w") as fh:
+            json.dump({"results": [{"part": "camera", "status": "PASS", "message": "1920x1080"},
+                                   {"part": "fc", "status": "FAIL", "message": "no heartbeat"}],
+                       "fails": 1, "warns": 0}, fh)
+        return False, "1 FAIL"
+    agent._run_tool = tool
+    r = agent.preflight(alt_m=90, speed_mps=18)
+    assert r["ok"] and r["fails"] == 1 and "fix the FAILs" in r["message"]
+    assert seen["cmd"][1].endswith("preflight.py") and "90.0" in seen["cmd"] and "--settings" in seen["cmd"]
+    assert seen["between"] == ["silm-recon"] and rec.calls[0][3:] == ["stop", "silm-recon"]
+    assert rec.calls[-1][3:] == ["start", "silm-recon"]          # always restarted
+    set_aircraft(tmp_path, armed=True)
+    assert "ARMED" in agent.preflight()["message"]
+
+
+def test_http_camera_calibration_preflight(http):
+    tmp_path, agent, _, url = http
+    with pytest.raises(urllib.error.HTTPError) as e:
+        urllib.request.urlopen(url + "/api/camera.jpg", timeout=5)
+    assert e.value.code == 503
+    _put_preview(tmp_path, b"\xff\xd8picture")
+    code, body, hdr = get(url + "/api/camera.jpg")
+    assert code == 200 and body == b"\xff\xd8picture" and hdr["Content-Type"] == "image/jpeg"
+    code, body, _ = get(url + "/api/calibration")
+    assert json.loads(body)["shots"] == 0
+    assert post(url + "/api/calibration/reset", {})[1]["ok"]
+    agent._run_tool = lambda cmd, timeout=15: (False, "boom")
+    code, r = post(url + "/api/preflight", {"alt_m": 80})
+    assert code == 200 and not r["ok"] and "did not finish" in r["message"]

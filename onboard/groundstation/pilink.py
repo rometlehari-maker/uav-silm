@@ -60,6 +60,34 @@ def status(address: str) -> dict:
     return _request(address, "/api/status")
 
 
+def camera_jpg(address: str) -> bytes | None:
+    """The camera's newest picture (None while the Pi has none yet)."""
+    try:
+        with urllib.request.urlopen(_url(address, "/api/camera.jpg"), timeout=6) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 503:
+            return None
+        raise PiError(f"the Pi answered with error {e.code}") from e
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        raise PiError(f"no answer from the Pi ({getattr(e, 'reason', e)})") from e
+
+
+def calibration(address: str, action: str, body: dict | None = None) -> dict:
+    """Lens calibration on the Pi: action = state | capture | compute | reset."""
+    if action == "state":
+        return _request(address, "/api/calibration")
+    if action not in ("capture", "compute", "reset"):
+        raise ValueError(f"unknown calibration action {action!r}")
+    return _request(address, f"/api/calibration/{action}", body or {},
+                    timeout=240 if action == "compute" else 15)
+
+
+def preflight(address: str, alt_m: float, speed_mps: float) -> dict:
+    """The full hardware check on the Pi (takes up to a few minutes)."""
+    return _request(address, "/api/preflight", {"alt_m": alt_m, "speed_mps": speed_mps}, timeout=360)
+
+
 def send_settings(address: str, settings_text: str, project: dict, mission_wpl: str | None) -> dict:
     payload = {"settings_yaml": settings_text, "project": project, "sender": "ground-station"}
     if mission_wpl:

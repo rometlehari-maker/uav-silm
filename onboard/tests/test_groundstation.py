@@ -785,3 +785,53 @@ def test_ports_say_which_are_usb(monkeypatch):
     monkeypatch.setitem(sys.modules, "serial", types.SimpleNamespace(tools=sys.modules["serial.tools"]))
     assert fc.list_ports() == [{"device": "/dev/ttyS0", "description": "n/a", "usb": False},
                                {"device": "/dev/ttyACM0", "description": "MatekH743", "usb": True}]
+
+
+# ------------------------------------------------------------ Tools tab: the Pi
+CAL = {"model": "fisheye", "width": 1920, "height": 1080,
+       "camera_matrix": [[640.0, 0.0, 960.0], [0.0, 640.0, 540.0], [0.0, 0.0, 1.0]],
+       "dist_coeffs": [0.05, -0.01, 0.002, -0.0005]}
+
+
+def test_lens_calibration_travels_with_the_settings_and_the_pi_accepts_it(station, pi):
+    agent, addr, tmp, _ = pi
+    p = full_project()
+    assert "georef" not in P.make_settings(p)                     # none measured: lens defaults
+    p["camera"]["calibration"] = CAL
+    assert P.make_settings(p)["georef"]["calibration"] == CAL
+    assert station.check(p)["ok"], station.check(p)["errors"]
+    r = station.pi_send({"project": p, "address": addr})
+    assert r["ok"], r
+    import run
+    cfg = run.load_checked(os.path.join(ONBOARD, "config.yaml"), agent.settings_file)
+    assert cfg["georef"]["calibration"]["camera_matrix"][0][0] == 640.0
+
+
+def test_camera_picture_calibration_and_check_through_the_ground_station(pi, http):
+    agent, addr, tmp, _ = pi
+    url, _ = http
+    with pytest.raises(urllib.error.HTTPError) as e:                  # no picture yet
+        call(url + "/api/pi/camera.jpg?address=" + addr)
+    assert e.value.code == 503
+    (tmp / "pi" / "preview.jpg").write_bytes(b"\xff\xd8" + bytes(500))
+    body, hdr = call(url + "/api/pi/camera.jpg?address=" + addr)
+    assert hdr["Content-Type"] == "image/jpeg" and len(body) >= 500       # the picture, passed through
+    st, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "state"})
+    assert st["shots"] == 0
+    r, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "capture", "cols": 9, "rows": 6})
+    assert not r["ok"] and "not fully in the picture" in r["message"]
+    r, _ = call(url + "/api/pi/calibration", {"address": addr, "action": "compute", "cols": 9, "rows": 6})
+    assert not r["ok"] and "calibration failed" in r["message"]
+
+    def tool(cmd, timeout=15):
+        assert cmd[cmd.index("--alt-m") + 1] == "100.0"
+        with open(cmd[cmd.index("--json") + 1], "w") as fh:
+            json.dump({"results": [{"part": "system", "status": "PASS", "message": "ok"}],
+                       "fails": 0, "warns": 0}, fh)
+        return True, ""
+    agent._run_tool = tool
+    r, _ = call(url + "/api/pi/preflight", {"address": addr, "project": full_project()})
+    assert r["ok"] and r["fails"] == 0 and r["results"][0]["part"] == "system"
+    with pytest.raises(urllib.error.HTTPError) as e:                  # the Pi is not there
+        call(url + "/api/pi/camera.jpg?address=127.0.0.1:9")
+    assert e.value.code == 502

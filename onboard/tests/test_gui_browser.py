@@ -2,6 +2,7 @@
 a user's way through every tab, against a real ground agent over HTTP.
 Skipped where Node + Playwright aren't installed."""
 
+import json
 import os
 import shutil
 import subprocess
@@ -44,6 +45,21 @@ def test_ground_station_in_a_browser(tmp_path):
     (tmp_path / "pi").mkdir()
     (tmp_path / "pi" / "config.yaml").write_text(yaml.safe_dump(base))
     agent = Agent(str(tmp_path / "pi" / "config.yaml"), runner=lambda c, timeout=15: (True, ""))
+
+    def preflight_tool(cmd, timeout=15):                 # the hardware check, without hardware
+        with open(cmd[cmd.index("--json") + 1], "w") as fh:
+            json.dump({"results": [{"part": "camera", "status": "PASS", "message": "1920x1080 at 30 fps"},
+                                   {"part": "fc", "status": "WARN", "message": "no GPS fix (indoors)"}],
+                       "fails": 0, "warns": 1}, fh)
+        return True, ""
+    agent._run_tool = preflight_tool
+    stop_camera = threading.Event()
+
+    def camera():                                        # the flight program's preview, once a second
+        while not stop_camera.is_set():
+            (tmp_path / "pi" / "preview.jpg").write_bytes(jpeg_bytes(640, 360, 90))
+            stop_camera.wait(1.0)
+    threading.Thread(target=camera, daemon=True).start()
     asrv = agent_server(agent, host="127.0.0.1", port=0)
     threading.Thread(target=asrv.serve_forever, daemon=True).start()
     # the laptop: Ground Station with one flight in its library
@@ -61,6 +77,7 @@ def test_ground_station_in_a_browser(tmp_path):
     try:
         r = subprocess.run([NODE, E2E], env=env, capture_output=True, text=True, timeout=240)
     finally:
+        stop_camera.set()
         gsrv.shutdown()
         asrv.shutdown()
     assert "E2E OK" in r.stdout, r.stdout + r.stderr
