@@ -1,11 +1,13 @@
-"""Companion-computer health: temperature, throttling, power, storage, rate.
+"""Companion-computer health: temperature, throttling, power, memory, storage, rate.
 
-A Raspberry Pi 3 sealed in a fuselage next to the ESC can overheat and throttle
-(the project's own notes: LW-PLA softens at 55-60 C), a sagging 5 V supply
-causes under-voltage throttling, and a full SD card silently ends data capture.
-This samples all of that, logs it to health.ndjson in the mission folder, warns
-on the console/journal, and tells the main loop to shed load when storage runs
-low (first stop archiving raw frames, then stop saving entirely).
+A Raspberry Pi 4 sealed in a fuselage next to the ESC can overheat and throttle
+(it starts slowing itself down at 80 C; the project's own notes: LW-PLA
+softens at 55-60 C), a sagging 5 V supply (the Pi 4 needs 5.1 V / 3 A) causes
+under-voltage throttling, the 2 GB model can run short of memory, and a full SD
+card silently ends data capture. This samples all of that, logs it to
+health.ndjson in the mission folder, warns on the console/journal, and tells
+the main loop to shed load when storage runs low (first stop archiving raw
+frames, then stop saving entirely).
 """
 
 from __future__ import annotations
@@ -46,6 +48,18 @@ def read_throttled() -> int | None:
         return None
 
 
+def read_mem_available_mb(path="/proc/meminfo") -> float | None:
+    """MemAvailable from the kernel (what can be used without swapping)."""
+    try:
+        with open(path) as fh:
+            for line in fh:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) / 1024.0
+    except Exception:
+        pass
+    return None
+
+
 def decode_throttled(flags: int | None) -> list[str]:
     if not flags:
         return []
@@ -55,10 +69,12 @@ def decode_throttled(flags: int | None) -> list[str]:
 class HealthMonitor:
     def __init__(self, cfg: dict | None, storage_dir: str, log_dir: str | None = None,
                  temp_reader=read_cpu_temp_c, throttle_reader=read_throttled,
-                 disk_reader=None):
+                 disk_reader=None, mem_reader=read_mem_available_mb):
         cfg = cfg or {}
         self.interval_s = float(cfg.get("interval_s", 10.0))
-        self.warn_temp_c = float(cfg.get("warn_temp_c", 70.0))
+        self.warn_temp_c = float(cfg.get("warn_temp_c", 75.0))
+        self.low_mem_mb = float(cfg.get("low_mem_mb", 200.0))
+        self._mem = mem_reader
         self.low_disk_mb = float(cfg.get("low_disk_mb", 500.0))        # stop raw frames
         self.critical_disk_mb = float(cfg.get("critical_disk_mb", 100.0))  # stop saving
         self.storage_dir = storage_dir
@@ -87,7 +103,11 @@ class HealthMonitor:
 
         temp = self._temp()
         thr = self._thr()
-        free_mb = self._disk()
+        try:
+            free_mb = self._disk()
+        except Exception:
+            free_mb = None            # storage unplugged / unreadable
+        mem_mb = self._mem() if self._mem else None
         self.low_disk = free_mb is not None and free_mb < self.low_disk_mb
         self.critical_disk = free_mb is not None and free_mb < self.critical_disk_mb
 
@@ -96,6 +116,8 @@ class HealthMonitor:
             warnings.append(f"CPU {temp:.0f}C")
         now_flags = decode_throttled(thr & 0xF if thr is not None else None)
         warnings += now_flags
+        if mem_mb is not None and mem_mb < self.low_mem_mb:
+            warnings.append(f"memory low ({mem_mb:.0f} MB available)")
         if self.critical_disk:
             warnings.append(f"storage critical ({free_mb:.0f} MB): saving stopped")
         elif self.low_disk:
@@ -107,6 +129,7 @@ class HealthMonitor:
             "throttled_hex": None if thr is None else hex(thr),
             "throttle_flags": decode_throttled(thr),
             "free_mb": None if free_mb is None else round(free_mb, 1),
+            "mem_available_mb": None if mem_mb is None else round(mem_mb, 1),
             "fps": round(fps, 2),
             "warnings": warnings,
         }

@@ -34,6 +34,7 @@ from .fire import FireDetector
 from .georef import GeoReferencer
 from .health import HealthMonitor
 from .siyi import SiyiGimbal
+from .status import status_path, write_status
 from .store import DetectionStore
 from .telemetry import TelemetryLink
 from .tiles import OfflineBasemap
@@ -60,7 +61,9 @@ class Recon:
             )
         self.link = link
 
-        self.camera = camera if camera is not None else Camera(cfg["camera"])
+        # strict=False: a camera that isn't sending yet at power-on is retried
+        # in the background instead of stopping the program.
+        self.camera = camera if camera is not None else Camera(cfg["camera"], strict=False)
 
         dcfg = cfg["detector"]
         self.detector = None
@@ -137,6 +140,13 @@ class Recon:
         self._frame_no = 0
         self._started = time.time()
 
+        # Live status for the ground agent (Wi-Fi / USB transfer, laptop GUI).
+        self._status_path = status_path(cfg)
+        self._last_status_write = 0.0
+        self._last_saved = None
+        self.frame_errors = 0
+        self.saved_count = 0
+
     # ------------------------------------------------------------------ #
 
     def _active(self, st) -> bool:
@@ -186,9 +196,10 @@ class Recon:
             while not self._stop:
                 st = self.link.state.snapshot()
                 self.log_track(st)
+                self.write_status(st)
 
                 if not self._active(st):
-                    # Idle: don't burn the Pi 3's CPU on inference pre-launch.
+                    # Idle: don't spend the Pi's CPU (and heat) on inference pre-launch.
                     self.health.maybe_sample()
                     now = time.time()
                     if now - last_status > 5.0:
@@ -206,10 +217,56 @@ class Recon:
                 # aircraft state at the moment the frame was captured
                 st_frame = (self.link.state_at(t_arrived - self._latency_s)
                             if hasattr(self.link, "state_at") else st)
-                self.process_frame(frame, st_frame, cam_tilt_deg=self.camera_tilt())
+                try:
+                    self.process_frame(frame, st_frame, cam_tilt_deg=self.camera_tilt())
+                except Exception as exc:  # one bad frame must not end the flight's capture
+                    self.frame_errors += 1
+                    if self.frame_errors <= 5 or self.frame_errors % 100 == 0:
+                        print(f"[recon] ERROR processing frame ({self.frame_errors} so far): "
+                              f"{type(exc).__name__}: {exc}")
                 self.health.maybe_sample()
         finally:
+            try:                          # final status: the last numbers are never stale
+                self._last_status_write = 0.0
+                self.write_status(self.link.state.snapshot())
+            except Exception:
+                pass
             self._shutdown()
+
+    def write_status(self, st, now: float | None = None) -> None:
+        """~1 Hz status for the ground agent (never raises)."""
+        now = time.time() if now is None else now
+        if now - self._last_status_write < 1.0:
+            return
+        self._last_status_write = now
+        age = None
+        try:
+            age = self.camera.seconds_since_frame(now)
+        except Exception:
+            pass
+        hs = self.health.last_sample or {}
+        write_status(self._status_path, {
+            "armed": bool(st.armed), "mode": st.mode, "rel_alt_m": round(st.rel_alt, 1),
+            "have_fix": bool(st.have_fix), "lat": round(st.lat, 7), "lon": round(st.lon, 7),
+            "gps": self.gps_monitor.state,
+            "telemetry_ok": bool(st.telemetry_ok(self.max_telemetry_age)),
+            "camera_frame_age_s": None if age is None else round(age, 1),
+            "recording": self._active(st),
+            "mission_dir": self.store.dir, "saved": self.saved_count,
+            "last_saved": self._last_saved, "frame_errors": self.frame_errors,
+            "cpu_temp_c": hs.get("cpu_temp_c"), "free_mb": hs.get("free_mb"),
+            "mem_available_mb": hs.get("mem_available_mb"),
+            "warnings": hs.get("warnings", []),
+        })
+
+    def _match_frame_size(self, frame) -> None:
+        """The camera's real size is only known from its first frame (a camera
+        that was still booting at start-up): re-size geo-referencing to it."""
+        h, w = frame.shape[:2]
+        if (w, h) != (self.geo.W, self.geo.H):
+            print(f"[recon] frame size {w}x{h}: geo-referencing re-sized "
+                  f"(was {self.geo.W}x{self.geo.H})")
+            self.geo = GeoReferencer(self.cfg.get("georef", {}), image_size=(w, h))
 
     def log_track(self, st, now: float | None = None) -> None:
         now = time.time() if now is None else now
@@ -227,6 +284,7 @@ class Recon:
         """Everything done with one camera frame while active. Returns the
         records saved for this frame (empty list if nothing was saved)."""
         now = time.time() if now is None else now
+        self._match_frame_size(frame)
         self._frame_no += 1
         self.health.frame_done()
 
@@ -284,6 +342,8 @@ class Recon:
             return []
 
         rec = self.store.save(frame, keep, st, None)
+        self.saved_count += 1
+        self._last_saved = os.path.basename(rec.path_jpg)
         labels = ", ".join(sorted({e["label"] for e in keep}))
         gp = keep[0]["ground"]
         where = (f"{gp.lat:.6f},{gp.lon:.6f}" if gp and gp.valid

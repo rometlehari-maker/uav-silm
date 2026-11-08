@@ -55,7 +55,7 @@ class TilePatch:
 class OfflineBasemap:
     def __init__(self, cfg: dict):
         self.enabled = bool(cfg.get("enabled", False))
-        self.path = cfg.get("path", "")
+        self.path = os.path.expanduser(cfg.get("path", "") or "")
         self.zoom = int(cfg.get("zoom", 17))
         self.kind = None
         self._db = None

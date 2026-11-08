@@ -45,7 +45,7 @@ def _haversine_m(lat1, lon1, lat2, lon2) -> float:
 
 class DetectionStore:
     def __init__(self, cfg: dict):
-        base = cfg.get("output_dir", "/home/pi/silm_captures")
+        base = os.path.expanduser(cfg.get("output_dir", "~/silm_captures"))
         stamp = time.strftime("%Y%m%d_%H%M%S")
         self.dir = os.path.join(base, f"mission_{stamp}")
         os.makedirs(self.dir, exist_ok=True)

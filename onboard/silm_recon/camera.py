@@ -8,9 +8,10 @@ Frame sources:
                    (camera default 192.168.144.25), and read
                    rtsp://192.168.144.25:8554/main.264. No capture hardware.
                    Decoding: ``gstreamer`` uses the Pi's hardware H.264 decoder
-                   (v4l2h264dec), which matters on a Pi 3 - software-decoding a
-                   1080p stream would take most of its CPU. ``ffmpeg`` is the
-                   fallback (software decode).
+                   (v4l2h264dec): on the Pi 4 that leaves the CPU free for
+                   the detector - software-decoding 1080p would take one to
+                   two of its four cores. ``ffmpeg`` is the fallback
+                   (software decode).
   * ``usb``      - any UVC/V4L2 device via OpenCV.
   * ``picamera`` - a Raspberry Pi CSI camera via picamera2.
   * ``file``     - a video file or image folder, for bench testing.
@@ -110,7 +111,13 @@ class _LatestFrameReader:
 
 
 class Camera:
-    def __init__(self, cfg: dict):
+    def __init__(self, cfg: dict, strict: bool = True):
+        """`strict=False` (the flight program): a live camera that sends no
+        frame within open_timeout_s is NOT an error - the background reader
+        keeps reconnecting, and frames appear whenever the camera comes up
+        (a camera still booting at power-on, a loose cable re-seated).
+        `strict=True` (preflight, self-test) raises CameraError instead."""
+        self.strict = strict
         self.source = cfg.get("source", "rtsp")
         self.width = int(cfg.get("width", 1920))
         self.height = int(cfg.get("height", 1080))
@@ -191,8 +198,13 @@ class Camera:
                     self.width, self.height = w, h
                     return
                 time.sleep(0.05)
-            self._reader.stop()
             where = self.url if self.source == "rtsp" else self.device
+            if not self.strict:
+                print(f"[camera] WARNING: no frames from {self.source} source {where!r} yet "
+                      f"after {self.open_timeout_s:.0f} s - still trying in the background "
+                      f"(assuming {self.width}x{self.height} until the first frame)")
+                return
+            self._reader.stop()
             raise CameraError(f"no frames from {self.source} source {where!r} within "
                               f"{self.open_timeout_s:.0f} s")
 
@@ -262,6 +274,18 @@ class Camera:
     def stats(self) -> dict:
         r = self._reader
         return {} if r is None else {"frames_read": r.frames_read, "reconnects": r.reconnects}
+
+    def seconds_since_frame(self, now: float | None = None) -> float | None:
+        """Age of the newest frame from a live camera (None if none yet, or
+        not a live source)."""
+        r = self._reader
+        if r is None:
+            return None
+        with r._lock:
+            t = r._t if r._frame is not None else None
+        if t is None:
+            return None
+        return (time.time() if now is None else now) - t
 
     def release(self) -> None:
         try:

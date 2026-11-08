@@ -3,7 +3,7 @@
 Runs a single-shot detector (SSD-MobileNet style) with TensorFlow Lite. If a
 Coral USB Edge TPU is plugged in and a ``*_edgetpu.tflite`` model is given, it
 is used automatically (30+ FPS on a Pi); otherwise the CPU interpreter runs the
-plain quantised model at ~1-3 FPS on a Pi 3.
+plain quantised model on the Pi 4 CPU (tools/preflight.py measures the speed).
 
 The detector is class-agnostic: it reads a labels file and the main loop keeps
 only the classes listed as ``targets`` in config. Out of the box the bundled
@@ -382,24 +382,58 @@ class ObjectDetector:
         locations (boxes), classes, scores, num_detections. Their index order
         varies between exports, so we identify them by shape/rank.
         """
-        tensors = {d["index"]: self.interpreter.get_tensor(d["index"]) for d in self._out}
-        boxes = classes = scores = count = None
-        for arr in tensors.values():
-            a = np.squeeze(arr, axis=0) if arr.ndim >= 1 and arr.shape[0] == 1 else arr
+        def squeeze(arr):
+            return np.squeeze(arr, axis=0) if arr.ndim >= 1 and arr.shape[0] == 1 else arr
+
+        named = {}
+        for d in self._out:
+            name = str(d.get("name", ""))
+            if name.startswith("TFLite_Detection_PostProcess"):
+                suffix = name.rsplit(":", 1)[1] if ":" in name else "0"
+                named[suffix] = self._dequant(d, self.interpreter.get_tensor(d["index"]))
+        if set(named) >= {"0", "1", "2"}:
+            # The standard post-process names its outputs: 0 boxes, 1 classes,
+            # 2 scores, 3 count. Trust the names over the tensor order.
+            boxes, classes, scores = (squeeze(named[k]) for k in ("0", "1", "2"))
+            count = float(np.squeeze(named["3"])) if "3" in named else len(scores)
+            return boxes, classes, scores, count
+
+        boxes, count, vecs = None, None, []
+        for d in self._out:
+            a = squeeze(self._dequant(d, self.interpreter.get_tensor(d["index"])))
             if a.ndim == 2 and a.shape[-1] == 4:
                 boxes = a
+            elif a.ndim == 1 and a.size == 1 and count is None:
+                count = float(a[0])
             elif a.ndim == 1:
-                if count is None and a.size == 1:
-                    count = a[0]
-                elif scores is None:
-                    scores = a
-                else:
-                    classes = a
-        # Fallback to declared order if detection failed.
+                vecs.append(a)
+        classes = scores = None
+        if len(vecs) == 2:
+            # Unnamed outputs: the class ids are whole numbers and can exceed 1;
+            # the scores lie in 0..1. Decide by the values, not by the order.
+            def looks_like_ids(v):
+                return bool(np.all(np.abs(v - np.round(v)) < 1e-4)) and float(np.max(v, initial=0)) > 1.0
+            a, b = vecs
+            if looks_like_ids(a) and not looks_like_ids(b):
+                classes, scores = a, b
+            elif looks_like_ids(b) and not looks_like_ids(a):
+                classes, scores = b, a
+            else:                       # ambiguous (e.g. all class 0/1): standard order
+                classes, scores = a, b
         if boxes is None or scores is None or classes is None:
+            # Last resort: the standard declared order boxes, classes, scores.
             b = np.squeeze(self.interpreter.get_tensor(self._out[0]["index"]))
             c = np.squeeze(self.interpreter.get_tensor(self._out[1]["index"]))
             s = np.squeeze(self.interpreter.get_tensor(self._out[2]["index"]))
             boxes, classes, scores = b, c, s
             count = len(s)
         return boxes, classes, scores, count
+
+    @staticmethod
+    def _dequant(detail, arr):
+        """Real values from a quantised output tensor (no-op for float)."""
+        q = detail.get("quantization", (0.0, 0)) or (0.0, 0)
+        scale, zero = q
+        if scale and np.issubdtype(arr.dtype, np.integer):
+            return (arr.astype(np.float32) - zero) * scale
+        return arr

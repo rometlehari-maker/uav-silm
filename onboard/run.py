@@ -1,25 +1,65 @@
 #!/usr/bin/env python3
-"""Entry point for the SILM onboard reconnaissance system.
+"""Entry point for the SILM onboard program (runs on the aircraft's Raspberry Pi 4).
 
 Usage:
-    python3 run.py --config config.yaml
-    python3 run.py --config config.yaml --selftest   # no flight controller needed
+    python3 run.py                         # config.yaml + ~/silm-settings/settings.yaml
+    python3 run.py --config config.yaml --settings my_settings.yaml
+    python3 run.py --selftest              # camera + detector check, no flight controller
+
+At power-on the systemd service starts it (systemd/silm-recon.service). The
+settings file holds your answers from the laptop Ground Station; it is sent
+over the Pi's Wi-Fi hotspot or a USB stick (see GROUND_STATION.md).
+
+program.mode in the settings:
+    flight  - normal: records only while armed, in AUTO, above activation.min_alt_m
+    bench   - records whenever it sees something (camera test on the ground)
 """
 
 from __future__ import annotations
 
 import argparse
+import math
+import os
 import sys
 import time
 
-import yaml
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
-from silm_recon.recon import Recon
+from silm_recon.config import load_config, validate_config  # noqa: E402
 
 
-def load_config(path: str) -> dict:
-    with open(path, "r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+def resolve(cfg: dict, base_dir: str) -> dict:
+    """Make relative model/label paths relative to the onboard folder, so the
+    program works whatever folder systemd starts it in."""
+    det = cfg.get("detector") or {}
+    for k in ("model", "labels"):
+        p = det.get(k)
+        if p and not os.path.isabs(p):
+            det[k] = os.path.join(base_dir, p)
+    return cfg
+
+
+def load_checked(config_path: str, settings: str | None = None) -> dict:
+    """config.yaml + settings.yaml. If the merged result is invalid, use
+    config.yaml alone and say why (a bad settings file must not ground the
+    aircraft's camera)."""
+    cfg = load_config(config_path, settings)
+    errors = validate_config(cfg)
+    if errors and cfg.get("_settings_loaded"):
+        print(f"[run] WARNING: the settings file {cfg['_settings_file']} was IGNORED:")
+        for e in errors:
+            print(f"[run]   - {e}")
+        cfg = load_config(config_path, settings="/nonexistent/silm-settings.yaml")
+        cfg["_settings_rejected"] = errors
+        errors = validate_config(cfg)
+    if errors:
+        raise SystemExit("config.yaml is invalid:\n  - " + "\n  - ".join(errors))
+    mode = ((cfg.get("program") or {}).get("mode") or "flight").lower()
+    if mode == "bench":
+        cfg.setdefault("activation", {})["always_on"] = True
+        print("[run] BENCH mode: recording whenever something is seen (not for flight)")
+    return resolve(cfg, os.path.dirname(os.path.abspath(config_path)))
 
 
 def selftest(cfg: dict) -> int:
@@ -29,8 +69,6 @@ def selftest(cfg: dict) -> int:
     folder of test images) and prints detections. Good for verifying the model
     and the camera's Ethernet video path on the bench before a flight.
     """
-    import math
-
     from silm_recon.camera import Camera
     from silm_recon.detector import ObjectDetector
     from silm_recon.fire import FireDetector
@@ -84,16 +122,26 @@ def selftest(cfg: dict) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="SILM onboard reconnaissance")
-    ap.add_argument("--config", default="config.yaml")
+    ap = argparse.ArgumentParser(description="SILM onboard program (Raspberry Pi 4)")
+    ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
+    ap.add_argument("--settings", default=None,
+                    help="settings file from the Ground Station (default ~/silm-settings/settings.yaml)")
     ap.add_argument("--selftest", action="store_true",
                     help="run camera+detector without a flight controller")
+    ap.add_argument("--check", action="store_true",
+                    help="only check the configuration and print the result")
     args = ap.parse_args()
 
-    cfg = load_config(args.config)
+    cfg = load_checked(args.config, args.settings)
+    print(f"[run] settings file: {cfg['_settings_file']} "
+          f"({'loaded' if cfg['_settings_loaded'] else 'not present - using config.yaml defaults'})")
+    if args.check:
+        print("[run] configuration OK")
+        return 0 if not cfg.get("_settings_rejected") else 1
     if args.selftest:
         return selftest(cfg)
 
+    from silm_recon.recon import Recon
     Recon(cfg).run()
     return 0
 
