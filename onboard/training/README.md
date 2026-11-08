@@ -17,6 +17,42 @@ YOLO model (`detector.format: yolo`), so no app code changes are needed.
 > altitude and angle like your own camera's. The synthetic generator here only
 > proves the pipeline end to end; it will not recognise a real combine.
 
+## The easy way: the Ground Station's "Teach new objects" tab
+
+Everything below is also behind tab 9 of the laptop Ground Station
+([`../GROUND_STATION.md`](../GROUND_STATION.md#9--teach-new-objects)): add
+pictures, drag a box around each object, press **Start training**, then **Use
+on the aircraft** and send it. It writes the same YOLO dataset format and runs
+`train.py` and `export.py` for you. Use the command line below for big
+datasets, a GPU machine, or to understand what happens.
+
+## Real photos to start from: Open Images (no account needed)
+
+```bash
+cd onboard/training
+python3 openimages_dataset.py --per-class 450 --out datasets/openimages
+python3 train.py --data datasets/openimages/data.yaml --model yolo11n.pt \
+    --epochs 40 --imgsz 320 --device cpu --name oi_v1
+python3 export.py --weights runs/detect/oi_v1/weights/best.pt --imgsz 320 \
+    --model-name silm_oi --data datasets/openimages/data.yaml
+```
+
+`openimages_dataset.py` streams Google Open Images' public annotation lists
+(once, ~5 GB streamed, a few MB kept), picks photos with **real human-drawn
+boxes** - car, truck, livestock (cattle/horse/sheep) - and photos people
+verified as showing a **tractor**, whose vehicle boxes become tractor boxes,
+downloads them (~1,800 photos, ~150 MB) and writes a YOLO dataset with the
+class numbers of `classes.yaml`. What I checked when building it:
+
+- **tractor**: about 8 in 10 boxes are good (some wagons, toy models and
+  close-ups slip in; some tractors in busy photos are unboxed).
+- **combine is left out**: Open Images' "Harvester" photos are mostly tractors
+  with implements, rakes and sprayers - training "combine" on them would teach
+  the wrong thing. Combines need your own pictures.
+- **Viewpoint**: these are mostly **ground-level** photos. The model learns the
+  objects, but recognises them from straight above much less well. Add your
+  own aerial pictures (ordinary pictures saved in flight) and retrain.
+
 ## Will it work in real situations? (read this)
 
 Real-world performance is decided almost entirely by **data**, not by the code.
