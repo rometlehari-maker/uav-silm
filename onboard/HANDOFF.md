@@ -389,6 +389,12 @@ User's answers to questions asked:
     plus the test extras. Reproduced and verified in a clean venv with exactly
     CI's packages: 456 passed (incl. the real-SSH install test). Check CI
     after every push.
+  - CI after the fix (509d7bf): **green** (onboard tests run 69 incl. the
+    real-SSH install test; app build green). Full real training-tools
+    install (started 20:35 into scratchpad/training-venv): download.pytorch.org
+    is blocked here, so pip fell back to the standard CUDA torch 2.14.1
+    (pinned via litert-torch) + nvidia libs, ~1 MB/s here; at 21:01 still
+    downloading nvidia_cudnn. Result to be recorded when it ends.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
