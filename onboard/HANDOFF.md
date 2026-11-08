@@ -383,6 +383,12 @@ User's answers to questions asked:
     bit 0x20, VFR_HUD airspeed). Both verified against ArduPlane SITL
     (test_fctools_sitl.py 7/7). Wizard fc_connect text no longer sends people
     to Mission Planner. Full suite 455 passed, 10 skipped.
+  - **CI was red from a0af800 to dde6144** (4 pushes, unnoticed at the time):
+    `onboard tests` installed a hand-written package list without pyserial,
+    which test_fctools.py imports. Now it installs `groundstation/requirements.txt`
+    plus the test extras. Reproduced and verified in a clean venv with exactly
+    CI's packages: 456 passed (incl. the real-SSH install test). Check CI
+    after every push.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
