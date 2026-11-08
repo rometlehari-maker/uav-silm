@@ -1,8 +1,9 @@
 name: ground station app
 
 # Builds the Ground Station desktop app for Windows (installer), macOS and
-# Linux, and checks that each built app starts (its --selftest). A tag gs-v*
-# also publishes them as a GitHub release, which the website links to.
+# Linux, and checks that each built app starts (its --selftest). On main, a
+# version (onboard/VERSION) without a release yet is published as release
+# gs-v<version>; a pushed tag gs-v* is published too. The website links to it.
 on:
   push:
     branches: ["**"]
@@ -59,17 +60,36 @@ jobs:
             onboard/packaging/out/*.tar.gz
 
   release:
-    if: startsWith(github.ref, 'refs/tags/gs-v')
+    if: startsWith(github.ref, 'refs/tags/gs-v') || github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the existing tags
+
+      - name: Which release
+        id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"; skip=false
+          else
+            tag="gs-v$(tr -d '[:space:]' < onboard/VERSION)"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then skip=true; else skip=false; fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "release $tag (already published: $skip)"
+
       - uses: actions/download-artifact@v4
+        if: steps.v.outputs.skip != 'true'
         with:
           path: dist
           merge-multiple: true
 
       # also under fixed names, so the website can always link to the latest
       - name: Name the files and add checksums
+        if: steps.v.outputs.skip != 'true'
         run: |
           cd dist
           for f in *-Setup-*.exe; do cp "$f" UAV-SILM-Ground-Station-Setup.exe; done
@@ -80,8 +100,12 @@ jobs:
           cat SHA256SUMS.txt
 
       - uses: softprops/action-gh-release@v2
+        if: steps.v.outputs.skip != 'true'
         with:
-          name: UAV SILM Ground Station ${{ github.ref_name }}
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: UAV SILM Ground Station ${{ steps.v.outputs.tag }}
+          make_latest: true
           files: dist/*
           body: |
             The UAV SILM Ground Station as a desktop app.

@@ -215,7 +215,9 @@ def main(argv=None) -> int:
     ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
                     help="website page whose download cards to update ('' to skip)")
     a = ap.parse_args(argv)
-    commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard").decode().strip()
+    # the handoff notes aren't packed, so a commit that only changes them doesn't count
+    commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard",
+                             ":(exclude)onboard/HANDOFF.md").decode().strip()
     commit = git("rev-parse", commit).decode().strip()
     if git("status", "--porcelain", "--", "onboard").strip():
         print("note: onboard/ has uncommitted changes; they are NOT in the downloads "
