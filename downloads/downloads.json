@@ -1,7 +1,7 @@
 {
   "version": "2.0.0",
-  "commit": "db734975fc9b6f31cc6cc6ddb8e4e2ef50c5aa93",
-  "commit_short": "db734975fc",
+  "commit": "d1b2f093c4ff9d840b01432f3e721a8539b598ba",
+  "commit_short": "d1b2f093c4",
   "date": "2026-11-08",
   "files": [
     {
@@ -9,7 +9,7 @@
       "kind": "software",
       "version": "2.0.0",
       "bytes": 4500476,
-      "sha256": "a108bd5fac10d60a6647c8532556fdd0047534795a1d9b36f454752b8d6eea06",
+      "sha256": "074843d4959b6d10eede85cae97c6e3d189abf9307a0d2fbf0278a639748e3cb",
       "what": "Ground Station (laptop), Raspberry Pi software, ArduPilot settings and GPS-loss script, simulator tools, documentation and tests.",
       "licence": "MIT + third-party"
     },
@@ -18,7 +18,7 @@
       "kind": "model",
       "version": "v1",
       "bytes": 3519436,
-      "sha256": "c880dd066d12cb9f9a85fa1852847c82551fdaf37f5f3d2c1b6168b4527281b3",
+      "sha256": "9672ae516e96055cbebd7dad6640b3e70c797aec7a4473ab9a9c050e763ad9cc",
       "what": "The ready-made recognition model only (tractor, car, truck, livestock), with labels and its description.",
       "licence": "AGPL-3.0"
     },
