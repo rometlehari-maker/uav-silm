@@ -196,7 +196,7 @@ Ground Station from the source folder.
 
 Then close and reopen the Ground Station. The Teach tab's **Install the
 training tools** puts everything else in its own folder (`~/SILM/training-venv`,
-2-6 GB depending on the computer, so keep about 8 GB free); deleting that folder
+2-7 GB depending on the computer, so keep about 10 GB free); deleting that folder
 removes it again.
 
 ## The simulator on Windows {#simulator}
