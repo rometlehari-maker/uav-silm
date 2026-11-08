@@ -44,6 +44,9 @@ jobs:
         run: python -m pip install -r groundstation/requirements.txt -r packaging/requirements.txt
 
       - name: Build the app and run its self-test
+        env:
+          # Windows and macOS builds must be able to open their own window
+          SILM_REQUIRE_WINDOW: ${{ runner.os != 'Linux' && '1' || '0' }}
         run: python packaging/build_app.py --smoke
 
       - uses: actions/upload-artifact@v4

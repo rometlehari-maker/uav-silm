@@ -83,6 +83,21 @@ def _mavlink_loopback() -> None:
         tx.close()
 
 
+def window_support() -> str:
+    """'ok' if this build can open its own window here, else the reason."""
+    try:
+        import webview  # noqa: F401
+        if sys.platform == "win32":
+            import webview.platforms.edgechromium  # noqa: F401  (Edge WebView2 via pythonnet)
+        elif sys.platform == "darwin":
+            import webview.platforms.cocoa  # noqa: F401
+        else:
+            return "browser mode on Linux"
+        return "ok"
+    except Exception as exc:  # noqa: BLE001
+        return f"unavailable ({exc!r})"
+
+
 def selftest() -> int:
     """Start the server on a free port and check the pages and the main
     functions answer, as the installers' build checks do."""
@@ -117,6 +132,11 @@ def selftest() -> int:
     finally:
         if srv:
             srv.shutdown()
+    win = window_support()
+    print(f"app window: {win}")
+    if os.environ.get("SILM_REQUIRE_WINDOW") == "1" and win != "ok":
+        print("SELFTEST FAILED: this build cannot open its own window")
+        return 1
     print(f"SELFTEST OK - {TITLE} {software_version()}")
     return 0
 

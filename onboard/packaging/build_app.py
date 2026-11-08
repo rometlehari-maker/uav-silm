@@ -70,7 +70,8 @@ def pyinstaller_args() -> list[str]:
               "groundstation.training", "groundstation.runtime", "survey", "silm_recon.mavmission",
               "silm_recon.config", "pymavlink.mavutil", "pymavlink.mavftp",
               "pymavlink.dialects.v20.ardupilotmega", "pymavlink.dialects.v10.ardupilotmega",
-              "serial.tools.list_ports"):
+              "serial.tools.list_ports") + (("webview.platforms.edgechromium",) if SYSTEM == "windows" else
+                                             ("webview.platforms.cocoa",) if SYSTEM == "macos" else ()):
         args += ["--hidden-import", m]
     for m in ("torch", "torchvision", "ultralytics", "cv2", "matplotlib", "scipy", "pandas",
               "IPython", "pytest", "numpy", "lxml"):           # pymavlink's generator only
