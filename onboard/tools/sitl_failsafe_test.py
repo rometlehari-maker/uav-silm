@@ -94,7 +94,7 @@ def dist_m(lat1, lon1, lat2, lon2):
 
 def analyse(rows, fault_t, restore_t, home, loss_s=5.0, fence_radius=1500.0,
             rtl_margin_s=6.0, reconverge_m=15.0, reconverge_within_s=40.0,
-            land=None, land_radius_m=150.0) -> dict:
+            land=None, land_radius_m=150.0, max_armed_on_ground_s=30.0) -> dict:
     """Grade a recorded flight. rows: dicts with t, true_lat, true_lon,
     est_lat, est_lon, mode, and optionally landing (in the DO_LAND_START
     sequence), armed and alt. home = (lat, lon) of launch, land = planned
@@ -143,8 +143,19 @@ def analyse(rows, fault_t, restore_t, home, loss_s=5.0, fence_radius=1500.0,
     res["touchdown_error_m"] = round(d_end, 1)
     res["landed_near_touchdown"] = res["landed"] and d_end <= land_radius_m
 
+    # It must disarm by itself soon after touching down (LAND_DISARMDELAY,
+    # 10 s): an aircraft that stays ARMED on the ground is dangerous to walk up to.
+    ground = next((r["t"] for r in rows if r.get("landing") and r.get("alt", 99.0) < 1.0), None)
+    disarm = next((r["t"] for r in rows if not r.get("armed", True)
+                   and (ground is None or r["t"] >= ground)), None)
+    armed_on_ground = None if ground is None or disarm is None else round(disarm - ground, 1)
+    res["armed_on_ground_s"] = armed_on_ground
+    res["disarmed_soon_after_landing"] = (res["landed"] and armed_on_ground is not None
+                                          and armed_on_ground <= max_armed_on_ground_s)
+
     checks = ["rtl_in_time", "headed_home_while_blind", "stayed_inside_fence",
-              "estimate_reconverged", "landed", "landed_near_touchdown"]
+              "estimate_reconverged", "landed", "landed_near_touchdown",
+              "disarmed_soon_after_landing"]
     res["passed"] = all(res[c] for c in checks)
     res["checks"] = {c: res[c] for c in checks}
     return res
@@ -467,7 +478,7 @@ def run(args) -> int:
         print(f"  {'PASS' if v else 'FAIL'}  {k}")
     for k in ("rtl_after_s", "true_dist_at_fault_m", "true_dist_at_restore_m", "max_true_dist_m",
               "dead_reckoning_error_max_m", "reconverged_after_s", "touchdown_error_m",
-              "blind_at_touchdown"):
+              "blind_at_touchdown", "armed_on_ground_s"):
         print(f"        {k}: {res[k]}")
     print(f"\n{'PASSED' if res['passed'] else 'FAILED'} - details in {args.out}/")
     return 0 if res["passed"] else 1

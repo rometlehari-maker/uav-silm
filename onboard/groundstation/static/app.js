@@ -415,7 +415,8 @@ async function simPoll() {
     if (s.result) {
       const names = { rtl_in_time: "Turned back for the landing in time", headed_home_while_blind: "Headed for the landing strip while blind",
         stayed_inside_fence: "Stayed inside the geofence", estimate_reconverged: "Knew where it was again after GPS came back",
-        landed: "Landed and switched itself off", landed_near_touchdown: "Landed close to the planned point" };
+        landed: "Landed and switched itself off", landed_near_touchdown: "Landed close to the planned point",
+        disarmed_soon_after_landing: "Switched itself off within 30 s of touching down" };
       $("sim-checks").innerHTML = `<ul class="checklist">` + Object.entries(s.result.checks || {}).map(([k, v]) => `<li class="${v ? "ok" : "err"}">${v ? "✓" : "✗"} ${esc(names[k] || k)}</li>`).join("") +
         `</ul><p class="help">Touchdown ${s.result.touchdown_error_m} m from the planned point; failsafe after ${s.result.rtl_after_s} s; farthest ${s.result.max_true_dist_m} m from home.</p>`;
       $("sim-track").src = "/api/sim/track.png?t=" + Date.now(); $("sim-track").hidden = false;

@@ -163,10 +163,10 @@ cards: **A** flight controller over USB, **B** aircraft computer over Wi-Fi,
 
 Flies **this exact mission** with your aircraft's settings and today's wind in
 ArduPilot's simulator; halfway through the GPS is jammed (or lost) for as long
-as you choose. Results: six checks (turned back in time, headed for the strip,
+as you choose. Results: seven checks (turned back in time, headed for the strip,
 stayed inside the geofence, knew where it was again, landed and switched off,
-landed near the planned point), the touchdown distance and a picture of the
-track.
+landed near the planned point, switched off within 30 s of touching down), the
+touchdown distance and a picture of the track.
 
 The simulator runs on **Linux**. On Windows, run the Ground Station inside
 Ubuntu (WSL2) for this tab - set up once as in [`SITL_HOWTO.md`](SITL_HOWTO.md) -

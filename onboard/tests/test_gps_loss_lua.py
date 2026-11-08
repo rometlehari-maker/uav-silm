@@ -320,14 +320,41 @@ def test_flickering_lock_does_not_toggle_sources():
     assert sim.src_changes() == [1]           # switched once, stays on no-GPS
 
 
-def test_sources_restored_after_landing_while_gps_bad():
+def test_gps_stays_ignored_after_landing_until_it_is_really_good():
+    """Landed while the GPS is still jammed: the EKF must NOT go back to GPS
+    (the fake movement kept the aircraft armed on the ground in SITL). It goes
+    back only after SLM_GPS_OK_S of good GPS."""
     sim = Sim()
     sim.s.gps_status = 1
     sim.run_for(6)
+    assert sim.mode_changes() == [11] and sim.s.src_set == 1
     sim.s.flying = False
     sim.s.armed = False
-    sim.run_for(1)
+    for _ in range(10):                     # jammer flickering on the ground
+        sim.s.gps_status = 3
+        sim.run_for(2)
+        sim.s.gps_status = 1
+        sim.run_for(1)
+    assert sim.src_changes() == [1]         # never toggled back and forth
+    assert sim.mode_changes() == [11]       # no new RTL on the ground
+    sim.s.gps_status = 3
+    sim.run_for(11)                         # really good now
     assert sim.s.src_set == 0
+    assert any("recovered" in m for m in sim.msgs())
+
+
+def test_new_flight_after_a_landed_episode_starts_clean():
+    sim = Sim()
+    sim.s.gps_status = 1
+    sim.run_for(6)
+    sim.s.flying = sim.s.armed = False
+    sim.s.gps_status = 3
+    sim.run_for(11)                         # recovered on the ground
+    sim.s.mode = 10
+    sim.s.flying = sim.s.armed = True
+    sim.s.gps_status = 1
+    sim.run_for(6)
+    assert sim.mode_changes() == [11, 11]
 
 
 def test_source_switch_can_be_disabled():

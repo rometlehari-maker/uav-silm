@@ -131,3 +131,16 @@ def test_mission_file_from_the_planner_is_accepted(tmp_path):
     args.mission = str(f)
     items2, land, start = build_mission(args, HOME)
     assert len(items2) == len(items) and items2[start].command == mm.DO_LAND_START
+
+
+def test_staying_armed_on_the_ground_fails():
+    """Touched down, but stayed ARMED for minutes (it happened in SITL when a
+    still-jammed GPS made it look like it was moving): must fail."""
+    rows = good_flight()
+    t_ground = rows[-60]["t"]
+    for r in rows[-60:]:
+        r["alt"] = 0.2                          # on the ground for the last 30 s
+    r = analyse(rows, 60, 150, HOME)
+    assert r["passed"] and r["armed_on_ground_s"] == rows[-1]["t"] - t_ground
+    r = analyse(rows, 60, 150, HOME, max_armed_on_ground_s=10)
+    assert not r["checks"]["disarmed_soon_after_landing"] and not r["passed"]

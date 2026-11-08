@@ -252,8 +252,11 @@ local function update()
 
   good_since_ms = nil
   if not flying then
-    -- landed / disarmed during an episode: nothing to do, start fresh later
-    end_episode()
+    -- On the ground with the GPS still bad: KEEP the EKF off GPS. Switching
+    -- back here let a still-jammed receiver's fake movement convince the
+    -- landing detector the aircraft was flying again, so it stayed armed on
+    -- the ground for minutes instead of disarming (SITL). The episode ends
+    -- the normal way: GPS good for SLM_GPS_OK_S.
     return update, RUN_MS
   end
   bad_ms = bad_ms + dt_ms

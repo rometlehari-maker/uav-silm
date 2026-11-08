@@ -104,6 +104,17 @@ User's answers to questions asked:
   from 250°, GPS jammed until after touchdown, approach A 300 m/30 m, B 200 m/25 m,
   C 150 m/20 m (script: scratchpad `wind_exp.py`, uses `groundstation.sim.SimRunner`).
 
+- **Safety bug found + fixed (wind experiment A, 10 m/s, GPS jammed past
+  touchdown):** after touchdown the Lua script ended the GPS-loss episode
+  ("not flying") and put the EKF back on the STILL-JAMMED GPS; the fake
+  movement made the aircraft look airborne, the episode restarted ~70 times
+  and it stayed ARMED on the ground for >3 min. Fix: on the ground the
+  episode stays (EKF off GPS) until GPS is good for SLM_GPS_OK_S
+  (`silm_gps_loss.lua`, 2 new Lua tests). New SITL grading check
+  `disarmed_soon_after_landing` (armed on the ground <= 30 s), shown in the
+  Simulator tab. Variant A otherwise passed: blind touchdown 129.6 m long
+  (limit 150), flare at 2.9 m.
+
 ## Still to do (in this order)
 
 1. **Strong-wind landing** (task 4): try shorter/steeper final approach

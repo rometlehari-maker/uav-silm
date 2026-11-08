@@ -155,7 +155,7 @@ Fly your mission in ArduPilot's simulator, with the GPS jammed halfway:
 - **Ground Station tab 7 Simulator** (needs Linux, or Ubuntu in WSL2 on Windows,
   with the simulator installed once: [`SITL_HOWTO.md`](SITL_HOWTO.md) part A):
   **Start the simulated flight**. It sets up the simulator, flies, and reports
-  six checks plus the track.
+  seven checks plus the track.
 - By hand: [`SITL_HOWTO.md`](SITL_HOWTO.md).
 
 **Every check must pass before a real flight.** The simulator's 3S battery is
