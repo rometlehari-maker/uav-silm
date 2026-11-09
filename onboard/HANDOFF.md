@@ -485,6 +485,27 @@ User's answers to questions asked:
     (non-commercial originals). Path that works without this environment:
     export on the user's PC (training/fetch_real_data.py --source roboflow),
     or their own flight pictures labelled in the Teach tab.
+- **Top-down retraining, in progress** (Roboflow reachable after the user
+  added the hosts to the uav-silm environment). Forked into
+  salvadors-workspace-of0ak, each with a plain v1 (auto-orient only) and a
+  yolov8 export: cow-aerial-hzo5z (PD; barn ceiling camera, single cows,
+  baked-in cutout/noise -> NOT used), aerial-sheep-7mzre (PD; 4K nadir drone
+  over pasture -> used), aerial-cattle-detection-wr4ey (CC BY 4.0; drone,
+  nadir+oblique pasture -> used), counting-cattle-7rpmz (CC BY 4.0; nadir
+  feedlot, many boxes, some animals unlabelled -> used), project-isui-wzhot
+  (stock ground photos with misplaced boxes -> REJECTED), harvester-px266-9r5id
+  (forked, not yet checked). No usable top-down tractor set found.
+  New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
+  boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
+  sheep 350/80/80 4K pictures -> 4589/1046/1096 tiles; counting cattle tiled
+  9191/2440/1083; training set training/datasets/aerial_v2 = Open Images
+  (1502/298) + aerial cattle (720/209) + 1500/300 sampled tiles each of
+  feedlot cattle and sheep; test splits held out. Baseline silm_oi (2x2,
+  score 0.35, boxes >= 8 px): aerial cattle test recall 4.5 % / P 0.71,
+  feedlot cattle test recall 25.6 % / P 0.50. Training: fine-tune from
+  runs/oi_v1/weights/best.pt, 30 epochs, 320 px, CPU (runs/aerial_v2).
+  Next: export, measure on held-out aerial tests + VisDrone cars/trucks +
+  Open Images val (no regression on tractor/car/truck), ship only if better.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
