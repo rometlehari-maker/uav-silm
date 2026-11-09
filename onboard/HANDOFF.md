@@ -506,6 +506,15 @@ User's answers to questions asked:
   runs/oi_v1/weights/best.pt, 30 epochs, 320 px, CPU (runs/aerial_v2).
   Next: export, measure on held-out aerial tests + VisDrone cars/trucks +
   Open Images val (no regression on tractor/car/truck), ship only if better.
+  **Kept safe** (user: "keep safe"): a scheduled check-in every 30 min runs
+  scratchpad/save_ckpt.sh, which pushes onboard/training/checkpoints/aerial_v2/
+  last_weights.pt (optimizer stripped, ~5.5 MB) + results.csv; the exact
+  training set is listed in onboard/training/manifests/aerial_v2.txt.
+  RECOVERY on a fresh machine: re-export the Roboflow copies (versions_export,
+  yolov8), re-tile, rebuild the set from the manifest, then
+  `train.py --model training/checkpoints/aerial_v2/last_weights.pt
+  --epochs <remaining>` (same data/imgsz/batch). Remove training/checkpoints/
+  before merging to main (or keep only the final model in models/).
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
