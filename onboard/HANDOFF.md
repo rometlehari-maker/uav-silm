@@ -446,10 +446,14 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
-- **2.2.3 prepared on the branch, NOT merged/released yet** (ask the user):
-  model version 2 (below), Camera-tab tile setting, eval/tiling tools,
-  has_module find_spec fix. Merge with SQUASH (branch history has training
-  checkpoints).
+- **2.2.3 merged and released** (user: "Replace it", then "Merge and
+  release"): PR #7 squash-merged as 1b7818b (model version 2, Camera-tab tile
+  setting, eval/tiling tools, has_module find_spec fix; checkpoints never
+  reached main), PR #8 = website version line (65150f0). Release gs-v2.2.3
+  published 15:33 with silm-oi-farm-model-v2.zip; pages deploy green.
+  Roboflow workspace salvadors-workspace-of0ak still holds the forks; unused
+  ones (cow-aerial, drone-parking-detection, tractor-vsb0t, parking-vehicles)
+  can be deleted if the user wants - not done without asking.
 - **Recognition from above** (user: "can you train the app uploaded model on
   the birdseye view images further", then "can you make anything better?"):
   - New tools: `tools/eval_detections.py` (P/R per class via the onboard
