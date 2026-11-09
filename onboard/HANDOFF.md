@@ -494,7 +494,11 @@ User's answers to questions asked:
   nadir+oblique pasture -> used), counting-cattle-7rpmz (CC BY 4.0; nadir
   feedlot, many boxes, some animals unlabelled -> used), project-isui-wzhot
   (stock ground photos with misplaced boxes -> REJECTED), harvester-px266-9r5id
-  (forked, not yet checked). No usable top-down tractor set found.
+  (ground photos at 256 px, unboxed machines -> REJECTED, deleted),
+  drone-parking-detection-l5uqg (forked, cars from above, being checked).
+  No usable top-down tractor or truck set found.
+  Progress 13:22 UTC: epoch 11/30 done, ~4.5 min/epoch, val mAP50 0.499
+  (epoch 1: 0.463), checkpoint pushed.
   New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
   boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
   sheep 350/80/80 4K pictures -> 4589/1046/1096 tiles; counting cattle tiled
@@ -506,7 +510,7 @@ User's answers to questions asked:
   runs/oi_v1/weights/best.pt, 30 epochs, 320 px, CPU (runs/aerial_v2).
   Next: export, measure on held-out aerial tests + VisDrone cars/trucks +
   Open Images val (no regression on tractor/car/truck), ship only if better.
-  **Kept safe** (user: "keep safe"): a scheduled check-in every 30 min runs
+  **Kept safe** (user: "keep safe"): a scheduled check-in every hour (at :42 UTC) runs
   scratchpad/save_ckpt.sh, which pushes onboard/training/checkpoints/aerial_v2/
   last_weights.pt (optimizer stripped, ~5.5 MB) + results.csv; the exact
   training set is listed in onboard/training/manifests/aerial_v2.txt.
