@@ -84,22 +84,32 @@ def test_a_secret_stops_the_build():
     bd.check_secret("x.txt", b"bash pi/install.sh --password 'my-secret-123'")   # docs example is fine
 
 
-def test_website_gets_only_the_small_files_and_old_ones_go(tmp_path):
+def test_website_offers_only_the_app(tmp_path):
+    """The website gets no files of its own: only the line with the version
+    under the app's download buttons (which link to the latest release)."""
     commit = subprocess.run(["git", "log", "-1", "--format=%H", "HEAD", "--", "onboard"], cwd=bd.ROOT,
                             capture_output=True, text=True, check=True).stdout.strip()
-    (tmp_path / "uav-silm-software-0.9.0.zip").write_bytes(b"old")
-    files = bd.build(str(tmp_path), commit, bd.WEBSITE_KINDS)
-    assert {f["name"] for f in files} == {"gps_denied_failsafe.param", "silm_gps_loss.lua"}
-    assert sorted(p.name for p in tmp_path.iterdir()) == [
-        "SHA256SUMS.txt", "downloads.json", "gps_denied_failsafe.param", "silm_gps_loss.lua"]
+    meta = bd.site_meta(commit)
+    assert meta["version"] == bd.blob(commit, "onboard/VERSION").decode().strip()
     page = tmp_path / "index.html"
-    page.write_text("x " + bd.SITE_BEGIN + " " + bd.SITE_END + " y")
-    assert bd.update_site(str(page), json.loads((tmp_path / "downloads.json").read_text()))
+    page.write_text("x " + bd.SITE_BEGIN + " old cards " + bd.SITE_END + " y")
+    assert bd.update_site(str(page), meta)
     html = page.read_text()
-    assert html.count('class="dl-hash"') == 2 and ".zip" not in html
+    assert f"Version {meta['version']}" in html and commit in html and "releases/latest" in html
+    assert "downloads/" not in html and "dl-hash" not in html and "old cards" not in html
+    assert not bd.update_site(str(page), meta)                     # second time: nothing to change
+    out = tmp_path / "web"
+    assert bd.main(["--site", str(page), "--out", str(out)]) == 0 and not out.exists()   # no files written
 
 
-def test_the_repository_holds_no_download_zips():
+def test_the_live_page_has_no_download_files():
+    html = open(os.path.join(bd.ROOT, "index.html"), encoding="utf-8").read()
+    block = html[html.index(bd.SITE_BEGIN):html.index(bd.SITE_END)]
+    assert "downloads/" not in block and "Version " in block
+    assert "releases/latest/download/UAV-SILM-Ground-Station-Setup.exe" in html
+
+
+def test_the_repository_holds_no_download_files():
     tracked = subprocess.run(["git", "ls-files", "downloads"], cwd=bd.ROOT, capture_output=True,
                              text=True, check=True).stdout.split()
-    assert tracked and not [f for f in tracked if f.endswith(".zip")]
+    assert tracked == []
