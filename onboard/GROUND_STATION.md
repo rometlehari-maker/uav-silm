@@ -170,6 +170,11 @@ pictures:
 - **Fire and smoke?** A colour check that needs no training; it also flags
   sunsets and red roofs, so look at its pictures.
 - **How sure must it be?** Lower finds more but also saves more mistakes.
+- **How finely should the Pi look?** It cuts the middle of each picture into
+  2 x 2, 3 x 3 or 4 x 4 pieces. Finer finds smaller objects and works higher up
+  (measured on 548 drone pictures: 13 %, 24 % and 32 % of cars found) but each
+  picture takes about 2 or 4 times longer. Tools > *Check everything* tells you
+  whether the Pi keeps up at your height and speed.
 - **From what height should it start taking pictures?** Nothing is saved below it.
 - **Also save ordinary pictures every few seconds?** For looking at the area
   afterwards and for teaching it new objects.

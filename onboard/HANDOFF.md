@@ -446,6 +446,35 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
+- **Recognition from above** (user: "can you train the app uploaded model on
+  the birdseye view images further", then "can you make anything better?"):
+  - New tools: `tools/eval_detections.py` (P/R per class via the onboard
+    detector with tiling; tiny boxes and "ignore" regions not counted) and
+    `training/visdrone_to_yolo.py` (VisDrone for MEASURING only: its licence
+    is CC BY-NC-SA 3.0 per mirrors - can't go into the AGPL silm_oi).
+  - Baseline silm_oi on VisDrone val (548 pictures, score 0.35, boxes >= 16 px),
+    car recall/precision: 1x1 2.4 %/0.84, 2x2 12.9 %/0.84, 3x3 23.5 %/0.79,
+    4x4 31.7 %/0.73; trucks ~1-3 % (no top-down trucks in the training).
+    Time per frame here (4-core): 13/48/106/215 ms.
+  - New Camera-tab question recognition.tiles (2/3/4, default 2) ->
+    detector.tile_grid and the planner's pixels-on-target (user chose "add a
+    setting"). Test: test_finer_tiles_reach_the_pi_and_the_planner.
+  - runtime.has_module now uses importlib.util.find_spec in-process instead
+    of importing (importing ultralytics inside /api/train/state could exceed
+    the 20 s test timeout under load - likely the long-standing intermittent
+    failure, test_http_training_endpoints).
+  - Roboflow: the user connected the Roboflow connector and approved forking
+    top-down sets into workspace salvadors-workspace-of0ak. Forked
+    `cow-aerial-hzo5z` (Public Domain, 524 pictures, v1 generated, yolov8
+    export ready) - but the export link is on app.roboflow.com, blocked here;
+    the user then DECLINED the environment change adding app.roboflow.com.
+    Don't propose it again. Candidates found (not forked): riis/aerial-sheep
+    (PD), cattle-psyty/aerial-cattle-detection, arthurmessias/counting-cattle,
+    ivan-slukin/project-isui (tractor/combine/car/truck), bolo-4yv3d/gcdp1
+    (tractor/harvester/animal); avoid VisDrone / Stanford-drone re-uploads
+    (non-commercial originals). Path that works without this environment:
+    export on the user's PC (training/fetch_real_data.py --source roboflow),
+    or their own flight pictures labelled in the Teach tab.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
