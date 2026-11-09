@@ -344,7 +344,8 @@ class Station:
         launch = pr["mission"]["launch"]
         return self.sim.start(o["params_text"], o["mission_wpl"], (launch[0], launch[1], 0.0),
                               float(w.get("speed_mps") or 0), float(w.get("from_deg") or 0),
-                              fault=body.get("fault", "jam"),
+                              fault=body.get("fault", "jam") if body.get("fault", "jam") in ("jam", "disable", "none")
+                              else "jam",
                               fault_s=float(body.get("fault_s") or 90),
                               trigger_s=float(body.get("trigger_s") or 150))
 

@@ -204,6 +204,14 @@ stayed inside the geofence, knew where it was again, landed and switched off,
 landed near the planned point, switched off within 30 s of touching down), the
 touchdown distance and a picture of the track.
 
+Or choose **Nothing goes wrong (a normal flight)**: the whole mission as
+planned, no fault. Its checks: flew the whole survey, no failsafe or
+return-home on the way, stayed inside the geofence, knew its position all the
+way, landed and switched off near the planned point; plus the flight time. Use
+it to check the route, the flight time and the landing. It does not replace
+the GPS-loss test: only a GPS-jammed or GPS-lost run counts for the launch
+checklist.
+
 The simulator runs on **Linux**. On Windows, run the Ground Station inside
 Ubuntu (WSL2) for this tab - set up once as in [`SITL_HOWTO.md`](SITL_HOWTO.md) -
 or copy the commands the tab shows.

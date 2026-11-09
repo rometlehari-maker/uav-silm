@@ -415,6 +415,26 @@ User's answers to questions asked:
     float, 4.4 MB), confidence check exported/original 0.98, model listed
     (mAP50 0.28 - expected for 40 pictures / 15 epochs). The whole
     install -> train -> export path works. Test venv deleted afterwards.
+- **2.2.1 merged and released** (user: "if everything is good, merge"): PR #5
+  squash-merged as 41c9075; main tests + app build green; release gs-v2.2.1
+  published 06:48 with all installers, zips, SHA256SUMS. Before merging, one
+  unexplained failure (454/455, slow run) did not reproduce in 8 further full
+  runs (incl. under CPU load); the PyPI-dependent cancel test was replaced by
+  a network-free one. If an intermittent failure shows up again, run with
+  `-rf` and record its name here.
+- **Simulator "Nothing goes wrong" option** (user: "add the option in the app
+  that nothing goes wrong in the simulator"): `--fault none` in
+  tools/sitl_failsafe_test.py + `analyse_normal` (checks: flew_whole_survey,
+  no_failsafe, stayed_inside_fence, position_estimate_good <= 25 m, landed,
+  landed_near_touchdown, disarmed_soon_after_landing; reports flight_time_s).
+  Simulator tab: third choice, hides the duration, explains; a normal-flight
+  pass does NOT mark "sim" done (the launch checklist needs the GPS-loss
+  test). Verified for real: tests/test_sitl_integration.py
+  ::test_normal_flight_option_through_the_ground_station flew the Test field
+  mission in ArduPlane SITL through the Ground Station's SimRunner: all 7
+  checks PASS, survey item 10 reached, estimate error max 3.5 m, touchdown
+  21.4 m from the planned point, disarmed 20.5 s after touchdown, flight
+  4 min 47 s, wind 5 m/s. Not merged/released yet.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

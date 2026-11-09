@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
-"""Build the download files: the website's two small files, or a release's set.
+"""Build the download files for a GitHub release, and the website's version line.
 
     python3 onboard/tools/build_downloads.py                       # the website
     python3 onboard/tools/build_downloads.py --release --out DIR   # a GitHub release
 
 Commit your onboard/ changes first: only committed files are packed.
 
-The website (default) gets `downloads/` at the repository root, and the
-download cards in `index.html` (between the downloads:begin/end markers):
+The website (default) offers only the app: its download buttons link to the
+latest GitHub release. This writes the line under them in `index.html`
+(between the downloads:begin/end markers): the version and the commit it was
+built from. No files are put on the website.
 
-    gps_denied_failsafe.param         the flight controller settings
-    silm_gps_loss.lua                 the GPS-loss script
-    SHA256SUMS.txt, downloads.json    checksums; names and sizes for the page
-
-A release (--release, run by the app workflow) also gets the big files, which
-are NOT committed to the repository (they would grow its history every time):
+A release (--release, run by the app workflow) gets these, which are NOT
+committed to the repository (they would grow its history every time):
 
     uav-silm-software-<version>.zip   the whole onboard folder: Ground Station,
                                       Pi software, ArduPilot files, docs, tests
     silm-oi-farm-model-v1.zip         the ready-made recognition model only
+    gps_denied_failsafe.param         the example flight controller settings
+    silm_gps_loss.lua                 the GPS-loss script
+    SHA256SUMS.txt, downloads.json    checksums; names and sizes
 
 Safety of the files:
 - Only files **committed to git** are packed, read straight from the commit
@@ -86,7 +87,6 @@ def check_secret(path: str, data: bytes) -> None:
                          "Remove it from the commit before publishing.")
 
 
-WEBSITE_KINDS = ("param", "lua")                 # small files served by the website itself
 RELEASE_KINDS = ("software", "model", "param", "lua")   # attached to each GitHub release
 
 
@@ -178,37 +178,26 @@ def _write(out, name, data, kind, version, what, licence) -> dict:
 
 
 SITE_BEGIN, SITE_END = "<!-- downloads:begin (written by onboard/tools/build_downloads.py) -->", "<!-- downloads:end -->"
-TITLES = {"software": "UAV SILM software {version}", "model": "Farm recognition model silm_oi",
-          "param": "Flight controller settings", "lua": "GPS-loss script"}
-KINDS = {"software": "Software", "model": "Model", "param": "ArduPilot", "lua": "ArduPilot"}
-ARROW = '<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>'
 
 
 def _esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+def site_meta(commit: str) -> dict:
+    """What the website's version line needs."""
+    return {"version": blob(commit, "onboard/VERSION").decode().strip(), "commit": commit,
+            "commit_short": commit[:10], "date": git("log", "-1", "--format=%cs", commit).decode().strip()}
+
+
 def site_block(meta: dict) -> str:
-    """The download cards for index.html (between the markers)."""
-    cards = []
-    for f in meta["files"]:
-        size = f"{f['bytes'] / 1e6:.1f} MB" if f["bytes"] >= 100_000 else f"{f['bytes'] / 1e3:.0f} kB"
-        ext = f["name"].rsplit(".", 1)[-1].upper()
-        cards.append(
-            f'        <div>\n'
-            f'          <div class="card-k">{KINDS[f["kind"]]} · {_esc(f["licence"])}</div>\n'
-            f'          <div class="card-t">{_esc(TITLES[f["kind"]].format(**f))}</div>\n'
-            f'          <div class="card-s">{ext} · {size}</div>\n'
-            f'          <p class="dl-what">{_esc(f["what"])}</p>\n'
-            f'          <a class="btn ghost dl-btn" href="downloads/{f["name"]}" download>{_esc(f["name"])}{ARROW}</a>\n'
-            f'          <div class="dl-hash"><span>SHA-256</span><code>{f["sha256"]}</code></div>\n'
-            f'        </div>')
+    """The line under the app's download buttons in index.html (between the markers)."""
     src = f"https://github.com/rometlehari-maker/uav-silm/tree/{meta['commit']}/onboard"
+    rel = "https://github.com/rometlehari-maker/uav-silm/releases/latest"
     return (f"{SITE_BEGIN}\n"
-            f'      <div class="cards c2 dl rv">\n' + "\n".join(cards) + "\n      </div>\n"
-            f'      <p class="note rv">Version {meta["version"]}, built {meta["date"]} from commit '
-            f'<a href="{src}"><code>{meta["commit_short"]}</code></a>. '
-            f'All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>\n'
+            f'      <p class="note rv">Version {_esc(meta["version"])}, built {_esc(meta["date"])} from commit '
+            f'<a href="{src}"><code>{_esc(meta["commit_short"])}</code></a>. '
+            f'Checksums of every file: <a href="{rel}">SHA256SUMS.txt on the release page</a>.</p>\n'
             f"      {SITE_END}")
 
 
@@ -227,14 +216,13 @@ def update_site(index_html: str, meta: dict) -> bool:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", default=os.path.join(ROOT, "downloads"))
+    ap.add_argument("--out", default=None, help="folder for the release files (with --release)")
     ap.add_argument("--commit", default=None,
                     help="git commit to pack (default: the last commit that changed onboard/)")
     ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
-                    help="website page whose download cards to update ('' to skip)")
+                    help="website page whose version line to update ('' to skip)")
     ap.add_argument("--release", action="store_true",
-                    help="build every file for a GitHub release (software and model zips too); "
-                         "doesn't touch the website")
+                    help="build every file for a GitHub release; doesn't touch the website")
     a = ap.parse_args(argv)
     # the handoff notes aren't packed, so a commit that only changes them doesn't count
     commit = a.commit or git("log", "-1", "--format=%H", "HEAD", "--", "onboard",
@@ -243,11 +231,13 @@ def main(argv=None) -> int:
     if git("status", "--porcelain", "--", "onboard").strip():
         print("note: onboard/ has uncommitted changes; they are NOT in the downloads "
               f"(packing commit {commit[:10]})", file=sys.stderr)
-    for f in build(a.out, commit, RELEASE_KINDS if a.release else WEBSITE_KINDS):
-        print(f"{f['name']:34s} {f['bytes'] / 1e6:6.2f} MB  {f['sha256']}")
-    if a.site and not a.release:
-        with open(os.path.join(a.out, "downloads.json"), encoding="utf-8") as fh:
-            changed = update_site(a.site, json.load(fh))
+    if a.release:
+        if not a.out:
+            ap.error("--release needs --out DIR")
+        for f in build(a.out, commit, RELEASE_KINDS):
+            print(f"{f['name']:34s} {f['bytes'] / 1e6:6.2f} MB  {f['sha256']}")
+    elif a.site:
+        changed = update_site(a.site, site_meta(commit))
         print(f"{a.site}: {'updated' if changed else 'already up to date'}")
     return 0
 

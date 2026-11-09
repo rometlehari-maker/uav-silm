@@ -126,3 +126,28 @@ def test_fresh_flight_controller_set_up_by_the_ground_station_then_flies(sitl, t
         "a battery pre-arm error appeared"
     res = json.load(open(res_dir / "result.json"))
     assert res["passed"], json.dumps(res["checks"]) + "\n" + log[-3000:]
+
+
+def test_normal_flight_option_through_the_ground_station(tmp_path):
+    """The Simulator tab's "Nothing goes wrong" choice, through the Ground
+    Station's own simulator runner: the whole mission flown with no fault."""
+    from groundstation.sim import SimRunner
+    station = Station(library=str(tmp_path / "lib"), projects=str(tmp_path / "proj"))
+    station.sim = SimRunner(run_dir=str(tmp_path / "sitlrun"))
+    assert station.sim.available()["available"], station.sim.available()
+    r = station.sim_start({"project": full_project(), "fault": "none"})
+    assert r["ok"], r
+    t0 = time.time()
+    while station.sim.status()["state"] == "running" and time.time() - t0 < 1800:
+        time.sleep(2)
+    s = station.sim.status()
+    log = "\n".join(s["log"][-60:])
+    shots = os.environ.get("SILM_SITL_RESULTS")
+    if shots and s.get("out"):
+        shutil.copytree(s["out"], os.path.join(shots, "normal_flight"), dirs_exist_ok=True)
+    assert s["state"] == "passed", log
+    res = s["result"]
+    assert res["fault"] == "none" and res["passed"] and res["no_failsafe"] and res["flew_whole_survey"], res
+    assert set(res["checks"]) == {"flew_whole_survey", "no_failsafe", "stayed_inside_fence",
+                                  "position_estimate_good", "landed", "landed_near_touchdown",
+                                  "disarmed_soon_after_landing"}

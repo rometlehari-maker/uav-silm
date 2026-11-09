@@ -1757,28 +1757,10 @@
           <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-macos.zip">macOS (Apple silicon)<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
           <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-linux.tar.gz">Linux<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
         </div>
-        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The source and the model on their own are attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>; the two files below are for ArduPlane users who don't use the app.</p>
+        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The source and the model on their own are attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>.</p>
       </div>
       <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
-      <div class="cards c2 dl rv">
-        <div>
-          <div class="card-k">ArduPilot · MIT</div>
-          <div class="card-t">Flight controller settings</div>
-          <div class="card-s">PARAM · 8 kB</div>
-          <p class="dl-what">ArduPlane parameters: no-RC operation and all failsafes ending in the automatic landing. Load in Mission Planner or QGroundControl.</p>
-          <a class="btn ghost dl-btn" href="downloads/gps_denied_failsafe.param" download>gps_denied_failsafe.param<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>137c9b786c6420f0cf3aa05862936a95451bb43297ad1c8722f21713a67b9a8d</code></div>
-        </div>
-        <div>
-          <div class="card-k">ArduPilot · MIT</div>
-          <div class="card-t">GPS-loss script</div>
-          <div class="card-s">LUA · 14 kB</div>
-          <p class="dl-what">ArduPilot Lua script: GPS lost, jammed or spoofed - stop trusting GPS and land on dead reckoning. Copy to APM/scripts on the SD card.</p>
-          <a class="btn ghost dl-btn" href="downloads/silm_gps_loss.lua" download>silm_gps_loss.lua<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <div class="dl-hash"><span>SHA-256</span><code>84e93a4d19553c0a15e607206f7badfa92857eb9ca866f514d2eaa802cb31315</code></div>
-        </div>
-      </div>
-      <p class="note rv">Version 2.2.1, built 2026-11-09 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/0277f99e363ea9ba99159902e0501f726055ebf8/onboard"><code>0277f99e36</code></a>. All checksums in one file: <a href="downloads/SHA256SUMS.txt" download>SHA256SUMS.txt</a>.</p>
+      <p class="note rv">Version 2.2.2, built 2026-11-09 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/a2d2f3e410aa4b944b160c3abb275c46f3527f56/onboard"><code>a2d2f3e410</code></a>. Checksums of every file: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>.</p>
       <!-- downloads:end -->
       <div class="tabs rv" data-tabs>
         <div class="tablist" role="tablist" aria-label="Using the downloads">
@@ -1791,20 +1773,20 @@
           <div class="tblwrap"><table class="tbl"><thead><tr><th>You want to</th><th>Take</th></tr></thead><tbody>
             <tr><td>Plan and fly a survey, see the pictures</td><td>The <b>app</b> above. Its guided setup takes a new aircraft step by step to ready-to-fly; <code>GROUND_STATION.md</code> explains every tab.</td></tr>
             <tr><td>Change the software, or run it from source</td><td>The source: on <a href="https://github.com/rometlehari-maker/uav-silm">GitHub</a>, or the software zip attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>. Start <code>Start Ground Station.bat</code> (Windows) or <code>start_ground_station.sh</code>; <code>FLIGHT_READY.md</code> describes the whole procedure.</td></tr>
-            <tr><td>Set up the Raspberry Pi 4</td><td>Nothing to download: the app's setup gives you one line to paste on the Pi.</td></tr>
-            <tr><td>Only the flight controller settings</td><td>The <code>.param</code> file (Mission Planner: Full Parameter List, Load from file) and the <code>.lua</code> script (SD card, <code>APM/scripts</code>).</td></tr>
+            <tr><td>Set up the Raspberry Pi 4</td><td>Nothing to download: the app installs it over your Wi-Fi (setup step 7) and updates it later.</td></tr>
+            <tr><td>Only the flight controller settings</td><td>The app sends them itself. For Mission Planner, its Send tab saves the parameter file made for <i>your</i> aircraft (Full Parameter List, Load from file); the GPS-loss script is in the software zip (<code>ardupilot/scripts</code>).</td></tr>
             <tr><td>Recognise tractors and livestock</td><td>Choose "Ready-made" on the Ground Station's Camera tab: the model is inside the app. On its own it is attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>.</td></tr>
           </tbody></table></div>
           <p class="summary-box">Read before flying: the software is tested in ArduPilot's simulator but <b>not yet flown on a real aircraft</b>. Fully automatic flight without a radio link needs the EASA "specific" category (an operational authorisation from Transpordiamet in Estonia), and taking pictures of people and property has its own rules. It comes as is, without any warranty.</p>
         </div>
         <div class="panel" role="tabpanel">
-          <p>Each file's SHA-256 checksum is listed above; for the app and the zips, in <code>SHA256SUMS.txt</code> on the <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">release page</a>. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
+          <p>The SHA-256 checksum of every file is in <code>SHA256SUMS.txt</code> on the <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">release page</a>. If the number you get is different, the file is damaged or not ours: do not use it, download it again.</p>
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Computer</th><th>Command (in the folder with the file)</th></tr></thead><tbody>
-            <tr><td>Windows</td><td><code>certutil -hashfile gps_denied_failsafe.param SHA256</code></td></tr>
-            <tr><td>macOS</td><td><code>shasum -a 256 gps_denied_failsafe.param</code></td></tr>
+            <tr><td>Windows</td><td><code>certutil -hashfile UAV-SILM-Ground-Station-Setup.exe SHA256</code></td></tr>
+            <tr><td>macOS</td><td><code>shasum -a 256 UAV-SILM-Ground-Station-macos.zip</code></td></tr>
             <tr><td>Linux</td><td><code>sha256sum -c SHA256SUMS.txt --ignore-missing</code></td></tr>
           </tbody></table></div>
-          <p class="note">The files are built from a published commit of our repository, always the same way, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py</code>.</p>
+          <p class="note">Everything is built on GitHub from a published commit of our repository (the release page names it); the zips are built the same way every time, so anyone can rebuild them and get the same checksums: <code>python3 onboard/tools/build_downloads.py --release --out DIR</code>.</p>
         </div>
         <div class="panel" role="tabpanel">
           <div class="tblwrap"><table class="tbl"><thead><tr><th>Part</th><th>Made by</th><th>Licence</th></tr></thead><tbody>
