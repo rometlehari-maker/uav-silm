@@ -16,7 +16,7 @@ committed to the repository (they would grow its history every time):
 
     uav-silm-software-<version>.zip   the whole onboard folder: Ground Station,
                                       Pi software, ArduPilot files, docs, tests
-    silm-oi-farm-model-v1.zip         the ready-made recognition model only
+    silm-oi-farm-model-v2.zip         the ready-made recognition model only
     gps_denied_failsafe.param         the example flight controller settings
     silm_gps_loss.lua                 the GPS-loss script
     SHA256SUMS.txt, downloads.json    checksums; names and sizes
@@ -134,23 +134,26 @@ def _software_zip(out, commit, name, version, source_note) -> dict:
 
 
 def _model_zip(out, commit, url, when) -> dict:
-    name = "silm-oi-farm-model-v1.zip"
+    name = "silm-oi-farm-model-v2.zip"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         for p in MODEL_FILES:
-            add(z, "silm-oi-farm-model-v1/" + os.path.basename(p), blob(commit, "onboard/" + p))
-        add(z, "silm-oi-farm-model-v1/README.txt", (
+            add(z, "silm-oi-farm-model-v2/" + os.path.basename(p), blob(commit, "onboard/" + p))
+        add(z, "silm-oi-farm-model-v2/README.txt", (
             "silm_oi - ready-made recognition model of the UAV SILM project\n"
             "Finds: tractor, car, truck, livestock. YOLO11n, 320x320 input, TFLite (INT8 body, float head).\n"
-            "Trained on Google Open Images photos (boxes CC BY 4.0, photos CC BY 2.0 by their Flickr authors).\n"
-            "Mostly ground-level photos: from straight above it recognises much less. Measured results:\n"
+            "Trained on Google Open Images photos (boxes CC BY 4.0, photos CC BY 2.0 by their Flickr authors)\n"
+            "and drone pictures from Roboflow Universe: aerial-cattle-detection (cattle-psyty) and\n"
+            "counting-cattle (arthurmessias), CC BY 4.0; aerial-sheep (riis), Public Domain.\n"
+            "Finds cattle and sheep well from above; tractors, cars and trucks it learned from the\n"
+            "ground and finds few of them from above. Measured results:\n"
             f"{url}/blob/{commit}/onboard/training/README.md\n\n"
             "Licence: AGPL-3.0 (derived from Ultralytics YOLO11n, (c) Ultralytics), see "
             "LICENSE-silm_oi-AGPL-3.0.txt.\n"
             "Corresponding source (how it was made): onboard/training/ in\n"
             f"{url}/tree/{commit}/onboard/training\n"
             f"Built from commit {commit} ({when}).\n").encode())
-    return _write(out, name, buf.getvalue(), "model", "v1",
+    return _write(out, name, buf.getvalue(), "model", "v2",
                   "The ready-made recognition model only (tractor, car, truck, livestock), with "
                   "labels and its description.", "AGPL-3.0")
 
