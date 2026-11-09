@@ -24,29 +24,48 @@
     "smoke"
   ],
   "imgsz": 320,
-  "epochs": 40,
+  "epochs": "40 on Open Images, then 30 more with drone pictures added",
   "base": "yolo11n (Ultralytics)",
-  "trained": "2026-11-08",
-  "data": "Open Images V6/V7: 1,800 real photos, mostly taken from the ground",
-  "map50": 0.533,
+  "version": 2,
+  "trained": "2026-11-09",
+  "data": "Open Images V6/V7: 1,800 real photos, mostly from the ground; plus drone pictures of cattle and sheep from above (Roboflow Universe: aerial-cattle-detection, counting-cattle, aerial-sheep)",
+  "map50": 0.562,
   "measured_at_0_35": {
     "tractor": {
-      "precision": 0.73,
-      "recall": 0.38
+      "precision": 0.71,
+      "recall": 0.35
     },
     "car": {
-      "precision": 0.72,
-      "recall": 0.37
+      "precision": 0.67,
+      "recall": 0.36
     },
     "truck": {
-      "precision": 0.7,
-      "recall": 0.58
+      "precision": 0.69,
+      "recall": 0.5
     },
     "livestock": {
-      "precision": 0.75,
-      "recall": 0.52
+      "precision": 0.76,
+      "recall": 0.39
     }
   },
-  "note": "Ground-level photos: recognises much less from straight above. Retrain with your own aerial pictures (Teach new objects).",
-  "license": "Weights derived from Ultralytics YOLO11n (AGPL-3.0). Training photos CC BY 2.0, boxes CC BY 4.0 (Open Images)."
+  "measured_from_above_at_0_35": {
+    "livestock (drone, pasture; 2x2 tiles)": {
+      "precision": 0.79,
+      "recall": 0.77
+    },
+    "livestock (drone, feedlot; 2x2 tiles)": {
+      "precision": 0.75,
+      "recall": 0.92
+    },
+    "livestock (drone, sheep; 2x2 tiles)": {
+      "precision": 0.62,
+      "recall": 0.93
+    },
+    "car (VisDrone, 2x2 tiles)": {
+      "precision": 0.8,
+      "recall": 0.14
+    }
+  },
+  "note": "Finds cattle and sheep well from straight above. Tractors, cars and trucks were learned from ground-level photos only: from above it finds few of them. Teach them with your own flight pictures (Teach new objects).",
+  "license": "Weights derived from Ultralytics YOLO11n (AGPL-3.0). Training data: Open Images (photos CC BY 2.0, boxes CC BY 4.0); aerial-cattle-detection by cattle-psyty and counting-cattle by arthurmessias on Roboflow Universe (CC BY 4.0); aerial-sheep by riis on Roboflow Universe (Public Domain)."
 }

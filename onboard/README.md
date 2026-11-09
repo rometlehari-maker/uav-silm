@@ -99,8 +99,9 @@ Pi-health and optional ordinary pictures every few seconds (`frames/`).
   lens: a few metres near the picture centre at 100 m. Enough to find the
   object again, not survey grade.
 - **Recognition** is only as good as the model and the pictures it was trained
-  on; ground-level training photos recognise objects from above less well
-  than aerial ones.
+  on. The ready-made model finds cattle and sheep well from above; tractors,
+  cars and trucks it learned from ground-level photos and finds few of them
+  from above until you teach it with your own flight pictures.
 - **A landing without GPS lands long** (55-107 m past the planned point in 4-10
   m/s wind in the simulator). Above 10 m/s wind the Ground Station refuses to
   launch. See [`FLIGHT_READY.md` 2.4](FLIGHT_READY.md#24-honest-limits).

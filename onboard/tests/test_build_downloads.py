@@ -69,8 +69,9 @@ def test_model_zip_carries_its_agpl_licence_and_source_pointer(built):
     with zipfile.ZipFile(out / m["name"]) as z:
         names = {n.split("/", 1)[1] for n in z.namelist()}
         assert {"silm_oi.tflite", "silm_oi_labels.txt", "LICENSE-silm_oi-AGPL-3.0.txt", "README.txt"} <= names
-        readme = z.read("silm-oi-farm-model-v1/README.txt").decode()
+        readme = z.read("silm-oi-farm-model-v2/README.txt").decode()
         assert "AGPL-3.0" in readme and "onboard/training" in readme and "Open Images" in readme
+        assert "cattle-psyty" in readme and "arthurmessias" in readme and "riis" in readme
 
 
 def test_single_files_are_the_committed_ones(built):

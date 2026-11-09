@@ -24,23 +24,27 @@ COCO's ids 0-89, with `???` at the unused ids. Don't replace it with an
 
 ## Ready-made farm model: `silm_oi` (tractor, car, truck, livestock)
 
-`silm_oi.tflite` + `silm_oi_labels.txt` + `silm_oi.json`: YOLO11n trained on
-~1,800 real photos from Google Open Images (`training/openimages_dataset.py`),
-320×320 input, network INT8 with the detection head in float (4.4 MB). The
-Ground Station offers it on the Camera tab as **"Ready-made: Farm vehicles and
-livestock"** and sends it to the Pi like a model you trained.
+`silm_oi.tflite` + `silm_oi_labels.txt` + `silm_oi.json` (version 2): YOLO11n
+trained on ~1,800 real photos from Google Open Images
+(`training/openimages_dataset.py`), then on drone pictures of cattle and sheep
+seen from above, 320×320 input, network INT8 with the detection head in float
+(4.4 MB). The Ground Station offers it on the Camera tab as **"Ready-made: Farm
+vehicles and livestock"** and sends it to the Pi like a model you trained.
 
-- Measured precision/recall: [`training/README.md`](../training/README.md#results-the-ready-made-model-silm_oi).
-- **Trained on ground-level photos**: from straight above it recognises much
-  less. Treat it as a starting point; retrain with your own aerial pictures
-  (tab 9).
+- Measured precision/recall: [`training/README.md`](../training/README.md#results-the-ready-made-model-silm_oi-version-2).
+- **From above it finds cattle and sheep well** (8 to 9 in 10 in held-out
+  drone pictures). **Tractors, cars and trucks** were learned from
+  ground-level photos only: from straight above it finds few of them. Teach
+  them with your own aerial pictures (tab 9).
 - It does **not** know combines (no usable public photos) or the other
   classes in `classes.yaml`; the labels file lists all 15 names only so the
   class numbers match.
 - **Licence**: the weights are derived from Ultralytics YOLO11n, which is
-  AGPL-3.0 (or an Ultralytics enterprise licence); the training photos are
-  CC BY 2.0 and the boxes CC BY 4.0 (Open Images). Check this fits how you
-  share the software.
+  AGPL-3.0 (or an Ultralytics enterprise licence). Training data: Open Images
+  (photos CC BY 2.0, boxes CC BY 4.0); aerial-cattle-detection (cattle-psyty)
+  and counting-cattle (arthurmessias) from Roboflow Universe, CC BY 4.0;
+  aerial-sheep (riis) from Roboflow Universe, Public Domain. Check this fits
+  how you share the software.
 
 ## Your own model (tractor, combine, ...)
 

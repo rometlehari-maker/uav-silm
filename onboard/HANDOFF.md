@@ -435,6 +435,118 @@ User's answers to questions asked:
   checks PASS, survey item 10 reached, estimate error max 3.5 m, touchdown
   21.4 m from the planned point, disarmed 20.5 s after touchdown, flight
   4 min 47 s, wind 5 m/s. Not merged/released yet.
+- **2.2.2 merged and released** (user: "keep only the app download file on
+  the website. put in the new update"): PR #6 squash-merged as ff3c640.
+  Website: the download section offers only the app (buttons ->
+  releases/latest); `downloads/` (param, lua, SHA256SUMS, downloads.json)
+  removed from the repo; build_downloads.py website mode now only writes the
+  version line (`site_meta`/`site_block`), release mode unchanged (param + lua
+  still attached to releases and inside the software zip). Page text updated
+  (Pi installed from the app, checksum examples use the app files). Main:
+  tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
+  Note: another session also edits index.html styling on main (red accent,
+  light blue) - rebase before touching the site.
+- **2.2.3 prepared on the branch, NOT merged/released yet** (ask the user):
+  model version 2 (below), Camera-tab tile setting, eval/tiling tools,
+  has_module find_spec fix. Merge with SQUASH (branch history has training
+  checkpoints).
+- **Recognition from above** (user: "can you train the app uploaded model on
+  the birdseye view images further", then "can you make anything better?"):
+  - New tools: `tools/eval_detections.py` (P/R per class via the onboard
+    detector with tiling; tiny boxes and "ignore" regions not counted) and
+    `training/visdrone_to_yolo.py` (VisDrone for MEASURING only: its licence
+    is CC BY-NC-SA 3.0 per mirrors - can't go into the AGPL silm_oi).
+  - Baseline silm_oi on VisDrone val (548 pictures, score 0.35, boxes >= 16 px),
+    car recall/precision: 1x1 2.4 %/0.84, 2x2 12.9 %/0.84, 3x3 23.5 %/0.79,
+    4x4 31.7 %/0.73; trucks ~1-3 % (no top-down trucks in the training).
+    Time per frame here (4-core): 13/48/106/215 ms.
+  - New Camera-tab question recognition.tiles (2/3/4, default 2) ->
+    detector.tile_grid and the planner's pixels-on-target (user chose "add a
+    setting"). Test: test_finer_tiles_reach_the_pi_and_the_planner.
+  - runtime.has_module now uses importlib.util.find_spec in-process instead
+    of importing (importing ultralytics inside /api/train/state could exceed
+    the 20 s test timeout under load - likely the long-standing intermittent
+    failure, test_http_training_endpoints).
+  - Roboflow: the user connected the Roboflow connector and approved forking
+    top-down sets into workspace salvadors-workspace-of0ak. Forked
+    `cow-aerial-hzo5z` (Public Domain, 524 pictures, v1 generated, yolov8
+    export ready) - but the export link is on app.roboflow.com, blocked here;
+    the approval prompt for adding app.roboflow.com was declined twice -
+    the user says they DO want to give access but "can't update on this
+    device" (the prompt can't be approved there). They were told to add
+    app.roboflow.com, api.roboflow.com, universe.roboflow.com,
+    source.roboflow.com under the environment's Network access > Allowed
+    domains from a computer (claude.ai/code, environment menu > Edit). Next:
+    check reachability with curl; when reachable, download the cow-aerial
+    export (versions_export gives an app.roboflow.com/ds/... link), fork the
+    other candidates, merge with the Open Images set (cow/sheep -> livestock,
+    tractor/combine kept), retrain, measure with tools/eval_detections.py
+    (VisDrone for cars/trucks; held-out top-down livestock/tractor splits;
+    Open Images val for no regression), ship only if better. Candidates found (not forked): riis/aerial-sheep
+    (PD), cattle-psyty/aerial-cattle-detection, arthurmessias/counting-cattle,
+    ivan-slukin/project-isui (tractor/combine/car/truck), bolo-4yv3d/gcdp1
+    (tractor/harvester/animal); avoid VisDrone / Stanford-drone re-uploads
+    (non-commercial originals). Path that works without this environment:
+    export on the user's PC (training/fetch_real_data.py --source roboflow),
+    or their own flight pictures labelled in the Teach tab.
+- **Top-down retraining, in progress** (Roboflow reachable after the user
+  added the hosts to the uav-silm environment). Forked into
+  salvadors-workspace-of0ak, each with a plain v1 (auto-orient only) and a
+  yolov8 export: cow-aerial-hzo5z (PD; barn ceiling camera, single cows,
+  baked-in cutout/noise -> NOT used), aerial-sheep-7mzre (PD; 4K nadir drone
+  over pasture -> used), aerial-cattle-detection-wr4ey (CC BY 4.0; drone,
+  nadir+oblique pasture -> used), counting-cattle-7rpmz (CC BY 4.0; nadir
+  feedlot, many boxes, some animals unlabelled -> used), project-isui-wzhot
+  (stock ground photos with misplaced boxes -> REJECTED), harvester-px266-9r5id
+  (ground photos at 256 px, unboxed machines -> REJECTED, deleted),
+  drone-parking-detection-l5uqg ("CC BY 4.0", but 2758/2771 pictures are the
+  COWC benchmark - ISPRS Potsdam + AFRL Columbus imagery with their own
+  research terms, fixed 32 px boxes - plus a few AI-generated ones -> NOT
+  trained on; its test split (277 tiles, 1139 cars) is kept for MEASURING
+  cars from above: current silm_oi finds 14, recall 1.2 %, P 0.44 at grid 1),
+  tractor-vsb0t-t9vsj (ground photos, CCTV, iStock-watermarked stock ->
+  REJECTED), parking-vehicles-qznfk-3ctsa (1998 frames of ONE fixed CCTV
+  camera looking obliquely over one car park, polygon labels, car only ->
+  NOT used: one scene, not nadir; deleted locally).
+  No usable top-down tractor or truck set found.
+  **Training FINISHED 14:51 UTC** (30/30; resumed once after the 2 h job
+  limit with train.py --resume). Val mAP50 0.562 (livestock 0.833, car 0.405,
+  truck 0.591, tractor 0.419). Exported (scratchpad exportenv, litert-torch)
+  -> training/checkpoints/aerial_v2/silm_oi_v2.tflite (4.35 MB, sha256
+  97c4d917...f1) + labels (same 15 classes). Scheduled check-in deleted.
+  Comparison, score 0.35 (recall / precision, old silm_oi -> v2; script and
+  JSONs in training/checkpoints/aerial_v2/eval/):
+    aerial cattle test, 2x2, >=8 px:   4.5 % / 0.71 -> 76.9 % / 0.79
+    feedlot cattle tiles, 2x2:        26.2 % / 0.51 -> 91.5 % / 0.75
+    sheep tiles, 2x2:                 15.3 % / 0.56 -> 92.5 % / 0.62
+    cars from above (COWC tiles), 1x1: 1.2 % / 0.44 ->  5.4 % / 0.60
+    VisDrone car, 2x2, >=16 px:       12.9 % / 0.84 -> 14.1 % / 0.80
+    VisDrone truck:                    1.3 % / 0.24 ->  0.6 % / 0.24 (9 vs 4 found)
+    Open Images val (ground level), 1x1, >=16 px:
+      car 37.9/0.72 -> 35.7/0.67, truck 58.5/0.70 -> 49.6/0.69,
+      tractor 38.1/0.73 -> 35.2/0.71, livestock 53.0/0.76 -> 39.1/0.76
+  Verdict: big gain where the aircraft looks (livestock from above), small
+  gain for cars from above, some loss on ground-level photos. **User chose
+  "Replace it"**: models/silm_oi.tflite is now version 2 (sha256 97c4d917...f1;
+  install.sh's MODEL_FILE_SHA is the COCO detect.tflite, unaffected), with
+  silm_oi.json (version 2, both measurements), notices + models/README +
+  training/README (results tables, how to rebuild) + website text/sources
+  credit cattle-psyty, arthurmessias (CC BY 4.0) and riis (PD); model download
+  renamed silm-oi-farm-model-v2.zip; VERSION 2.2.3. training/checkpoints/ was
+  removed from the tree (still in branch history: squash-merge the PR so main
+  doesn't carry the ~40 MB of checkpoints).
+  New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
+  boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
+  sheep 350/80/80 4K pictures -> 4589/1046/1096 tiles; counting cattle tiled
+  9191/2440/1083; training set training/datasets/aerial_v2 = Open Images
+  (1502/298) + aerial cattle (720/209) + 1500/300 sampled tiles each of
+  feedlot cattle and sheep; test splits held out. Baseline silm_oi (2x2,
+  score 0.35, boxes >= 8 px): aerial cattle test recall 4.5 % / P 0.71,
+  feedlot cattle test recall 25.6 % / P 0.50. Training: fine-tune from
+  runs/oi_v1/weights/best.pt, 30 epochs, 320 px, CPU (runs/aerial_v2).
+  Kept safe during training by an hourly scheduled check-in (deleted when it
+  finished) that pushed stripped checkpoints; training/manifests/aerial_v2.txt
+  lists the exact training set for a rebuild.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to

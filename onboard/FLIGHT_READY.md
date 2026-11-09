@@ -346,7 +346,9 @@ trained on **your** pictures:
 A starting point trained on real photos: `training/openimages_dataset.py`
 downloads ~1,800 labelled photos of tractors, cars, trucks and livestock from
 Google's Open Images (no account needed). Those are mostly **ground-level**
-photos: add your aerial pictures for real use. Training in depth,
+photos: add your aerial pictures for real use. The ready-made model already
+adds drone pictures of cattle and sheep, so it finds those from above; for
+tractors, cars and trucks from above, your own pictures are needed. Training in depth,
 including GPU training and evaluating a model with the onboard code:
 [`training/README.md`](training/README.md).
 
