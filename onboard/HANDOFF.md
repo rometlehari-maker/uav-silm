@@ -435,6 +435,17 @@ User's answers to questions asked:
   checks PASS, survey item 10 reached, estimate error max 3.5 m, touchdown
   21.4 m from the planned point, disarmed 20.5 s after touchdown, flight
   4 min 47 s, wind 5 m/s. Not merged/released yet.
+- **2.2.2 merged and released** (user: "keep only the app download file on
+  the website. put in the new update"): PR #6 squash-merged as ff3c640.
+  Website: the download section offers only the app (buttons ->
+  releases/latest); `downloads/` (param, lua, SHA256SUMS, downloads.json)
+  removed from the repo; build_downloads.py website mode now only writes the
+  version line (`site_meta`/`site_block`), release mode unchanged (param + lua
+  still attached to releases and inside the software zip). Page text updated
+  (Pi installed from the app, checksum examples use the app files). Main:
+  tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
+  Note: another session also edits index.html styling on main (red accent,
+  light blue) - rebase before touching the site.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
