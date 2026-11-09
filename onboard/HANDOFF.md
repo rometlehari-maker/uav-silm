@@ -505,7 +505,7 @@ User's answers to questions asked:
   camera looking obliquely over one car park, polygon labels, car only ->
   NOT used: one scene, not nadir; deleted locally).
   No usable top-down tractor or truck set found.
-  Progress 13:22 UTC: epoch 11/30 done, ~4.5 min/epoch, val mAP50 0.499
+  Progress 13:43 UTC: epoch 15/30 done, ~4.5 min/epoch, val mAP50 0.504
   (epoch 1: 0.463), checkpoint pushed.
   New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
   boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
