@@ -254,9 +254,14 @@
         <select id="sim-fault" aria-label="Fault">
           <option value="jam">GPS jammed (signal scrambled)</option>
           <option value="disable">GPS lost completely</option>
+          <option value="none">Nothing goes wrong (a normal flight)</option>
         </select>
-        <div class="q">For how long?</div>
-        <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div>
+        <div id="sim-fault-len"><div class="q">For how long?</div>
+        <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div></div>
+        <p class="help" id="sim-none-help" hidden>The whole mission flown as planned: it must fly the complete survey with
+          no failsafe, stay inside the geofence, know its position all the way, land on the landing point and switch
+          itself off. Good for checking the route, the flight time and the landing. The GPS-loss test above is still
+          needed before the first flight.</p>
         <div class="row-btns">
           <button class="btn primary" id="sim-start">Start the simulated flight</button>
           <button class="btn ghost" id="sim-stop">Stop</button>

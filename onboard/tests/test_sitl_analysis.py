@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
-from sitl_failsafe_test import MODE_AUTO, MODE_RTL, analyse, dist_m, offset  # noqa: E402
+from sitl_failsafe_test import MODE_AUTO, MODE_RTL, analyse, analyse_normal, dist_m, offset  # noqa: E402
 
 HOME = (59.40, 24.70)
 
@@ -144,3 +144,40 @@ def test_staying_armed_on_the_ground_fails():
     assert r["passed"] and r["armed_on_ground_s"] == rows[-1]["t"] - t_ground
     r = analyse(rows, 60, 150, HOME, max_armed_on_ground_s=10)
     assert not r["checks"]["disarmed_soon_after_landing"] and not r["passed"]
+
+
+# ------------------------------------------------------------------ "nothing goes wrong" (--fault none)
+LAND_START = 6               # mission items: 0 home, 1 takeoff, 2-5 survey, 6 DO_LAND_START, ...
+
+
+def normal_flight(last_survey_item=5, rtl=False, est_err=3, end_n=-20):
+    segs = [(80, 0, 0, 900, 0, MODE_AUTO, est_err)]                      # the survey, out and back
+    if rtl:
+        segs.append((4, 900, 0, 880, 0, MODE_RTL, est_err))             # a failsafe on the way
+    segs += [(80, 880, 0, 60, 0, MODE_AUTO, est_err, True),             # landing sequence
+             (20, 60, 0, end_n, 0, MODE_AUTO, 2, True)]                 # touchdown
+    rows = track(segs)
+    n_survey = sum(1 for r in rows if not r["landing"])
+    for i, r in enumerate(rows):                                        # mission item flown
+        r["seq"] = (LAND_START + 2 if r["landing"]
+                    else 1 + min(last_survey_item - 1, int(i * last_survey_item / n_survey)))
+    return rows
+
+
+def test_normal_flight_passes():
+    r = analyse_normal(normal_flight(), HOME, LAND_START)
+    assert r["passed"], r["checks"]
+    assert r["last_survey_item_reached"] == 5 and r["failsafe_modes"] == [] and r["estimate_error_max_m"] <= 5
+
+
+def test_normal_flight_failures_are_named():
+    r = analyse_normal(normal_flight(rtl=True), HOME, LAND_START)
+    assert not r["passed"] and not r["checks"]["no_failsafe"] and r["checks"]["flew_whole_survey"]
+    r = analyse_normal(normal_flight(last_survey_item=3), HOME, LAND_START)       # cut the survey short
+    assert not r["checks"]["flew_whole_survey"]
+    r = analyse_normal(normal_flight(est_err=60), HOME, LAND_START)                # lost track of itself
+    assert not r["checks"]["position_estimate_good"]
+    r = analyse_normal(normal_flight(end_n=400), HOME, LAND_START)                 # landed far away
+    assert not r["checks"]["landed_near_touchdown"]
+    r = analyse_normal(normal_flight(), HOME, LAND_START, fence_radius=500)
+    assert not r["checks"]["stayed_inside_fence"]

@@ -391,6 +391,7 @@ What to expect from each is in **E1**.
 ```bash
 silmtest --fault jam     --wind 6                      --out jam_w6         # baseline
 silmtest --fault disable --wind 6                      --out off_w6         # GPS simply gone
+silmtest --fault none    --wind 6                      --out normal_w6      # nothing goes wrong: whole mission
 silmtest --fault jam     --wind 10 --wind-dir 270      --out jam_w10        # strong wind
 silmtest --fault disable --wind 8  --fault-s 240       --out off_long       # lands blind: worst case
 silmtest --fault jam     --wind 6  --trigger-m 1000 --out-m 1400 --out jam_far   # fault further out

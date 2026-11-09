@@ -161,6 +161,48 @@ def analyse(rows, fault_t, restore_t, home, loss_s=5.0, fence_radius=1500.0,
     return res
 
 
+def analyse_normal(rows, home, land_start, fence_radius=1500.0, land=None, land_radius_m=150.0,
+                   max_armed_on_ground_s=30.0, max_estimate_error_m=25.0) -> dict:
+    """Grade a flight in which nothing went wrong (--fault none): the whole
+    survey flown, no failsafe, inside the fence, a good position estimate all
+    the way, and the planned landing (touchdown, disarm)."""
+    hl, hn = home
+    ll, ln = land or home
+    res: dict = {}
+    before_landing = [r for r in rows if not r.get("landing")]
+    seqs = [r["seq"] for r in before_landing if r.get("seq") is not None]
+    res["last_survey_item_reached"] = max(seqs) if seqs else None
+    res["flew_whole_survey"] = bool(seqs) and max(seqs) >= land_start - 1 and any(r.get("landing") for r in rows)
+    res["failsafe_modes"] = sorted({r["mode"] for r in rows if r["mode"] == MODE_RTL})
+    res["no_failsafe"] = not res["failsafe_modes"]
+    max_d = max(dist_m(hl, hn, r["true_lat"], r["true_lon"]) for r in rows)
+    res["max_true_dist_m"] = round(max_d, 1)
+    res["stayed_inside_fence"] = max_d <= fence_radius
+    flying = [r for r in rows if r.get("armed") and r.get("alt", 0.0) > 5.0]
+    errs = [dist_m(r["true_lat"], r["true_lon"], r["est_lat"], r["est_lon"]) for r in flying]
+    res["estimate_error_max_m"] = round(max(errs), 1) if errs else None
+    res["position_estimate_good"] = bool(errs) and max(errs) <= max_estimate_error_m
+    last = rows[-1]
+    res["disarmed_at_end"] = not last.get("armed", True)
+    res["landed"] = res["disarmed_at_end"] and last.get("alt", 0.0) < 5.0
+    d_end = dist_m(ll, ln, last["true_lat"], last["true_lon"])
+    res["touchdown_error_m"] = round(d_end, 1)
+    res["landed_near_touchdown"] = res["landed"] and d_end <= land_radius_m
+    ground = next((r["t"] for r in rows if r.get("landing") and r.get("alt", 99.0) < 1.0), None)
+    disarm = next((r["t"] for r in rows if not r.get("armed", True)
+                   and (ground is None or r["t"] >= ground)), None)
+    armed_on_ground = None if ground is None or disarm is None else round(disarm - ground, 1)
+    res["armed_on_ground_s"] = armed_on_ground
+    res["disarmed_soon_after_landing"] = (res["landed"] and armed_on_ground is not None
+                                          and armed_on_ground <= max_armed_on_ground_s)
+    res["flight_time_s"] = round(rows[-1]["t"] - rows[0]["t"], 1)
+    checks = ["flew_whole_survey", "no_failsafe", "stayed_inside_fence", "position_estimate_good",
+              "landed", "landed_near_touchdown", "disarmed_soon_after_landing"]
+    res["passed"] = all(res[c] for c in checks)
+    res["checks"] = {c: res[c] for c in checks}
+    return res
+
+
 def _touchdown_t(rows):
     """Time it disarmed (end of the landing), or the last row's time."""
     for r in rows:
@@ -421,7 +463,9 @@ def run(args) -> int:
             last_log = now
         d_home = dist_m(hl, hn, tp[0], tp[1])
 
-        if fault_t is None and not landing and ep[2] > 0.5 * args.alt and (
+        if args.fault == "none":
+            pass                                   # nothing goes wrong: just fly it
+        elif fault_t is None and not landing and ep[2] > 0.5 * args.alt and (
                 d_home >= args.trigger_m or (args.trigger_s and now >= args.trigger_s)):
             fault_t = now
             phase = "gps_fault"
@@ -449,7 +493,12 @@ def run(args) -> int:
                 rows.append(row)          # the sample that ended the run is graded too
             break
         if fault_t is None and flew and not armed:
-            print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
+            if args.fault == "none":
+                print(f"t={now:.0f}s  landed and disarmed")
+                if rows[-1] is not row:
+                    rows.append(row)
+            else:
+                print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
             break
         if now > args.timeout_s:
             print("timeout")
@@ -461,11 +510,23 @@ def run(args) -> int:
         w.writeheader()
         w.writerows(rows)
 
-    if fault_t is None or restore_t is None:
+    if args.fault == "none":
+        if not flew:
+            print("it never took off - check the pre-arm messages above")
+            return 1
+        res = analyse_normal(rows, home, land_start, fence_radius=fence_r, land=land,
+                             land_radius_m=args.land_radius_m)
+        report = ("last_survey_item_reached", "max_true_dist_m", "estimate_error_max_m",
+                  "touchdown_error_m", "armed_on_ground_s", "flight_time_s")
+    elif fault_t is None or restore_t is None:
         print("fault was never triggered/restored - increase --timeout-s or reduce --trigger-m")
         return 1
-    res = analyse(rows, fault_t, restore_t, home, loss_s=loss_s, fence_radius=fence_r,
-                  land=land, land_radius_m=args.land_radius_m)
+    else:
+        res = analyse(rows, fault_t, restore_t, home, loss_s=loss_s, fence_radius=fence_r,
+                      land=land, land_radius_m=args.land_radius_m)
+        report = ("rtl_after_s", "true_dist_at_fault_m", "true_dist_at_restore_m", "max_true_dist_m",
+                  "dead_reckoning_error_max_m", "reconverged_after_s", "touchdown_error_m",
+                  "blind_at_touchdown", "armed_on_ground_s")
     res.update({"fault": args.fault, "fault_s": args.fault_s, "wind_mps": args.wind,
                 "wind_dir_deg": args.wind_dir, "touchdown_planned": land,
                 "ap_messages": s.texts[-40:]})
@@ -476,9 +537,7 @@ def run(args) -> int:
     print("\n=== RESULT ===")
     for k, v in res["checks"].items():
         print(f"  {'PASS' if v else 'FAIL'}  {k}")
-    for k in ("rtl_after_s", "true_dist_at_fault_m", "true_dist_at_restore_m", "max_true_dist_m",
-              "dead_reckoning_error_max_m", "reconverged_after_s", "touchdown_error_m",
-              "blind_at_touchdown", "armed_on_ground_s"):
+    for k in report:
         print(f"        {k}: {res[k]}")
     print(f"\n{'PASSED' if res['passed'] else 'FAILED'} - details in {args.out}/")
     return 0 if res["passed"] else 1
@@ -501,12 +560,13 @@ def plot(rows, home, fault_t, restore_t, path, land=None):
     for label, sel, style in [("true track", lambda r: True, "-"),]:
         pts = [ne(r["true_lat"], r["true_lon"]) for r in rows if sel(r)]
         ax.plot([p[1] for p in pts], [p[0] for p in pts], style, color="#333", lw=1.2, label=label)
-    blind = [r for r in rows if fault_t <= r["t"] <= restore_t]
+    blind = [] if fault_t is None else [r for r in rows if fault_t <= r["t"] <= restore_t]
     pe = [ne(r["est_lat"], r["est_lon"]) for r in blind]
     pt = [ne(r["true_lat"], r["true_lon"]) for r in blind]
-    ax.plot([p[1] for p in pt], [p[0] for p in pt], color="#d33", lw=2.5, label="true, GPS lost")
-    ax.plot([p[1] for p in pe], [p[0] for p in pe], "--", color="#36c", lw=1.5,
-            label="autopilot's estimate, GPS lost")
+    if blind:
+        ax.plot([p[1] for p in pt], [p[0] for p in pt], color="#d33", lw=2.5, label="true, GPS lost")
+        ax.plot([p[1] for p in pe], [p[0] for p in pe], "--", color="#36c", lw=1.5,
+                label="autopilot's estimate, GPS lost")
     ax.plot(0, 0, "k^", ms=10, label="launch")
     if land:
         n, e = ne(*land)
@@ -527,7 +587,8 @@ def main() -> int:
                          "use tcp:127.0.0.1:5760 if SITL runs with --no-mavproxy)")
     ap.add_argument("--params", default=os.path.join(os.path.dirname(__file__), "..",
                                                      "ardupilot", "gps_denied_failsafe.param"))
-    ap.add_argument("--fault", choices=["jam", "disable"], default="jam")
+    ap.add_argument("--fault", choices=["jam", "disable", "none"], default="jam",
+                    help="what goes wrong: GPS jammed, GPS lost, or none (a normal flight)")
     ap.add_argument("--fault-s", type=float, default=90, help="how long GPS stays bad")
     ap.add_argument("--mission", default=None,
                     help="fly this .waypoints file (from the laptop planner) instead of the built-in survey")

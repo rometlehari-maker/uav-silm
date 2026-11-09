@@ -110,6 +110,13 @@ let PAGE = null;
   assert((await page.textContent("#wind-recap")).includes("within"), "wind recap within the limit");
   await step("06-launch");
 
+  // simulator: "Nothing goes wrong" needs no fault length and explains itself
+  await tab("sim");
+  await page.selectOption("#sim-fault", "none");
+  assert(await page.isHidden("#sim-fault-len") && await page.isVisible("#sim-none-help"), "normal flight option");
+  await page.selectOption("#sim-fault", "jam");
+  assert(await page.isVisible("#sim-fault-len") && await page.isHidden("#sim-none-help"), "fault options back");
+
   // ---------------- flights & pictures
   await tab("flights");
   await page.waitForSelector("#fl-list li[data-fl]");

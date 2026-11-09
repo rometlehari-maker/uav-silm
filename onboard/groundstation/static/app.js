@@ -428,11 +428,20 @@ async function simPoll() {
       const names = { rtl_in_time: "Turned back for the landing in time", headed_home_while_blind: "Headed for the landing strip while blind",
         stayed_inside_fence: "Stayed inside the geofence", estimate_reconverged: "Knew where it was again after GPS came back",
         landed: "Landed and switched itself off", landed_near_touchdown: "Landed close to the planned point",
-        disarmed_soon_after_landing: "Switched itself off within 30 s of touching down" };
+        disarmed_soon_after_landing: "Switched itself off within 30 s of touching down",
+        flew_whole_survey: "Flew the whole survey", no_failsafe: "No failsafe or return-home on the way",
+        position_estimate_good: "Knew its position all the way" };
       $("sim-checks").innerHTML = `<ul class="checklist">` + Object.entries(s.result.checks || {}).map(([k, v]) => `<li class="${v ? "ok" : "err"}">${v ? "✓" : "✗"} ${esc(names[k] || k)}</li>`).join("") +
-        `</ul><p class="help">Touchdown ${s.result.touchdown_error_m} m from the planned point; failsafe after ${s.result.rtl_after_s} s; farthest ${s.result.max_true_dist_m} m from home.</p>`;
+        `</ul><p class="help">Touchdown ${s.result.touchdown_error_m} m from the planned point; ` +
+        (s.result.fault === "none"
+          ? `flight time ${Math.round((s.result.flight_time_s || 0) / 60)} min; position error at most ${s.result.estimate_error_max_m} m; `
+          : `failsafe after ${s.result.rtl_after_s} s; `) +
+        `farthest ${s.result.max_true_dist_m} m from home.</p>`;
       $("sim-track").src = "/api/sim/track.png?t=" + Date.now(); $("sim-track").hidden = false;
-      if (s.state === "passed") markDone("sim");
+      // only the GPS-loss test counts as "flown in the simulator" for the launch checklist
+      if (s.state === "passed" && s.result.fault !== "none") markDone("sim");
+      if (s.state === "passed" && s.result.fault === "none")
+        $("sim-checks").insertAdjacentHTML("beforeend", '<p class="help">A normal flight passed. The launch checklist still needs the GPS-loss test (GPS jammed or lost).</p>');
     }
   }
   clearTimeout(simTimer);
@@ -445,6 +454,12 @@ $("sim-start").addEventListener("click", async () => {
   setResult("sim-result", r); if (r.ok) simPoll();
 });
 $("sim-stop").addEventListener("click", async () => { await api("/api/sim/stop", {}); simPoll(); });
+function simFaultUI() {
+  const none = $("sim-fault").value === "none";
+  $("sim-fault-len").hidden = none; $("sim-none-help").hidden = !none;
+}
+$("sim-fault").addEventListener("change", simFaultUI);
+simFaultUI();
 
 /* ------------------------------------------------------------------ flights */
 let flMap = null, flLayers = null, FL = null, flOn = new Set(), flShown = [], lbIndex = 0;
