@@ -467,8 +467,18 @@ User's answers to questions asked:
     top-down sets into workspace salvadors-workspace-of0ak. Forked
     `cow-aerial-hzo5z` (Public Domain, 524 pictures, v1 generated, yolov8
     export ready) - but the export link is on app.roboflow.com, blocked here;
-    the user then DECLINED the environment change adding app.roboflow.com.
-    Don't propose it again. Candidates found (not forked): riis/aerial-sheep
+    the approval prompt for adding app.roboflow.com was declined twice -
+    the user says they DO want to give access but "can't update on this
+    device" (the prompt can't be approved there). They were told to add
+    app.roboflow.com, api.roboflow.com, universe.roboflow.com,
+    source.roboflow.com under the environment's Network access > Allowed
+    domains from a computer (claude.ai/code, environment menu > Edit). Next:
+    check reachability with curl; when reachable, download the cow-aerial
+    export (versions_export gives an app.roboflow.com/ds/... link), fork the
+    other candidates, merge with the Open Images set (cow/sheep -> livestock,
+    tractor/combine kept), retrain, measure with tools/eval_detections.py
+    (VisDrone for cars/trucks; held-out top-down livestock/tractor splits;
+    Open Images val for no regression), ship only if better. Candidates found (not forked): riis/aerial-sheep
     (PD), cattle-psyty/aerial-cattle-detection, arthurmessias/counting-cattle,
     ivan-slukin/project-isui (tractor/combine/car/truck), bolo-4yv3d/gcdp1
     (tractor/harvester/animal); avoid VisDrone / Stanford-drone re-uploads
