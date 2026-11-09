@@ -501,7 +501,9 @@ User's answers to questions asked:
   trained on; its test split (277 tiles, 1139 cars) is kept for MEASURING
   cars from above: current silm_oi finds 14, recall 1.2 %, P 0.44 at grid 1),
   tractor-vsb0t-t9vsj (ground photos, CCTV, iStock-watermarked stock ->
-  REJECTED), parking-vehicles-qznfk-3ctsa (car/truck, being checked).
+  REJECTED), parking-vehicles-qznfk-3ctsa (1998 frames of ONE fixed CCTV
+  camera looking obliquely over one car park, polygon labels, car only ->
+  NOT used: one scene, not nadir; deleted locally).
   No usable top-down tractor or truck set found.
   Progress 13:22 UTC: epoch 11/30 done, ~4.5 min/epoch, val mAP50 0.499
   (epoch 1: 0.463), checkpoint pushed.
