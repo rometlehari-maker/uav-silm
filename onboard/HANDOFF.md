@@ -495,7 +495,13 @@ User's answers to questions asked:
   feedlot, many boxes, some animals unlabelled -> used), project-isui-wzhot
   (stock ground photos with misplaced boxes -> REJECTED), harvester-px266-9r5id
   (ground photos at 256 px, unboxed machines -> REJECTED, deleted),
-  drone-parking-detection-l5uqg (forked, cars from above, being checked).
+  drone-parking-detection-l5uqg ("CC BY 4.0", but 2758/2771 pictures are the
+  COWC benchmark - ISPRS Potsdam + AFRL Columbus imagery with their own
+  research terms, fixed 32 px boxes - plus a few AI-generated ones -> NOT
+  trained on; its test split (277 tiles, 1139 cars) is kept for MEASURING
+  cars from above: current silm_oi finds 14, recall 1.2 %, P 0.44 at grid 1),
+  tractor-vsb0t-t9vsj (ground photos, CCTV, iStock-watermarked stock ->
+  REJECTED), parking-vehicles-qznfk-3ctsa (car/truck, being checked).
   No usable top-down tractor or truck set found.
   Progress 13:22 UTC: epoch 11/30 done, ~4.5 min/epoch, val mAP50 0.499
   (epoch 1: 0.463), checkpoint pushed.
