@@ -1,0 +1,56 @@
+{
+  "images": 298,
+  "grid": 1,
+  "score": 0.35,
+  "min_px": 16.0,
+  "classes": {
+    "person": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "car": {
+      "tp": 85,
+      "fp": 33,
+      "fn": 139,
+      "precision": 0.72,
+      "recall": 0.379,
+      "f1": 0.497
+    },
+    "truck": {
+      "tp": 72,
+      "fp": 31,
+      "fn": 51,
+      "precision": 0.699,
+      "recall": 0.585,
+      "f1": 0.637
+    },
+    "tractor": {
+      "tp": 40,
+      "fp": 15,
+      "fn": 65,
+      "precision": 0.727,
+      "recall": 0.381,
+      "f1": 0.5
+    },
+    "livestock": {
+      "tp": 80,
+      "fp": 26,
+      "fn": 71,
+      "precision": 0.755,
+      "recall": 0.53,
+      "f1": 0.623
+    },
+    "all": {
+      "tp": 277,
+      "fp": 105,
+      "fn": 326,
+      "precision": 0.725,
+      "recall": 0.459,
+      "f1": 0.562
+    }
+  }
+}

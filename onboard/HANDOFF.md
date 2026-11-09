@@ -505,8 +505,26 @@ User's answers to questions asked:
   camera looking obliquely over one car park, polygon labels, car only ->
   NOT used: one scene, not nadir; deleted locally).
   No usable top-down tractor or truck set found.
-  Progress 14:43 UTC: epoch 27/30 done (resumed after the 2 h job limit), val mAP50 0.551
-  (epoch 1: 0.463), checkpoint pushed.
+  **Training FINISHED 14:51 UTC** (30/30; resumed once after the 2 h job
+  limit with train.py --resume). Val mAP50 0.562 (livestock 0.833, car 0.405,
+  truck 0.591, tractor 0.419). Exported (scratchpad exportenv, litert-torch)
+  -> training/checkpoints/aerial_v2/silm_oi_v2.tflite (4.35 MB, sha256
+  97c4d917...f1) + labels (same 15 classes). Scheduled check-in deleted.
+  Comparison, score 0.35 (recall / precision, old silm_oi -> v2; script and
+  JSONs in training/checkpoints/aerial_v2/eval/):
+    aerial cattle test, 2x2, >=8 px:   4.5 % / 0.71 -> 76.9 % / 0.79
+    feedlot cattle tiles, 2x2:        26.2 % / 0.51 -> 91.5 % / 0.75
+    sheep tiles, 2x2:                 15.3 % / 0.56 -> 92.5 % / 0.62
+    cars from above (COWC tiles), 1x1: 1.2 % / 0.44 ->  5.4 % / 0.60
+    VisDrone car, 2x2, >=16 px:       12.9 % / 0.84 -> 14.1 % / 0.80
+    VisDrone truck:                    1.3 % / 0.24 ->  0.6 % / 0.24 (9 vs 4 found)
+    Open Images val (ground level), 1x1, >=16 px:
+      car 37.9/0.72 -> 35.7/0.67, truck 58.5/0.70 -> 49.6/0.69,
+      tractor 38.1/0.73 -> 35.2/0.71, livestock 53.0/0.76 -> 39.1/0.76
+  Verdict: big gain where the aircraft looks (livestock from above), small
+  gain for cars from above, some loss on ground-level photos. Waiting for the
+  user's OK to make it models/silm_oi (then: silm_oi.json, notices with the
+  CC BY 4.0 cattle-set credits + PD sheep, install.sh MODEL_FILE_SHA, tests).
   New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
   boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
   sheep 350/80/80 4K pictures -> 4589/1046/1096 tiles; counting cattle tiled

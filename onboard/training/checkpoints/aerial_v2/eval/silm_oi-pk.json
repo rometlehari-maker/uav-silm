@@ -1,0 +1,24 @@
+{
+  "images": 277,
+  "grid": 1,
+  "score": 0.35,
+  "min_px": 8.0,
+  "classes": {
+    "car": {
+      "tp": 14,
+      "fp": 18,
+      "fn": 1125,
+      "precision": 0.438,
+      "recall": 0.012,
+      "f1": 0.024
+    },
+    "all": {
+      "tp": 14,
+      "fp": 18,
+      "fn": 1125,
+      "precision": 0.438,
+      "recall": 0.012,
+      "f1": 0.024
+    }
+  }
+}

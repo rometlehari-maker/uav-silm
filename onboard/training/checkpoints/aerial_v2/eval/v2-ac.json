@@ -1,0 +1,24 @@
+{
+  "images": 145,
+  "grid": 2,
+  "score": 0.35,
+  "min_px": 8.0,
+  "classes": {
+    "livestock": {
+      "tp": 1748,
+      "fp": 461,
+      "fn": 524,
+      "precision": 0.791,
+      "recall": 0.769,
+      "f1": 0.78
+    },
+    "all": {
+      "tp": 1748,
+      "fp": 461,
+      "fn": 524,
+      "precision": 0.791,
+      "recall": 0.769,
+      "f1": 0.78
+    }
+  }
+}
