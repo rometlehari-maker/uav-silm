@@ -446,6 +446,10 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
+- **2.2.3 prepared on the branch, NOT merged/released yet** (ask the user):
+  model version 2 (below), Camera-tab tile setting, eval/tiling tools,
+  has_module find_spec fix. Merge with SQUASH (branch history has training
+  checkpoints).
 - **Recognition from above** (user: "can you train the app uploaded model on
   the birdseye view images further", then "can you make anything better?"):
   - New tools: `tools/eval_detections.py` (P/R per class via the onboard
@@ -522,9 +526,15 @@ User's answers to questions asked:
       car 37.9/0.72 -> 35.7/0.67, truck 58.5/0.70 -> 49.6/0.69,
       tractor 38.1/0.73 -> 35.2/0.71, livestock 53.0/0.76 -> 39.1/0.76
   Verdict: big gain where the aircraft looks (livestock from above), small
-  gain for cars from above, some loss on ground-level photos. Waiting for the
-  user's OK to make it models/silm_oi (then: silm_oi.json, notices with the
-  CC BY 4.0 cattle-set credits + PD sheep, install.sh MODEL_FILE_SHA, tests).
+  gain for cars from above, some loss on ground-level photos. **User chose
+  "Replace it"**: models/silm_oi.tflite is now version 2 (sha256 97c4d917...f1;
+  install.sh's MODEL_FILE_SHA is the COCO detect.tflite, unaffected), with
+  silm_oi.json (version 2, both measurements), notices + models/README +
+  training/README (results tables, how to rebuild) + website text/sources
+  credit cattle-psyty, arthurmessias (CC BY 4.0) and riis (PD); model download
+  renamed silm-oi-farm-model-v2.zip; VERSION 2.2.3. training/checkpoints/ was
+  removed from the tree (still in branch history: squash-merge the PR so main
+  doesn't carry the ~40 MB of checkpoints).
   New tool training/tile_dataset.py (cuts big pictures into 640 px tiles with
   boxes clipped, like the Pi's tiling). Data in the scratchpad (not in git):
   sheep 350/80/80 4K pictures -> 4589/1046/1096 tiles; counting cattle tiled
@@ -534,17 +544,9 @@ User's answers to questions asked:
   score 0.35, boxes >= 8 px): aerial cattle test recall 4.5 % / P 0.71,
   feedlot cattle test recall 25.6 % / P 0.50. Training: fine-tune from
   runs/oi_v1/weights/best.pt, 30 epochs, 320 px, CPU (runs/aerial_v2).
-  Next: export, measure on held-out aerial tests + VisDrone cars/trucks +
-  Open Images val (no regression on tractor/car/truck), ship only if better.
-  **Kept safe** (user: "keep safe"): a scheduled check-in every hour (at :42 UTC) runs
-  scratchpad/save_ckpt.sh, which pushes onboard/training/checkpoints/aerial_v2/
-  last_weights.pt (optimizer stripped, ~5.5 MB) + results.csv; the exact
-  training set is listed in onboard/training/manifests/aerial_v2.txt.
-  RECOVERY on a fresh machine: re-export the Roboflow copies (versions_export,
-  yolov8), re-tile, rebuild the set from the manifest, then
-  `train.py --model training/checkpoints/aerial_v2/last_weights.pt
-  --epochs <remaining>` (same data/imgsz/batch). Remove training/checkpoints/
-  before merging to main (or keep only the final model in models/).
+  Kept safe during training by an hourly scheduled check-in (deleted when it
+  finished) that pushed stripped checkpoints; training/manifests/aerial_v2.txt
+  lists the exact training set for a rebuild.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
