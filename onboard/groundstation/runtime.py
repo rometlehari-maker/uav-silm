@@ -61,10 +61,12 @@ def has_module(module: str, cmd: tuple[str, ...] | None = None) -> bool:
     if cmd is None:
         return False
     if in_process or tuple(cmd) == (sys.executable,):
+        # find it without importing it: importing e.g. ultralytics (torch, its own
+        # start-up checks) can take many seconds inside a page request
+        import importlib.util
         try:
-            __import__(module)
-            return True
-        except Exception:
+            return importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
             return False
     try:
         return subprocess.run(cmd + ("-c", f"import {module}"), capture_output=True,

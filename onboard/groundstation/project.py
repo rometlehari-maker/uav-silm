@@ -161,6 +161,15 @@ QUESTIONS = [
     Q("recognition.sensitivity", "How sure must it be before it saves a picture?",
       "Lower finds more but also saves more mistakes.", unit="% confidence",
       min=10, max=95, step=5, tab="camera", group="What to find"),
+    Q("recognition.tiles", "How finely should the Pi look at each picture?",
+      "It cuts the middle of every camera picture into pieces and looks at each piece, so "
+      "small objects keep more pixels. Finer finds smaller objects and works higher up (in "
+      "a test on 548 drone pictures it found 13 % of cars with 2 x 2, 24 % with 3 x 3, "
+      "32 % with 4 x 4) but every picture takes 2 to 4 times longer. Tools > 'Check "
+      "everything' measures whether the Pi keeps up at your height and speed.", "select",
+      options={"2": "2 x 2 (normal)", "3": "3 x 3 (finer, about 2x slower)",
+               "4": "4 x 4 (finest, about 4x slower)"},
+      tab="camera", group="What to find"),
     Q("recognition.min_alt_m", "From what height should it start taking pictures?",
       "Below this it saves nothing (launch, landing).", unit="m", min=5, max=200, step=5,
       tab="camera", group="Pictures"),
@@ -229,7 +238,7 @@ def default_project() -> dict:
         "recognition": {
             "model": "standard",
             "targets": ["person", "car", "truck"], "fire": True, "sensitivity": 45,
-            "min_alt_m": 20, "save_all_frames": False, "frame_interval_s": 2,
+            "min_alt_m": 20, "save_all_frames": False, "frame_interval_s": 2, "tiles": "2",
         },
         "camera": {"url": "rtsp://192.168.144.25:8554/main.264", "gimbal": True},
         "program": {"mode": "flight"},
@@ -409,8 +418,17 @@ def plan_body(project: dict, camera: dict | None = None) -> dict:
         "fence_radius_m": float(m.get("fence_radius_m") or 10000.0),
     }
     if camera:
-        body["camera"] = camera
+        body["camera"] = {**camera, "tiles": tiles(project)}   # the planner's pixels-on-target
     return body
+
+
+def tiles(project: dict) -> int:
+    """Tiles per side the Pi cuts each picture into (recognition.tiles, 1-4)."""
+    try:
+        n = int((project.get("recognition") or {}).get("tiles") or 2)
+    except (TypeError, ValueError):
+        n = 2
+    return min(4, max(1, n))
 
 
 def wind_landing_heading(project: dict) -> float | None:
@@ -508,6 +526,7 @@ def make_settings(project: dict) -> dict:
         "targets": targets,
         "detector": {"enabled": bool(targets),
                      "score_threshold": round(float(r.get("sensitivity", 45)) / 100.0, 2),
+                     "tiled": True, "tile_grid": [tiles(project)] * 2,
                      **model_settings(r.get("model", "standard"))},
         "fire": {"enabled": bool(r.get("fire")), "detect_smoke": bool(r.get("fire"))},
         "activation": {"min_alt_m": float(r.get("min_alt_m", 20))},

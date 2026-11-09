@@ -979,3 +979,23 @@ def test_pi_install_routes(http, monkeypatch):
     assert s["state"] == "failed" and "cannot reach" in s["result"]
     assert seen == {"host": "silm.local", "port": 2222, "user": "pi"}
     assert not call(url + "/api/pi/install/cancel", {})[0]["ok"]
+
+
+def test_finer_tiles_reach_the_pi_and_the_planner(station):
+    """recognition.tiles: the Pi's detector.tile_grid, accepted by its own
+    validation, and the planner's pixels-on-target grows with it."""
+    p2 = full_project()
+    p3 = full_project(recognition__tiles="3")
+    s2, s3 = P.make_settings(p2), P.make_settings(p3)
+    assert s2["detector"]["tile_grid"] == [2, 2] and s3["detector"]["tile_grid"] == [3, 3]
+    assert s3["detector"]["tiled"] is True
+    assert not P.check_settings_against_config(p3)                   # the Pi accepts it
+    assert P.tiles(full_project(recognition__tiles="9")) == 4 and P.tiles(full_project(recognition__tiles="x")) == 2
+    b2 = P.plan_body(p2, station.camera)
+    b3 = P.plan_body(p3, station.camera)
+    assert b2["camera"]["tiles"] == 2 and b3["camera"]["tiles"] == 3
+    import survey
+    cam2 = survey.Camera(**{k: (tuple(v) if k == "roi" else v) for k, v in b2["camera"].items()})
+    cam3 = survey.Camera(**{k: (tuple(v) if k == "roi" else v) for k, v in b3["camera"].items()})
+    assert cam3.pixels_at_model(3.0, 100) > cam2.pixels_at_model(3.0, 100)
+    assert cam3.max_alt_for(3.0) > cam2.max_alt_for(3.0)
