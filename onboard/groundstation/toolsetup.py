@@ -1,6 +1,7 @@
 """Install the training tools from the Ground Station (Teach new objects tab).
 
-Training runs Ultralytics YOLO and exports with LiteRT; together about 2 GB.
+Training runs Ultralytics YOLO and exports with LiteRT; together 2-7 GB
+(the most on Linux, where PyTorch brings NVIDIA's libraries).
 This makes a separate Python environment for them, ~/SILM/training-venv, with
 the Python found on this computer, so nothing else on the computer changes.
 Removing that folder removes them again.
@@ -127,13 +128,18 @@ class ToolInstall:
                                                                      and not has_nvidia())
             if cpu:
                 self._set("PyTorch for the processor (no NVIDIA card found; ~200 MB)", 15)
-                if self._cmd([vpy, "-m", "pip", "install"] + CPU_TORCH, 1800) != 0:
+                if self._cmd([vpy, "-m", "pip", "install", "--no-cache-dir"] + CPU_TORCH, 1800) != 0:
                     self._log("(the CPU-only PyTorch is not reachable; the standard one is installed "
                               "instead - larger, works the same)")
-            self._set("Downloading and installing the training tools (about 2 GB, 5-30 minutes)", 25)
-            if self._cmd([vpy, "-m", "pip", "install"] + self.packages, 3600) != 0:
-                raise RuntimeError("the install stopped: the last lines of the messages say why "
-                                   "(often no internet, or not enough disk space: ~5 GB needed)")
+            self._set("Downloading and installing the training tools (2-7 GB, 5 minutes to an hour)", 25)
+            # --no-cache-dir: pip would otherwise keep a second copy of every
+            # download (several GB), doubling the disk space this needs
+            if self._cmd([vpy, "-m", "pip", "install", "--no-cache-dir"] + self.packages, 7200) != 0:
+                with self._lock:
+                    tail = " / ".join(x.strip() for x in self.state["log"][-2:])
+                hint = ("not enough disk space: free about 10 GB and press "
+                        "Install again" if "No space left" in tail else "often no internet: the last lines say why")
+                raise RuntimeError(f"the install stopped ({hint}): {tail}")
             self._set("Checking", 95)
             if self.packages == PACKAGES and self._cmd([vpy, "-c", VERIFY], 300) != 0:
                 raise RuntimeError("the tools were installed but don't start (see the messages)")

@@ -69,18 +69,19 @@ def test_failures_are_explained(tmp_path):
     assert not r["ok"] and "Installing Python" in r["message"]
 
 
-@pytest.mark.skipif(not online(), reason="needs pypi.org")
-def test_cancel_stops_pip(tmp_path):
-    job = ToolInstall(venv=str(tmp_path / "v"), packages=["numpy==2.1.3", "--no-binary", ":all:"],
-                      base_python=[sys.executable], cpu_torch=False)        # a long source build
+def test_cancel_stops_a_running_step(tmp_path):
+    """Stop works whatever the step is doing (no network: the first step just waits)."""
+    job = ToolInstall(venv=str(tmp_path / "v"), cpu_torch=False,
+                      base_python=[sys.executable, "-c", "import time; time.sleep(120)", "--"])
     assert job.start()["ok"]
     t0 = time.time()
-    while "training tools" not in job.status().get("step", "") and time.time() - t0 < 120:
-        time.sleep(0.2)
-    time.sleep(1)
+    while job._proc is None and time.time() - t0 < 30:                 # the step has started
+        time.sleep(0.05)
+    assert job._proc is not None
     assert job.cancel()["ok"]
-    s = wait(job, 60)
-    assert s["state"] == "stopped"
+    s = wait(job, 30)
+    assert s["state"] == "stopped" and time.time() - t0 < 30
+    assert not job.cancel()["ok"]                                       # nothing left to stop
 
 
 def test_training_uses_the_installed_environment(tmp_path, monkeypatch):

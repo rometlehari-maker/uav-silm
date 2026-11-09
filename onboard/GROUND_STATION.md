@@ -247,7 +247,7 @@ The standard model doesn't know tractors or combines. To teach it:
    appears under "Trained models" with how many objects it finds; press **Use
    on the aircraft**, then send it (tab 5 - the model goes with the settings).
 
-Training needs the training tools on the laptop (about 2 GB, once): the tab
+Training needs the training tools on the laptop (2-7 GB, once; keep about 10 GB free): the tab
 shows **Install the training tools**, which puts them in their own folder
 (`~/SILM/training-venv`; delete it to remove them) using the Python on this
 computer - see the guide *Installing Python* if there is none. A computer with

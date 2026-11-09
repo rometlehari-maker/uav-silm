@@ -395,6 +395,26 @@ User's answers to questions asked:
     is blocked here, so pip fell back to the standard CUDA torch 2.14.1
     (pinned via litert-torch) + nvidia libs, ~1 MB/s here; at 21:01 still
     downloading nvidia_cudnn. Result to be recorded when it ends.
+- **2.2.0 merged and released** (user: "merge it now" / "merge it but do the
+  testing regardless"): PR #4 squash-merged as 4b39006 after green CI; on main
+  onboard tests + app build green; release gs-v2.2.0 published 23:11 with
+  Setup .exe, windows/macos zips, linux tar.gz, source + model zips,
+  SHA256SUMS, and also `pi_software.zip` (the Pi update package from the
+  build folder; harmless, usable for a manual USB update). Branch restarted
+  from main afterwards.
+  - After the merge (on the branch, not yet in a release): the first full
+    training-tools install ran out of disk here ("No space left on device":
+    pip's cache doubled the space). Fix: `--no-cache-dir`, a disk-space
+    message, honest sizes. **Re-run succeeded for real:** the app's
+    ToolInstall made the venv and installed ultralytics 8.4.208, litert-torch,
+    ai-edge-litert, ai-edge-quantizer (+ CUDA torch 2.14.1, as the CPU index
+    is blocked here) = **7.0 GB** -> sizes now "2-7 GB, keep ~10 GB free".
+    Then a real Quick training through the Ground Station HTTP routes with
+    that venv (40 Open Images tractor pictures uploaded + boxed via
+    /api/train/upload and /boxes): training 47 s, INT8 export (body INT8, head
+    float, 4.4 MB), confidence check exported/original 0.98, model listed
+    (mAP50 0.28 - expected for 40 pictures / 15 epochs). The whole
+    install -> train -> export path works. Test venv deleted afterwards.
 - The user asked to "use the desktop computer remotely": DESKTOP-G18N2DO is in
   their Remote Control list but offers no folders to cloud sessions
   (`not_available`; folders `uavsilm_softsim1`, `System32`). Told them how to
