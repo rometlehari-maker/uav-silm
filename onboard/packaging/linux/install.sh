@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Install the UAV SILM Ground Station for this user: a menu entry with its icon
-# and the command uav-silm-ground-station. Run from the unpacked folder:
+# and the command uav-silm-ground-station. Usually not needed: double-click
+# UAV-SILM-Ground-Station in the unpacked folder and it adds the menu entry
+# itself. Run from the unpacked folder if double-clicking does nothing:
 #     ./install.sh
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"

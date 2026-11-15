@@ -121,6 +121,9 @@ def selftest() -> int:
         params = _get(url + "api/files/params", {"project": project}).decode()
         assert "INITIAL_MODE" in params and "SERIAL2_BAUD" in params, "parameter file"
         assert len(_get(url + "api/setup")["steps"]) == 10, "setup"
+        sim = _get(url + "api/sim/status")
+        assert sim["state"] == "idle" and "jam" in sim["scenarios"] and "platform" in sim, "simulator"
+        import certifi  # noqa: F401  - the simulator download needs trusted certificates
         assert isinstance(_get(url + "api/ports"), list), "ports"
         assert any(m["name"] == "silm_oi" for m in meta["models"]), "ready-made model"
         _mavlink_loopback()
@@ -193,6 +196,29 @@ def _browser(url: str, srv) -> None:
             threading.Event().wait()
         except KeyboardInterrupt:
             pass
+
+
+def linux_menu_entry() -> str | None:
+    """On Linux the unpacked app adds itself to the applications menu the
+    first time it runs, so nothing has to be typed. Returns the entry's path."""
+    if sys.platform != "linux" or not getattr(sys, "frozen", False):
+        return None
+    try:
+        exe = os.path.realpath(sys.executable)
+        folder = os.path.dirname(exe)
+        apps = os.path.join(os.path.expanduser("~"), ".local", "share", "applications")
+        os.makedirs(apps, exist_ok=True)
+        icon = os.path.join(folder, "icon.png")
+        entry = os.path.join(apps, "uav-silm-ground-station.desktop")
+        text = ("[Desktop Entry]\nType=Application\nName=UAV SILM Ground Station\n"
+                "Comment=Plan, send and review UAV SILM survey flights\n"
+                f"Exec=\"{exe}\"\nIcon={icon}\nTerminal=false\nCategories=Science;Utility;\n")
+        if not os.path.isfile(entry) or open(entry).read() != text:
+            with open(entry, "w") as fh:
+                fh.write(text)
+        return entry
+    except OSError:
+        return None
 
 
 def main(argv=None) -> int:

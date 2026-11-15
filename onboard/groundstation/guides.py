@@ -75,11 +75,22 @@ def to_html(md: str) -> str:
                        + "</tr></thead><tbody>" + "".join("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r)
                                                           + "</tr>" for r in rows) + "</tbody></table></div>")
             continue
-        m = re.match(r"^(#{3,4}) (.+)$", ln)
+        if ln.strip().startswith("```"):                 # a fenced block: commands to copy
+            flush_para()
+            close_lists()
+            code, i = [], i + 1
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                code.append(lines[i].strip())
+                i += 1
+            i += 1
+            out.append('<pre class="gd-code"><code>' + html.escape("\n".join(code), quote=False) + "</code></pre>")
+            continue
+        m = re.match(r"^(#{3,4}) (.+?)(?:\s*\{#([a-z0-9-]+)\})?\s*$", ln)
         if m:
             flush_para()
             close_lists()
-            out.append(f"<h{len(m.group(1))}>{inline(m.group(2))}</h{len(m.group(1))}>")
+            n, anchor = len(m.group(1)), f' id="{m.group(3)}"' if m.group(3) else ""
+            out.append(f"<h{n}{anchor}>{inline(m.group(2))}</h{n}>")
             i += 1
             continue
         m = LIST.match(ln)

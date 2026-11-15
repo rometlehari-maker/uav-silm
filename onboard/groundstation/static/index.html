@@ -20,16 +20,20 @@
 <div class="layout">
   <nav class="tabs" aria-label="Steps">
     <button data-tab="setup" class="tab tab-setup"><b>✦</b> Setup <span class="tab-badge" id="setup-badge"></span></button>
+    <div class="tab-group">Fly a mission</div>
     <button data-tab="start" class="tab"><b>1</b> Start</button>
     <button data-tab="aircraft" class="tab"><b>2</b> Aircraft</button>
     <button data-tab="mission" class="tab"><b>3</b> Mission</button>
     <button data-tab="camera" class="tab"><b>4</b> Camera</button>
     <button data-tab="send" class="tab"><b>5</b> Send to aircraft</button>
     <button data-tab="launch" class="tab"><b>6</b> Launch</button>
+    <div class="tab-group">Before and after</div>
     <button data-tab="sim" class="tab"><b>7</b> Simulator</button>
     <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
-    <button data-tab="train" class="tab"><b>9</b> Teach new objects</button>
-    <button data-tab="tools" class="tab"><b>10</b> Tools</button>
+    <button class="tab tab-more" id="tab-more" aria-expanded="false"><b>…</b> More</button>
+    <div class="tab-group tab-more-only">More</div>
+    <button data-tab="train" class="tab tab-more-only"><b>9</b> Teach new objects</button>
+    <button data-tab="tools" class="tab tab-more-only"><b>10</b> Tools</button>
     <button data-tab="guides" class="tab tab-guides"><b>?</b> Guides</button>
   </nav>
 
@@ -62,9 +66,15 @@
           <div class="help" id="setup-banner-text">A guided setup checks every part for you, one step at a time.</div></div>
         <button class="btn primary" id="setup-banner-go">Start the setup</button>
       </div>
+      <h2 class="sub">What do you want to do?</h2>
+      <div class="home-actions">
+        <button class="home-action" data-home="fly"><span class="ha-icon">✈</span><b>Fly a mission</b><span id="home-fly-sub">Plan it, send it, launch it</span></button>
+        <button class="home-action" data-home="sim"><span class="ha-icon">◎</span><b>Practise in the simulator</b><span>Fly this mission on the laptop first</span></button>
+        <button class="home-action" data-home="flights"><span class="ha-icon">▣</span><b>See the pictures</b><span>From the last flights</span></button>
+        <button class="home-action" data-home="setup"><span class="ha-icon">✦</span><b>Set up an aircraft</b><span id="home-setup-sub">The guided setup, step by step</span></button>
+      </div>
       <p class="lead">Plan a fully automatic survey flight, send it to the aircraft, launch it,
-        and look at the pictures it took. Work through the steps on the left from top to bottom.
-        Everything is saved on this laptop as you go.</p>
+        and look at the pictures it took. Everything is saved on this laptop as you go.</p>
       <div class="cards two">
         <div class="card">
           <h2>Your progress</h2>
@@ -242,37 +252,49 @@
     </section>
 
     <!-- ======================================================== SIM -->
-    <section id="tab-sim" class="page">
+    <section id="tab-sim" class="page wide">
       <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>7 · Simulator</span></div>
       <h1>Simulator</h1>
-      <p class="lead">Fly this exact mission, with your aircraft settings and today's wind, in
-        ArduPilot's simulator. Halfway through, the GPS is jammed: it must turn back, land on the
-        strip and switch itself off. Do this before every new mission.</p>
+      <p class="lead">Fly this exact mission on the computer first: your aircraft settings, your route,
+        today's wind, and something going wrong. Watch it on the map. Nothing to set up by hand: the
+        simulator is ArduPilot's own, and the button below fetches it.</p>
       <div class="card" id="sim-avail"></div>
-      <div class="card">
-        <div class="q">What should go wrong in the simulated flight?</div>
-        <select id="sim-fault" aria-label="Fault">
-          <option value="jam">GPS jammed (signal scrambled)</option>
-          <option value="disable">GPS lost completely</option>
-          <option value="none">Nothing goes wrong (a normal flight)</option>
-        </select>
-        <div id="sim-fault-len"><div class="q">For how long?</div>
-        <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div></div>
-        <p class="help" id="sim-none-help" hidden>The whole mission flown as planned: it must fly the complete survey with
-          no failsafe, stay inside the geofence, know its position all the way, land on the landing point and switch
-          itself off. Good for checking the route, the flight time and the landing. The GPS-loss test above is still
-          needed before the first flight.</p>
-        <div class="row-btns">
-          <button class="btn primary" id="sim-start">Start the simulated flight</button>
-          <button class="btn ghost" id="sim-stop">Stop</button>
+      <div class="cards two sim-grid">
+        <div class="card">
+          <div class="q">What should happen in the simulated flight?</div>
+          <select id="sim-fault" aria-label="Scenario">
+            <option value="jam">GPS jammed halfway (the test before the first flight)</option>
+            <option value="disable">GPS lost completely halfway</option>
+            <option value="gusty">Strong, gusty wind (10 m/s) with GPS jammed</option>
+            <option value="none">A normal flight (nothing goes wrong)</option>
+          </select>
+          <p class="help" id="sim-scenario-help"></p>
+          <div id="sim-fault-len"><div class="q">How long is the GPS bad?</div>
+          <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div></div>
+          <div class="q">How fast?</div>
+          <select id="sim-speed" aria-label="Speed">
+            <option value="real">Real time, like the real flight (5-8 minutes)</option>
+            <option value="fast">Fast (about 2 minutes)</option>
+          </select>
+          <div class="row-btns">
+            <button class="btn primary big" id="sim-start">▶ Fly it in the simulator</button>
+            <button class="btn ghost" id="sim-stop">Stop</button>
+          </div>
+          <div class="result" id="sim-result" role="status"></div>
+          <div id="sim-checks"></div>
         </div>
-        <div class="result" id="sim-result" role="status"></div>
-        <div id="sim-checks"></div>
+        <div class="card sim-live-card">
+          <div class="sim-status" id="sim-status"><b id="sim-status-title">Ready when you are</b><span id="sim-status-sub">The flight appears here, live.</span></div>
+          <div id="sim-map" class="sim-map" role="img" aria-label="Live map of the simulated flight"></div>
+          <div class="sim-legend"><span><i class="sw sw-plan"></i>planned route</span><span><i class="sw sw-true"></i>where it really is</span><span><i class="sw sw-est"></i>where it thinks it is (GPS bad)</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <details><summary>Progress log (the simulator's own messages)</summary><pre id="sim-log" class="log"></pre></details>
         <img id="sim-track" alt="Simulated flight track" hidden>
-        <details open><summary>Progress</summary><pre id="sim-log" class="log"></pre></details>
       </div>
       <div class="card" id="sim-cmds-card" hidden>
-        <h2>Run it yourself in Ubuntu (WSL2)</h2>
+        <h2>The same run by hand (for developers)</h2>
         <pre id="sim-cmds" class="log"></pre>
       </div>
     </section>

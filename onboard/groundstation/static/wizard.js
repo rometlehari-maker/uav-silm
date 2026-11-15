@@ -200,9 +200,12 @@ const WZ_RENDER = {
       <li>Fill in and press <b>Install</b>:</li>
     </ol>
     ${piInstallForm()}
-    <details class="wz-byhand"><summary>Or install by hand in a terminal</summary>
-      <p>Connect to the Pi (Windows: <b>PowerShell</b>):${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
-      then paste this line. It asks for a password for the aircraft's own Wi-Fi, installs everything and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</p>
+    <details class="wz-byhand"><summary>Or install by hand in a terminal (only if the Install button cannot reach the Pi)</summary>
+      <p>A terminal is a window where you type one line and press Enter. Open one: Windows → Start menu, type <b>PowerShell</b>, Enter; Mac → Cmd+Space, <b>Terminal</b>; Ubuntu → Ctrl+Alt+T.</p>
+      <p>1. Connect to the Pi. Copy this, put your Pi username in place of YOUR-USERNAME, paste it, Enter:${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
+      The first time it asks <i>Are you sure you want to continue connecting (yes/no)?</i>: type <b>yes</b>, Enter. Then <i>password:</i> type the Pi password: <b>nothing shows while you type</b>, not even dots. Enter. The line now ends in <code>silm:~ $</code>: you are typing on the Pi.</p>
+      <p>2. Copy this whole line (one line), paste it, Enter:${copyBox(PI_ONE_LINE, "wz-oneline")}
+      It asks for the Pi password once more, then for a password for the aircraft's own Wi-Fi (choose one, 8 characters or more, and write it down), then installs for 10-20 minutes and restarts the Pi (the connection closes: that is the end). Close the terminal.</p>
     </details>
     <label class="wz-confirm"><input type="checkbox" id="wz-pi-installed" ${wzIsDone("pi_install") ? "checked" : ""}> The installer finished and the Pi restarted</label>`,
   pi_connect: () => `<p class="wz-lead">After the restart, the Pi makes its own Wi-Fi network named <b>SILM-silm</b> whenever your home Wi-Fi is out of reach (at the field, or with the aircraft away from home).</p>
@@ -215,13 +218,16 @@ const WZ_RENDER = {
     <button class="btn primary big" id="wz-pi-send">Send the settings to the aircraft computer</button>
     <div class="result" id="wz-pi-result"></div>`,
   sim: () => META.sim && META.sim.available
-    ? `<p class="wz-lead">Fly your mission in ArduPilot's simulator with the GPS jammed halfway. It must turn back, land on the strip and switch itself off: all seven checks green.</p>
+    ? `<p class="wz-lead">Fly your mission in the simulator with the GPS jammed halfway, before you risk the real aircraft. It must turn back, land on the strip and switch itself off: every check green. You watch it on a map.</p>
        <div class="wz-status">${wzIsDone("sim") ? chip(true, "Passed") : chip(false, "Not passed yet")}</div>
        <button class="btn primary big" data-go="sim">Open the simulator</button>`
-    : `<p class="wz-lead">The simulator flies your exact mission with the GPS jammed halfway, before you risk the real aircraft. It runs on Linux: on Windows, inside <b>Ubuntu (WSL2)</b>.</p>
-       <p class="help"><a href="#guides" data-guide="simulator">How to set up the simulator</a></p>
-       <ol class="wz-howto"><li>Set it up once: follow <b>SITL_HOWTO.md</b> in the software folder (part A, about 30 minutes, mostly waiting).</li><li>Start the Ground Station inside Ubuntu and open the <b>Simulator</b> tab, or run the commands it shows.</li><li>All seven checks must say PASS.</li></ol>
-       <label class="wz-confirm"><input type="checkbox" id="wz-sim-ok" ${wzIsDone("sim") ? "checked" : ""}> I flew this mission in the simulator and every check passed</label>`,
+    : META.sim && META.sim.can_install
+    ? `<p class="wz-lead">The simulator flies your exact mission on this computer with the GPS jammed halfway, before you risk the real aircraft. It is ArduPilot's own simulator: one click fetches it (${META.sim.platform.startsWith("windows") ? "25" : "7"} MB), nothing to build, nothing to type.</p>
+       ${META.sim.install && META.sim.install.state === "running" ? `<div class="wz-live"><span class="wz-spin"></span> Downloading the simulator… ${Math.round((META.sim.install.progress || 0) * 100)} %</div>` :
+         `<button class="btn primary big" id="wz-sim-install">⬇ Install the simulator</button>${META.sim.install && META.sim.install.state === "error" ? `<p class="result err">${esc(META.sim.install.message || "")}</p>` : ""}`}`
+    : `<p class="wz-lead">The simulator flies your exact mission with the GPS jammed halfway, before you risk the real aircraft. ${esc((META.sim && META.sim.why) || "")}</p>
+       <p class="help"><a href="#guides" data-guide="simulator">The simulator on a Mac: the one-time build, every step explained</a></p>
+       <label class="wz-confirm"><input type="checkbox" id="wz-sim-ok" ${wzIsDone("sim") ? "checked" : ""}> I flew this mission in the simulator on another computer and every check passed</label>`,
 };
 
 const WZ_BIND = {
@@ -232,6 +238,8 @@ const WZ_BIND = {
   sim: (el) => {
     el.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => wzGo(b.dataset.go)));
     const c = $("wz-sim-ok"); if (c) c.addEventListener("change", () => { wzMark("sim", c.checked); wzRenderStep(); });
+    const i = $("wz-sim-install"); if (i) i.addEventListener("click", async () => { const r = await api("/api/sim/install", {}); if (!r.ok) toast(r.message, 6000); simInstallPoll(); wzRenderStep(); });
+    if (META.sim && META.sim.install && META.sim.install.state === "running") { simInstallPoll(); WZ.timer = setInterval(() => { if ($("tab-setup").classList.contains("active")) wzRenderStep(); else wzStopPoll(); }, 1500); }
   },
   pi_install: (el) => {
     $("wz-pi-installed").addEventListener("change", (e) => { wzMark("pi_install", e.target.checked); wzNextLabel(); });

@@ -446,10 +446,57 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
-- **2.2.3 prepared on the branch, NOT merged/released yet** (ask the user):
-  model version 2 (below), Camera-tab tile setting, eval/tiling tools,
-  has_module find_spec fix. Merge with SQUASH (branch history has training
-  checkpoints).
+- **2.3.0 on the branch, NOT merged yet** (user, 15 Nov: "make it mooore easy
+  to use, its too much for a farmer or soldier; anything in a terminal must
+  be explained thoroughly; realistic simulations inside the app"; the Android
+  app was asked for and then withdrawn: "scratch the mobile thing").
+  SIMULATOR WITHOUT A TERMINAL: groundstation/sim.py downloads ArduPilot's
+  prebuilt SITL from firmware.ardupilot.org (Linux x86_64:
+  Plane/stable/SITL_x86_64_linux_gnu/arduplane; Windows: the Cygwin
+  Tools/MissionPlanner/sitl/PlaneStable/ArduPlane.elf + 9 DLLs - the files
+  Mission Planner uses; no Mac build exists -> guide "The simulator on a
+  Mac" with the build explained) into ~/SILM/sitl, runs it directly:
+  `arduplane --model plane --home lat,lon,0,0 --defaults silm_sitl.parm
+  --wipe --speedup N` in ~/SILM/sitl/run (scripts/silm_gps_loss.lua there).
+  FOUND: an explicit --defaults REPLACES the simulator's embedded plane
+  defaults (no INS calibration -> "3D Accel calibration needed", can't arm),
+  so ardupilot/sitl_defaults.parm = ArduPilot's models/plane.parm + SCR_ENABLE
+  (script loads at the first start, no restart). The flight runs in-process
+  (tools/sitl_failsafe_test.py: set_hooks(log, on_row), say() instead of
+  print, elapsed() from SYSTEM_TIME so --speedup grades right, --turbulence).
+  Verified here with the DOWNLOADED binary: GPS-jam scenario, fast (x4),
+  PASSED 7/7 in 50 s wall (rtl 5.3 s, blind error 130 m, touchdown 65 m).
+  Windows path not run here (no Windows): same args, DLLs beside the .elf,
+  cwd = run dir; CREATE_NO_WINDOW. Scenarios: jam / disable / gusty (10 m/s,
+  SIM_WIND_TURB 6) / none; speed real|fast. API: /api/sim/live?since=N
+  (rows [t, true lat/lon, est lat/lon, alt, phase, mode, seq, armed]),
+  /api/sim/install, /api/sim/remove; status carries scenarios + install
+  progress. UI: live Leaflet map (plan, true track, estimate while blind,
+  plane marker), plain status line, Install button (also in wizard step 10).
+  certifi added for the download inside the frozen app; matplotlib stays
+  excluded from the app (no track.png there; the live map replaces it).
+  EASIER: nav groups (Fly a mission / Before and after / More: Teach + Tools
+  hidden behind "More" until opened, remembered in localStorage;
+  showTab("train"|"tools") reveals them); Start tab "What do you want to
+  do?" 4 big buttons, "Fly a mission" -> nextOpenStep(); Linux app registers
+  its own .desktop entry on first run (desktop.linux_menu_entry) so
+  install.sh is a fallback; GUIDES.md: intro "how to use a terminal", new
+  guide linux-install, Python/USB/Pi-by-hand/camera terminal steps written
+  for first-timers, fenced ``` blocks now render with Copy buttons
+  (guides.py + guides.js). e2e: tab() opens More first; home actions checked.
+  Website moved its download section to downloads.html (main, #10):
+  build_downloads.py --site default and its test now use downloads.html.
+  Docs: GROUND_STATION.md (screen, section 7, troubleshooting), FLIGHT_READY
+  2.3, SITL_HOWTO intro (developers only now), README, notices, release
+  notes' Linux line. VERSION 2.3.0.
+- **2.2.3 merged and released** (user: "Replace it", then "Merge and
+  release"): PR #7 squash-merged as 1b7818b (model version 2, Camera-tab tile
+  setting, eval/tiling tools, has_module find_spec fix; checkpoints never
+  reached main), PR #8 = website version line (65150f0). Release gs-v2.2.3
+  published 15:33 with silm-oi-farm-model-v2.zip; pages deploy green.
+  Roboflow workspace salvadors-workspace-of0ak still holds the forks; unused
+  ones (cow-aerial, drone-parking-detection, tractor-vsb0t, parking-vehicles)
+  can be deleted if the user wants - not done without asking.
 - **Recognition from above** (user: "can you train the app uploaded model on
   the birdseye view images further", then "can you make anything better?"):
   - New tools: `tools/eval_detections.py` (P/R per class via the onboard

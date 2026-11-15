@@ -1,96 +1,272 @@
-"""Fly the mission in ArduPilot's simulator (SITL) from the Ground Station.
+"""Fly the mission in ArduPilot's simulator (SITL) from the Ground Station,
+with nothing to build and nothing to type.
 
-Needs ArduPilot built for SITL on this computer (Linux, or WSL2 on Windows:
-SITL_HOWTO.md). The runner:
-  1. writes your parameter file and mission into the SITL folder, copies the
+The simulator is ArduPilot's own program, built by the ArduPilot project
+for Linux and Windows and published on firmware.ardupilot.org (the same
+files Mission Planner downloads). "Install the simulator" fetches it into
+~/SILM/sitl (about 7 MB on Linux, 25 MB on Windows). On a Mac there is no
+ready-made file: the guide explains the one-time build.
+
+A run:
+  1. writes your parameter file and mission into ~/SILM/sitl/run, copies the
      Lua script to its scripts/ folder
-  2. starts SITL at your mission's launch point (no MAVProxy, nothing to type)
-  3. runs tools/sitl_failsafe_test.py with your parameters, mission and wind;
-     the first time, the script needs one SITL restart to load - done
-     automatically
+  2. starts the simulator at your mission's launch point, fresh (--wipe),
+     with scripting on from the first start (sitl_defaults.parm)
+  3. flies the mission with tools/sitl_failsafe_test.py inside this process:
+     your parameters, mission, wind and the chosen scenario; every recorded
+     position goes to the live map
   4. reports PASS/FAIL per check, the numbers and the track picture
-One run at a time; a run takes 4-6 minutes.
+One run at a time; in real time a run takes 5-8 minutes, "fast" about 2.
+
+A developer with an ArduPilot checkout can point SILM_SITL_BIN at any
+arduplane binary; ~/ardupilot/build/sitl/bin/arduplane is found by itself.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import platform
 import shutil
-import signal
+import ssl
 import subprocess
 import sys
 import threading
 import time
-
-from groundstation import runtime  # noqa: E402
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ONBOARD = os.path.dirname(HERE)
 TEST_TOOL = os.path.join(ONBOARD, "tools", "sitl_failsafe_test.py")
 LUA = os.path.join(ONBOARD, "ardupilot", "scripts", "silm_gps_loss.lua")
+DEFAULTS = os.path.join(ONBOARD, "ardupilot", "sitl_defaults.parm")
+SERVER = "https://firmware.ardupilot.org"
+PORT = 5760
+
+# What to download for this computer: (files, the one to run). The Windows
+# build is the Cygwin one Mission Planner uses; it needs its DLLs next to it.
+_WIN_DLLS = ["cygwin1.dll", "cyggcc_s-seh-1.dll", "cygstdc++-6.dll", "cygatomic-1.dll",
+             "cyggomp-1.dll", "cygiconv-2.dll", "cygintl-8.dll", "cygquadmath-0.dll", "cygssp-0.dll"]
+DOWNLOADS = {
+    "linux-x86_64": ([("Plane/stable/SITL_x86_64_linux_gnu/arduplane", "arduplane"),
+                      ("Plane/stable/SITL_x86_64_linux_gnu/git-version.txt", "git-version.txt")],
+                     "arduplane"),
+    "windows-x86_64": ([("Tools/MissionPlanner/sitl/PlaneStable/ArduPlane.elf", "ArduPlane.elf"),
+                        ("Tools/MissionPlanner/sitl/PlaneStable/git.txt", "git-version.txt")] +
+                       [("Tools/MissionPlanner/sitl/PlaneStable/" + d.replace("+", "%2B"), d) for d in _WIN_DLLS],
+                       "ArduPlane.elf"),
+}
+
+SCENARIOS = {
+    # what goes wrong, in the order the tab offers them
+    "jam": {"title": "GPS jammed halfway", "fault": "jam", "fault_s": 90, "turbulence": 0.0,
+            "what": "The test before the first flight: the GPS signal is scrambled for 90 s mid-survey. "
+                    "The aircraft must notice, turn back, land on the strip and switch itself off."},
+    "disable": {"title": "GPS lost completely", "fault": "disable", "fault_s": 90, "turbulence": 0.0,
+                "what": "The GPS stops answering for 90 s. Same demands as the jamming test."},
+    "gusty": {"title": "Strong, gusty wind with GPS jammed", "fault": "jam", "fault_s": 90, "turbulence": 6.0,
+              "wind": 10.0,
+              "what": "10 m/s wind with gusts and the GPS jammed: the hardest case. Shows how far the "
+                      "landing can drift when the aircraft has to feel its way home."},
+    "none": {"title": "A normal flight (nothing goes wrong)", "fault": "none", "fault_s": 0, "turbulence": 0.0,
+             "what": "The whole mission as planned: route, flight time and the landing. The GPS-jammed "
+                     "test is still needed before the first real flight."},
+}
+SPEEDS = {"real": 1, "fast": 4}
+
+
+def host_key() -> str:
+    m = platform.machine().lower()
+    arch = "x86_64" if m in ("x86_64", "amd64") else m
+    if sys.platform.startswith("linux"):
+        return f"linux-{arch}"
+    if sys.platform == "win32":
+        return f"windows-{arch}"
+    if sys.platform == "darwin":
+        return f"macos-{arch}"
+    return f"{sys.platform}-{arch}"
 
 
 def _listening(port: int) -> bool:
-    hexport = f":{port:04X} "
-    for f in ("/proc/net/tcp", "/proc/net/tcp6"):
-        try:
-            with open(f) as fh:
-                for line in fh:
-                    parts = line.split()
-                    if len(parts) > 3 and parts[1].endswith(hexport.strip()) and parts[3] == "0A":
-                        return True
-        except OSError:
-            pass
-    return False
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.3)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _ssl_context():
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # noqa: BLE001
+        return ssl.create_default_context()
+
+
+def _load_test_tool():
+    spec = importlib.util.spec_from_file_location("sitl_failsafe_test", TEST_TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 class SimRunner:
-    def __init__(self, ardupilot_dir: str | None = None, run_dir: str | None = None):
-        self.ardupilot_dir = os.path.expanduser(ardupilot_dir or os.environ.get(
-            "SILM_ARDUPILOT", "~/ardupilot"))
-        self.run_dir = os.path.expanduser(run_dir or os.environ.get("SILM_SITL_DIR", "~/sitlrun"))
+    def __init__(self, ardupilot_dir: str | None = None, run_dir: str | None = None,
+                 sitl_dir: str | None = None):
+        self.ardupilot_dir = os.path.expanduser(ardupilot_dir or os.environ.get("SILM_ARDUPILOT", "~/ardupilot"))
+        self.sitl_dir = os.path.expanduser(sitl_dir or os.environ.get("SILM_SITL_DIR", "~/SILM/sitl"))
+        self.run_dir = os.path.expanduser(run_dir or os.path.join(self.sitl_dir, "run"))
         self.job: dict | None = None
+        self.inst: dict | None = None          # the install job
         self._lock = threading.Lock()
-        self._sitl = None
+        self._sitl: subprocess.Popen | None = None
+        self.rows: list[dict] = []
 
-    # ------------------------------------------------------------ setup
-    def sim_vehicle(self) -> str:
-        return os.path.join(self.ardupilot_dir, "Tools", "autotest", "sim_vehicle.py")
+    # ------------------------------------------------------------ the binary
+    def binary(self) -> str | None:
+        """The simulator program to run, or None."""
+        env = os.environ.get("SILM_SITL_BIN")
+        if env and os.path.isfile(os.path.expanduser(env)):
+            return os.path.expanduser(env)
+        dl = DOWNLOADS.get(host_key())
+        if dl:
+            p = os.path.join(self.sitl_dir, dl[1])
+            if os.path.isfile(p):
+                return p
+        dev = os.path.join(self.ardupilot_dir, "build", "sitl", "bin", "arduplane")
+        if os.path.isfile(dev) and sys.platform != "win32":
+            return dev
+        return None
+
+    def version(self) -> str:
+        p = os.path.join(self.sitl_dir, "git-version.txt")
+        commit = ""
+        try:
+            for line in open(p):
+                if line.startswith("APMVERSION:"):
+                    return line.split(":", 1)[1].strip()
+                if line.startswith("commit "):
+                    commit = "commit " + line.split()[1][:10]
+        except OSError:
+            pass
+        return commit
 
     def available(self) -> dict:
-        sv = self.sim_vehicle()
-        binp = os.path.join(self.ardupilot_dir, "build", "sitl", "bin", "arduplane")
-        ok = sys.platform.startswith("linux") and os.path.isfile(sv) and os.path.isfile(binp)
+        b = self.binary()
+        key = host_key()
+        can = key in DOWNLOADS
         why = None
-        if not sys.platform.startswith("linux"):
-            why = ("The simulator runs on Linux. On Windows, run the Ground Station inside "
-                   "Ubuntu (WSL2) to use this tab, or use the commands shown below.")
-        elif not os.path.isfile(sv):
-            why = f"ArduPilot not found at {self.ardupilot_dir} (SITL_HOWTO.md part A)"
-        elif not os.path.isfile(binp):
-            why = f"ArduPlane SITL is not built: cd {self.ardupilot_dir} && ./waf plane"
-        elif runtime.python_cmd() is None:
-            ok, why = False, "The simulator needs Python 3 on this computer (sudo apt install python3)."
-        return {"available": ok, "why": why, "ardupilot_dir": self.ardupilot_dir,
-                "run_dir": self.run_dir}
+        if not b:
+            why = ("The simulator is not on this computer yet. Press \"Install the simulator\": "
+                   "it downloads ArduPilot's own simulator (no building, nothing to type)." if can else
+                   "There is no ready-made simulator for this computer "
+                   f"({key.replace('-', ', ')}). The guide \"The simulator on a Mac\" explains the "
+                   "one-time build, or run the Ground Station on a Windows or Linux computer.")
+        out = {"available": bool(b), "installed": bool(b), "can_install": can and not b, "why": why,
+               "platform": key, "binary": b, "version": self.version() if b else "",
+               "run_dir": self.run_dir, "sitl_dir": self.sitl_dir, "scenarios": SCENARIOS,
+               "install": self.install_status()}
+        return out
+
+    # ------------------------------------------------------------ install
+    def install(self) -> dict:
+        with self._lock:
+            if self.inst and self.inst["state"] == "running":
+                return {"ok": False, "message": "the simulator is already being installed"}
+            if host_key() not in DOWNLOADS:
+                return {"ok": False, "message": self.available()["why"]}
+            self.inst = {"state": "running", "progress": 0.0, "log": [], "file": "", "started": time.time()}
+        threading.Thread(target=self._install, daemon=True).start()
+        return {"ok": True, "message": "downloading the simulator"}
+
+    def _install(self):
+        j = self.inst
+        files, exe = DOWNLOADS[host_key()]
+        tmp = self.sitl_dir + ".part"
+        try:
+            shutil.rmtree(tmp, ignore_errors=True)
+            os.makedirs(tmp, exist_ok=True)
+            ctx = _ssl_context()
+            total_files = len(files)
+            for i, (path, name) in enumerate(files):
+                j["file"] = name
+                j["log"].append(f"downloading {name}")
+                req = urllib.request.Request(SERVER + "/" + path, headers={"User-Agent": "SILM-GroundStation"})
+                with urllib.request.urlopen(req, timeout=60, context=ctx) as r, \
+                        open(os.path.join(tmp, name), "wb") as fh:
+                    size = int(r.headers.get("Content-Length") or 0)
+                    got = 0
+                    while True:
+                        chunk = r.read(256 * 1024)
+                        if not chunk:
+                            break
+                        fh.write(chunk)
+                        got += len(chunk)
+                        part = got / size if size else 0.0
+                        j["progress"] = (i + part) / total_files
+            exe_path = os.path.join(tmp, exe)
+            if os.path.getsize(exe_path) < 1_000_000:
+                raise RuntimeError("the downloaded simulator is too small to be right")
+            os.chmod(exe_path, 0o755)
+            self._stop_sitl()
+            if os.path.isdir(self.sitl_dir):
+                keep = os.path.join(self.sitl_dir, "run")
+                for n in os.listdir(self.sitl_dir):
+                    p = os.path.join(self.sitl_dir, n)
+                    if p != keep:
+                        shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) else os.remove(p)
+            else:
+                os.makedirs(self.sitl_dir)
+            for n in os.listdir(tmp):
+                shutil.move(os.path.join(tmp, n), os.path.join(self.sitl_dir, n))
+            shutil.rmtree(tmp, ignore_errors=True)
+            j["log"].append(f"installed {self.version() or exe} in {self.sitl_dir}")
+            j["progress"] = 1.0
+            j["state"] = "done"
+        except Exception as exc:  # noqa: BLE001
+            shutil.rmtree(tmp, ignore_errors=True)
+            j["log"].append(f"ERROR: {exc}")
+            j["state"] = "error"
+            j["message"] = (f"Could not download the simulator ({exc}). Check the internet "
+                            "connection and try again.")
+
+    def install_status(self) -> dict:
+        j = self.inst
+        if not j:
+            return {"state": "idle"}
+        return {"state": j["state"], "progress": round(j["progress"], 3), "file": j["file"],
+                "log": j["log"][-20:], "message": j.get("message"),
+                "elapsed_s": round(time.time() - j["started"])}
+
+    def remove(self) -> dict:
+        self._stop_sitl()
+        shutil.rmtree(self.sitl_dir, ignore_errors=True)
+        return {"ok": True, "message": "the simulator was removed"}
 
     # ------------------------------------------------------------ run
     def start(self, params_text: str, mission_wpl: str, launch: tuple, wind: float,
               wind_dir: float, fault: str = "jam", fault_s: float = 90.0,
-              trigger_s: float = 150.0, out_dir: str | None = None) -> dict:
+              trigger_s: float = 150.0, out_dir: str | None = None, speed: str = "real",
+              turbulence: float = 0.0, scenario: str | None = None) -> dict:
         with self._lock:
             if self.job and self.job["state"] == "running":
                 return {"ok": False, "message": "a simulation is already running"}
+            if self.inst and self.inst["state"] == "running":
+                return {"ok": False, "message": "wait for the simulator to finish installing"}
             av = self.available()
             if not av["available"]:
                 return {"ok": False, "message": av["why"]}
-            out_dir = out_dir or os.path.join(self.run_dir, "results",
-                                              time.strftime("sim_%Y%m%d_%H%M%S"))
+            if _listening(PORT) and self._sitl is None:
+                return {"ok": False, "message": f"something else is using port {PORT} (another simulator?). "
+                                                "Close it and try again."}
+            out_dir = out_dir or os.path.join(self.sitl_dir, "results", time.strftime("sim_%Y%m%d_%H%M%S"))
             self.job = {"state": "running", "log": [], "result": None, "out": out_dir,
-                        "started": time.time(), "step": "preparing"}
+                        "started": time.time(), "step": "preparing", "scenario": scenario or fault,
+                        "fault": fault, "speed": SPEEDS.get(speed, 1), "launch": list(launch[:2])}
+            self.rows = []
         os.makedirs(os.path.join(self.run_dir, "scripts"), exist_ok=True)
         shutil.copyfile(LUA, os.path.join(self.run_dir, "scripts", "silm_gps_loss.lua"))
+        shutil.copyfile(DEFAULTS, os.path.join(self.run_dir, "silm_sitl.parm"))
         pf = os.path.join(self.run_dir, "ground_station.param")
         mf = os.path.join(self.run_dir, "ground_station.waypoints")
         with open(pf, "w") as fh:
@@ -98,7 +274,8 @@ class SimRunner:
         with open(mf, "w") as fh:
             fh.write(mission_wpl)
         args = dict(pf=pf, mf=mf, launch=launch, wind=wind, wind_dir=wind_dir, fault=fault,
-                    fault_s=fault_s, trigger_s=trigger_s, out=out_dir)
+                    fault_s=fault_s, trigger_s=trigger_s, out=out_dir, turbulence=turbulence,
+                    speedup=SPEEDS.get(speed, 1))
         threading.Thread(target=self._run, args=(args,), daemon=True).start()
         return {"ok": True, "message": "simulation started", "out": out_dir}
 
@@ -108,67 +285,85 @@ class SimRunner:
         if len(j["log"]) > 3000:
             del j["log"][:1000]
 
-    def _start_sitl(self, launch):
+    def _on_row(self, row: dict):
+        self.rows.append(row)
+
+    def _start_sitl(self, launch, speedup=1):
         self._stop_sitl()
+        b = self.binary()
         loc = f"{launch[0]:.7f},{launch[1]:.7f},{launch[2] if len(launch) > 2 else 0:.1f},0"
-        cmd = [*runtime.python_cmd(), self.sim_vehicle(), "-v", "ArduPlane", "--no-rebuild",
-               "--no-mavproxy", f"--custom-location={loc}"]
-        self._log("$ " + " ".join(cmd[1:]))
-        self._sitl = subprocess.Popen(cmd, cwd=self.run_dir, stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL, start_new_session=True)
+        cmd = [b, "--model", "plane", "--home", loc, "--defaults", "silm_sitl.parm", "--wipe",
+               "--speedup", str(int(speedup))]
+        self._log("$ " + " ".join([os.path.basename(b)] + cmd[1:]))
+        kw = {}
+        if sys.platform == "win32":
+            kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        else:
+            kw["start_new_session"] = True
+        with open(os.path.join(self.run_dir, "simulator.log"), "wb") as logf:
+            self._sitl = subprocess.Popen(cmd, cwd=self.run_dir, stdout=logf, stderr=subprocess.STDOUT, **kw)
         t0 = time.time()
         while time.time() - t0 < 60:
-            if _listening(5760):
-                time.sleep(2)
+            if _listening(PORT):
+                time.sleep(1.5)
                 return True
             if self._sitl.poll() is not None:
                 break
             time.sleep(0.5)
+        try:
+            tail = open(os.path.join(self.run_dir, "simulator.log"), errors="replace").read()[-600:]
+            if tail.strip():
+                self._log("simulator said: " + tail.strip())
+        except OSError:
+            pass
         return False
 
     def _stop_sitl(self):
-        if self._sitl is not None and self._sitl.poll() is None:
+        p = self._sitl
+        if p is not None and p.poll() is None:
             try:
-                os.killpg(self._sitl.pid, signal.SIGTERM)
-            except OSError:
-                pass
-            try:
-                self._sitl.wait(10)
-            except subprocess.TimeoutExpired:
-                os.killpg(self._sitl.pid, signal.SIGKILL)
+                p.terminate()
+                p.wait(10)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    p.kill()
+                except OSError:
+                    pass
         self._sitl = None
-        # sim_vehicle leaves the simulator running in its own process
-        subprocess.run(["pkill", "-x", "arduplane"], capture_output=True)
         t0 = time.time()
-        while _listening(5760) and time.time() - t0 < 10:
+        while _listening(PORT) and time.time() - t0 < 10:
             time.sleep(0.3)
 
     def _test(self, a) -> int:
-        cmd = [*runtime.python_cmd(), "-u", TEST_TOOL, "--connect", "tcp:127.0.0.1:5760",
-               "--params", a["pf"], "--mission", a["mf"], "--fault", a["fault"],
-               "--fault-s", str(a["fault_s"]), "--trigger-s", str(a["trigger_s"]),
-               "--wind", str(a["wind"]), "--wind-dir", str(a["wind_dir"]), "--out", a["out"]]
-        self._log("$ " + " ".join(os.path.basename(c) if i < 2 else c for i, c in enumerate(cmd)))
-        p = subprocess.Popen(cmd, cwd=ONBOARD, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             text=True, bufsize=1)
-        for line in p.stdout:
-            if "Battery" in line and "Arm:" in line:
-                continue
-            self._log(line)
-        return p.wait()
+        tool = _load_test_tool()
+        tool.set_hooks(log=self._log, on_row=self._on_row)
+        import argparse
+        args = argparse.Namespace(connect=f"tcp:127.0.0.1:{PORT}", params=a["pf"], fault=a["fault"],
+                                  fault_s=a["fault_s"], mission=a["mf"], trigger_m=700.0, out_m=1200.0,
+                                  trigger_s=a["trigger_s"], bearing=45.0, fence_m=1500.0,
+                                  land_radius_m=150.0, alt=100.0, wind=a["wind"], wind_dir=a["wind_dir"],
+                                  timeout_s=1500.0, out=a["out"], turbulence=a.get("turbulence", 0.0))
+        try:
+            return int(tool.run(args) or 0)
+        except SystemExit as exc:
+            self._log(f"ERROR: {exc}")
+            return 1
+        except Exception as exc:  # noqa: BLE001
+            self._log(f"ERROR: {exc!r}")
+            return 1
 
     def _run(self, a):
         j = self.job
         try:
             j["step"] = "starting the simulator"
-            if not self._start_sitl(a["launch"]):
-                raise RuntimeError("the simulator did not start (see SITL_HOWTO.md)")
+            if not self._start_sitl(a["launch"], a["speedup"]):
+                raise RuntimeError("the simulator did not start (see the progress log)")
             j["step"] = "flying the mission"
             code = self._test(a)
-            if code == 2:      # the Lua script only loads after a restart (first run)
-                self._log("--- the script needs one simulator restart to load: restarting ---")
-                j["step"] = "restarting the simulator (first run)"
-                if not self._start_sitl(a["launch"]):
+            if code == 2:      # the script did not load: one restart
+                self._log("--- the script did not load on the first start: restarting ---")
+                j["step"] = "restarting the simulator"
+                if not self._start_sitl(a["launch"], a["speedup"]):
                     raise RuntimeError("the simulator did not restart")
                 j["step"] = "flying the mission"
                 code = self._test(a)
@@ -179,8 +374,9 @@ class SimRunner:
                     res = json.load(fh)
             j["result"] = res
             j["exit_code"] = code
-            j["state"] = "passed" if code == 0 else "failed"
-        except Exception as exc:
+            if j["state"] == "running":
+                j["state"] = "passed" if code == 0 else "failed"
+        except Exception as exc:  # noqa: BLE001
             self._log(f"ERROR: {exc}")
             j["state"] = "error"
         finally:
@@ -188,9 +384,9 @@ class SimRunner:
             self._stop_sitl()
 
     def stop(self) -> dict:
-        self._stop_sitl()
         if self.job and self.job["state"] == "running":
             self.job["state"] = "stopped"
+        self._stop_sitl()
         return {"ok": True}
 
     def status(self, tail: int = 200) -> dict:
@@ -198,19 +394,26 @@ class SimRunner:
         if not j:
             return {"state": "idle", **self.available()}
         return {"state": j["state"], "step": j["step"], "log": j["log"][-tail:],
-                "result": j["result"], "out": j["out"],
-                "track_png": os.path.join(j["out"], "track.png"),
+                "result": j["result"], "out": j["out"], "scenario": j["scenario"], "fault": j["fault"],
+                "speed": j["speed"], "track_png": os.path.join(j["out"], "track.png"),
                 "elapsed_s": round(time.time() - j["started"]), **self.available()}
+
+    def live(self, since: int = 0) -> dict:
+        """Recorded positions after index `since`, for the live map."""
+        j = self.job
+        rows = self.rows[since:]
+        return {"state": j["state"] if j else "idle", "step": j["step"] if j else "",
+                "next": since + len(rows), "launch": j["launch"] if j else None,
+                "rows": [[r["t"], r["true_lat"], r["true_lon"], r["est_lat"], r["est_lon"],
+                          round(r["alt"]), r["phase"], r["mode"], r["seq"], r["armed"]] for r in rows]}
 
 
 def commands_for(project_name: str, launch, wind, wind_dir) -> str:
-    """What to type in Ubuntu (WSL2) when the Ground Station runs on Windows."""
+    """The same run by hand, for a developer with their own simulator."""
     lat, lon = launch if launch else (59.40, 24.70)
-    return (f"# In Ubuntu, terminal 1:\n"
-            f"cd ~/sitlrun && ~/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane --console "
-            f"--custom-location={lat:.6f},{lon:.6f},0,0\n"
-            f"# terminal 2 (copy ground_station.param and ground_station.waypoints from the\n"
-            f"# 'Download files' buttons into ~/uav-silm/onboard first):\n"
-            f"cd ~/uav-silm/onboard && python3 tools/sitl_failsafe_test.py --params "
+    return (f"# 1. in ~/SILM/sitl/run (scripts/silm_gps_loss.lua inside):\n"
+            f"arduplane --model plane --home {lat:.6f},{lon:.6f},0,0 --defaults silm_sitl.parm --wipe\n"
+            f"# 2. in a second terminal, from the onboard folder:\n"
+            f"python3 tools/sitl_failsafe_test.py --connect tcp:127.0.0.1:5760 --params "
             f"ground_station.param --mission ground_station.waypoints --trigger-s 150 "
             f"--fault jam --wind {wind:g} --wind-dir {wind_dir:g} --out sim_{project_name}\n")

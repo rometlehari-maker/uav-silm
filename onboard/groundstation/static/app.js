@@ -42,13 +42,34 @@ function markDone(k) {
 }
 
 /* ------------------------------------------------------------------ tabs */
+function navMore(on) {                       // Teach and Tools are behind "More" until wanted
+  document.querySelector("nav.tabs").classList.toggle("more", on);
+  try { localStorage.setItem("silm-nav-more", on ? "1" : ""); } catch (e) {}
+}
+$("tab-more").addEventListener("click", () => navMore(true));
+try { if (localStorage.getItem("silm-nav-more")) navMore(true); } catch (e) {}
+function nextOpenStep() {                   // where "Fly a mission" should take you
+  if (!P) return "aircraft";
+  const missionOK = CHECK && CHECK.plan && !CHECK.errors.some((e) => e.startsWith("Mission"));
+  const aircraftOK = CHECK && !CHECK.errors.some((e) => META.questions.some((q) => q.tab === "aircraft" && e.includes(q.q)));
+  const windOK = P.wind.speed_mps != null && P.wind.from_deg != null;
+  if (!aircraftOK) return "aircraft";
+  if (!missionOK || !windOK) return "mission";
+  if (!DONE.fc || !DONE.pi) return "send";
+  return "launch";
+}
+document.querySelectorAll(".home-action").forEach((b) => b.addEventListener("click", () => {
+  const k = b.dataset.home;
+  showTab(k === "fly" ? nextOpenStep() : k);
+}));
 function showTab(name) {
+  if (name === "train" || name === "tools") navMore(true);
   document.querySelectorAll(".page").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   window.scrollTo(0, 0);                       // every step starts at its top
   if (name === "mission") setTimeout(() => { map.invalidateSize(); }, 50);
   if (name === "flights") { loadLibrary(); setTimeout(() => flMap && flMap.invalidateSize(), 50); }
-  if (name === "sim") simPoll();
+  if (name === "sim") { simEnsureMap(); simScenarioUI(); simPoll(); }
   if (name === "launch") renderLaunch();
   if (name === "train") loadTrain();
   if (typeof wzOnTab === "function") wzOnTab(name);
@@ -170,6 +191,8 @@ function renderProgress() {
     ["Today's wind entered", windOK, "mission"], ["Flown in the simulator", DONE.sim, "sim"],
     ["Sent to the flight controller", DONE.fc, "send"], ["Sent to the aircraft computer", DONE.pi, "send"]];
   $("progress").innerHTML = steps.map(([t, d, tab]) => `<li class="${d ? "done" : ""}"><a href="#${tab}" data-go="${tab}">${esc(t)}</a></li>`).join("");
+  const open = steps.filter(([, d]) => !d);
+  $("home-fly-sub").textContent = open.length ? `Next: ${open[0][0].toLowerCase()}` : "Everything is ready: go to Launch";
   $("progress").querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); showTab(a.dataset.go); }));
   const tabDone = { aircraft: aircraftOK, mission: missionOK && windOK, send: DONE.fc && DONE.pi, sim: DONE.sim };
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("done", !!tabDone[b.dataset.tab]));
@@ -409,57 +432,138 @@ $("arm").addEventListener("click", async () => {
 $("disarm").addEventListener("click", async () => { setResult("arm-result", null, "Disarming…"); setResult("arm-result", await api("/api/fc/disarm", { port: P.link.fc_port, baud: P.link.fc_baud })); });
 
 /* ------------------------------------------------------------------ simulator */
-let simTimer = null;
+let simTimer = null, simMap = null, simG = null, simNext = 0, simPlane = null, simTrue = [], simEst = [], simLastSeen = -1, simInstTimer = null;
+const SIM_NAMES = { rtl_in_time: "Turned back for the landing in time", headed_home_while_blind: "Headed for the landing strip while blind",
+  stayed_inside_fence: "Stayed inside the geofence", estimate_reconverged: "Knew where it was again after GPS came back",
+  landed: "Landed and switched itself off", landed_near_touchdown: "Landed close to the planned point",
+  disarmed_soon_after_landing: "Switched itself off within 30 s of touching down",
+  flew_whole_survey: "Flew the whole survey", no_failsafe: "No failsafe or return-home on the way",
+  position_estimate_good: "Knew its position all the way" };
+function simEnsureMap() {
+  if (simMap) { setTimeout(() => simMap.invalidateSize(), 50); return; }
+  simMap = L.map("sim-map", { zoomControl: true }).setView([58.6, 25.0], 7);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: "tiles-dark", attribution: "&copy; OpenStreetMap contributors" }).addTo(simMap);
+  simG = { plan: L.layerGroup().addTo(simMap), track: L.layerGroup().addTo(simMap) };
+  simDrawPlan();
+}
+function simDrawPlan() {
+  if (!simG) return;
+  simG.plan.clearLayers();
+  const r = CHECK && CHECK.plan, m = P.mission;
+  if (!r || !m.launch) return;
+  L.circle(m.launch, { radius: r.fence_needed_m, color: "#e88a7a", weight: 1, fill: false, dashArray: "6 6" }).addTo(simG.plan);
+  L.polyline([m.launch, ...r.path], { color: "#f0b64a", weight: 2.5, opacity: 0.8 }).addTo(simG.plan);
+  L.polyline([r.approach_start, m.landing || m.launch], { color: "#e88a7a", weight: 4, opacity: 0.8 }).addTo(simG.plan);
+  if (m.area && m.area.length > 2) L.polygon(m.area, { color: "#a1e6f3", weight: 1, fillOpacity: 0.06 }).addTo(simG.plan);
+  L.marker(m.launch, { icon: L.divIcon({ className: "", html: '<div class="home-pin">H</div>', iconSize: [26, 26] }) }).bindTooltip("Launch (home)").addTo(simG.plan);
+  if (!simPlane) simMap.fitBounds(L.latLngBounds([m.launch, ...r.path]).pad(0.15));
+}
+function simResetTrack() {
+  simNext = 0; simTrue = []; simEst = []; simPlane = null; simLastSeen = -1;
+  if (simG) simG.track.clearLayers();
+}
+function simPlaneIcon(deg) {
+  return L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+    html: `<svg class="sim-plane" viewBox="0 0 24 24" style="transform:rotate(${deg}deg)"><path fill="currentColor" d="M12 2 L14 9 L22 13 L22 15 L14 13 L13.5 19 L16 21 L16 22 L12 21 L8 22 L8 21 L10.5 19 L10 13 L2 15 L2 13 L10 9 Z"/></svg>` });
+}
+async function simLivePoll() {
+  let lv; try { lv = await api(`/api/sim/live?since=${simNext}`); } catch (e) { return; }
+  if (!lv.rows || !simG) return;
+  simNext = lv.next;
+  for (const r of lv.rows) {
+    const [t, tlat, tlon, elat, elon, alt, phase, mode, seq, armed] = r;
+    simTrue.push([tlat, tlon]);
+    if (phase === "gps_fault") simEst.push([elat, elon]);
+    simLastSeen = { t, alt, phase, mode, seq, armed, pos: [tlat, tlon] };
+  }
+  if (!lv.rows.length) return;
+  simG.track.clearLayers();
+  if (simTrue.length > 1) L.polyline(simTrue, { color: "#a1e6f3", weight: 3 }).addTo(simG.track);
+  if (simEst.length > 1) L.polyline(simEst, { color: "#e88a7a", weight: 2.5, dashArray: "5 6" }).addTo(simG.track);
+  const n = simTrue.length, head = n > 3 ? bearing(simTrue[n - 4], simTrue[n - 1]) : 0;
+  const here = simTrue[n - 1];
+  if (!simPlane) { simPlane = L.marker(here, { icon: simPlaneIcon(head), zIndexOffset: 1000 }).addTo(simG.track); simMap.panTo(here); }
+  else { simPlane.setLatLng(here).setIcon(simPlaneIcon(head)); simPlane.addTo(simG.track); if (!simMap.getBounds().pad(-0.2).contains(here)) simMap.panTo(here); }
+  const s = simLastSeen, mins = Math.floor(s.t / 60), secs = Math.round(s.t % 60);
+  const what = s.phase === "gps_fault" ? "GPS is bad: flying on airspeed and compass" : s.phase === "gps_restored" ? "GPS is back" :
+    !s.armed && s.t > 60 ? "On the ground, motor off" : s.mode === 11 ? "Returning to land" : s.alt < 15 && s.t < 60 ? "Taking off" : "Flying the survey";
+  simSetStatus("busy", `${what}`, `Flight time ${mins}:${String(secs).padStart(2, "0")} · height ${s.alt} m · mission item ${s.seq ?? "-"}`);
+}
+function simSetStatus(cls, title, sub) {
+  const el = $("sim-status"); el.className = "sim-status " + (cls || ""); $("sim-status-title").textContent = title; $("sim-status-sub").textContent = sub || "";
+}
+function simScenarioUI() {
+  const sc = (META && META.sim && META.sim.scenarios) || {}, v = $("sim-fault").value, none = v === "none";
+  $("sim-fault-len").hidden = none;
+  $("sim-scenario-help").textContent = sc[v] ? sc[v].what : "";
+}
+async function simInstallPoll() {
+  const s = await api("/api/sim/status");
+  META.sim = s;
+  simRenderAvail(s);
+  clearTimeout(simInstTimer);
+  if (s.install && s.install.state === "running") simInstTimer = setTimeout(simInstallPoll, 1000);
+  else if (typeof wzRenderStep === "function" && $("tab-setup").classList.contains("active")) wzRenderStep();
+}
+function simRenderAvail(s) {
+  const el = $("sim-avail"), inst = s.install || {};
+  if (s.available) {
+    el.innerHTML = `<p class="result ok">✓ The simulator is installed${s.version ? ` (ArduPlane ${esc(s.version)})` : ""}. <button class="btn ghost small" id="sim-remove">Remove it</button></p>`;
+    $("sim-remove").addEventListener("click", async () => { if (confirm("Remove the simulator from this computer? You can install it again any time.")) { await api("/api/sim/remove", {}); simInstallPoll(); } });
+  } else if (inst.state === "running") {
+    el.innerHTML = `<div class="sim-install"><span class="wz-spin"></span><span>Downloading the simulator (${esc(inst.file || "")})…</span><div class="sim-bar"><i style="width:${Math.round((inst.progress || 0) * 100)}%"></i></div></div>`;
+  } else if (s.can_install) {
+    el.innerHTML = `<p class="help">${esc(s.why || "")}</p>${inst.state === "error" ? `<p class="result err">${esc(inst.message || "")}</p>` : ""}
+      <button class="btn primary big" id="sim-install">⬇ Install the simulator (one click, ${s.platform.startsWith("windows") ? "25" : "7"} MB)</button>
+      <p class="help">It is ArduPilot's own simulator program, downloaded from the ArduPilot project (firmware.ardupilot.org), kept in your SILM folder. Internet is needed only for this.</p>`;
+    $("sim-install").addEventListener("click", async () => { const r = await api("/api/sim/install", {}); if (!r.ok) toast(r.message, 6000); simInstallPoll(); });
+  } else {
+    el.innerHTML = `<p class="result err">${esc(s.why || "")}</p><p class="help"><a href="#guides" data-guide="simulator">The simulator on a Mac: the one-time build, every step explained</a></p>`;
+  }
+  $("sim-start").disabled = !s.available || s.state === "running";
+}
 async function simPoll() {
   const s = await api("/api/sim/status");
-  $("sim-avail").innerHTML = s.available ? `<p class="result ok">✓ The simulator is installed (${esc(s.ardupilot_dir)}).</p>`
-    : `<p class="result err">The simulator can't run from here: ${esc(s.why)}</p>`;
-  $("sim-start").disabled = !s.available || s.state === "running";
-  if (!s.available) {
-    $("sim-cmds-card").hidden = false;
-    const c = await api("/api/sim/commands", { project: P }); $("sim-cmds").textContent = c.text || "";
+  META.sim = s; simRenderAvail(s);
+  if (!s.available && !(s.install && s.install.state === "running")) {
+    $("sim-cmds-card").hidden = !s.binary && !localStorage.getItem("silm-dev");
   }
   if (s.state && s.state !== "idle") {
     $("sim-log").textContent = (s.log || []).join("\n"); $("sim-log").scrollTop = 1e9;
-    const label = { running: `Running: ${s.step} (${s.elapsed_s} s)`, passed: "PASSED - every check passed", failed: "FAILED - see the checks below", error: "Could not run - see the progress log", stopped: "Stopped" }[s.state];
+    const label = { running: `Running: ${s.step} (${Math.round(s.elapsed_s / 60)} min ${s.elapsed_s % 60} s)`, passed: "PASSED - every check passed", failed: "FAILED - see the checks", error: "Could not run - open the progress log below", stopped: "Stopped" }[s.state];
     setResult("sim-result", { ok: s.state === "passed" || s.state === "running", message: label });
-    if (s.state === "running") $("sim-result").className = "result busy";
+    if (s.state === "running") { $("sim-result").className = "result busy"; if (s.step !== "flying the mission") simSetStatus("busy", s.step.charAt(0).toUpperCase() + s.step.slice(1) + "…", "The map starts moving once it is in the air."); }
+    if (s.state === "error") simSetStatus("err", "The simulator could not run", "The progress log below says why.");
+    if (s.state === "stopped") simSetStatus("", "Stopped", "");
     if (s.result) {
-      const names = { rtl_in_time: "Turned back for the landing in time", headed_home_while_blind: "Headed for the landing strip while blind",
-        stayed_inside_fence: "Stayed inside the geofence", estimate_reconverged: "Knew where it was again after GPS came back",
-        landed: "Landed and switched itself off", landed_near_touchdown: "Landed close to the planned point",
-        disarmed_soon_after_landing: "Switched itself off within 30 s of touching down",
-        flew_whole_survey: "Flew the whole survey", no_failsafe: "No failsafe or return-home on the way",
-        position_estimate_good: "Knew its position all the way" };
-      $("sim-checks").innerHTML = `<ul class="checklist">` + Object.entries(s.result.checks || {}).map(([k, v]) => `<li class="${v ? "ok" : "err"}">${v ? "✓" : "✗"} ${esc(names[k] || k)}</li>`).join("") +
-        `</ul><p class="help">Touchdown ${s.result.touchdown_error_m} m from the planned point; ` +
-        (s.result.fault === "none"
-          ? `flight time ${Math.round((s.result.flight_time_s || 0) / 60)} min; position error at most ${s.result.estimate_error_max_m} m; `
-          : `failsafe after ${s.result.rtl_after_s} s; `) +
-        `farthest ${s.result.max_true_dist_m} m from home.</p>`;
+      const r = s.result;
+      $("sim-checks").innerHTML = `<ul class="checklist">` + Object.entries(r.checks || {}).map(([k, v]) => `<li class="${v ? "ok" : "err"}">${v ? "✓" : "✗"} ${esc(SIM_NAMES[k] || k)}</li>`).join("") +
+        `</ul><p class="help">Touchdown ${r.touchdown_error_m} m from the planned point; ` +
+        (r.fault === "none" ? `flight time ${Math.round((r.flight_time_s || 0) / 60)} min; position error at most ${r.estimate_error_max_m} m; `
+          : `turned back ${r.rtl_after_s} s after the GPS went bad; while blind it was at most ${r.dead_reckoning_error_max_m} m off; `) +
+        `farthest ${r.max_true_dist_m} m from home.</p>`;
       $("sim-track").src = "/api/sim/track.png?t=" + Date.now(); $("sim-track").hidden = false;
-      // only the GPS-loss test counts as "flown in the simulator" for the launch checklist
-      if (s.state === "passed" && s.result.fault !== "none") markDone("sim");
-      if (s.state === "passed" && s.result.fault === "none")
-        $("sim-checks").insertAdjacentHTML("beforeend", '<p class="help">A normal flight passed. The launch checklist still needs the GPS-loss test (GPS jammed or lost).</p>');
+      simSetStatus(r.passed ? "ok" : "err", r.passed ? "Passed: it would have come home safely" : "Failed: do not fly this yet",
+        r.passed ? `Landed ${r.touchdown_error_m} m from the planned point.` : "The red lines on the left say what went wrong. Fix the mission or the settings and fly it again.");
+      // only a GPS-loss test counts as "flown in the simulator" for the launch checklist
+      if (s.state === "passed" && r.fault !== "none") markDone("sim");
+      if (s.state === "passed" && r.fault === "none")
+        $("sim-checks").insertAdjacentHTML("beforeend", '<p class="help">A normal flight passed. The launch checklist still needs the GPS-jammed (or GPS-lost) test.</p>');
     }
   }
   clearTimeout(simTimer);
-  if (s.state === "running") simTimer = setTimeout(simPoll, 2000);
+  if (s.state === "running") { await simLivePoll(); simTimer = setTimeout(simPoll, 1500); }
+  else if (s.install && s.install.state === "running") simTimer = setTimeout(simPoll, 1000);
 }
 $("sim-start").addEventListener("click", async () => {
   if (CHECK && CHECK.errors.length) { toast("Fix the problems on the right first.", 4000); return; }
-  $("sim-checks").innerHTML = ""; $("sim-track").hidden = true;
-  const r = await api("/api/sim/start", { project: P, fault: $("sim-fault").value, fault_s: Number($("sim-fault-s").value) || 90 });
-  setResult("sim-result", r); if (r.ok) simPoll();
+  $("sim-checks").innerHTML = ""; $("sim-track").hidden = true; simResetTrack(); simDrawPlan();
+  simSetStatus("busy", "Starting the simulator…", "About 10 seconds.");
+  const r = await api("/api/sim/start", { project: P, scenario: $("sim-fault").value, fault_s: Number($("sim-fault-s").value) || 90, speed: $("sim-speed").value });
+  setResult("sim-result", r); if (r.ok) simPoll(); else simSetStatus("err", "Could not start", r.message);
 });
 $("sim-stop").addEventListener("click", async () => { await api("/api/sim/stop", {}); simPoll(); });
-function simFaultUI() {
-  const none = $("sim-fault").value === "none";
-  $("sim-fault-len").hidden = none; $("sim-none-help").hidden = !none;
-}
-$("sim-fault").addEventListener("change", simFaultUI);
-simFaultUI();
+$("sim-fault").addEventListener("change", simScenarioUI);
 
 /* ------------------------------------------------------------------ flights */
 let flMap = null, flLayers = null, FL = null, flOn = new Set(), flShown = [], lbIndex = 0;

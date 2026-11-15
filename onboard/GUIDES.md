@@ -9,6 +9,19 @@ the app links to them wherever a step needs one.
 Each guide says **what you need**, **the steps**, and **how to check it
 worked**.
 
+**Almost nothing here needs a terminal.** Where a step does (a few Linux and
+Mac steps, marked), it is written for someone who has never used one:
+what to open, what to type, what you will see, and how to tell it worked.
+The short version of "a terminal": a window where you type one line, press
+**Enter** (Return on a Mac), and the computer does it and answers in text.
+Open it with **Ctrl+Alt+T** on Ubuntu, or **Cmd+Space**, type `Terminal`,
+Return on a Mac. The line ending in `$` or `%` is where you type. Every
+command in these guides has a **Copy** button in the app: copy, paste
+(**Ctrl+Shift+V** on Ubuntu, **Cmd+V** on a Mac), Enter, and wait until the
+`$` line comes back. If a command starts with `sudo`, it asks for your
+computer's password: **nothing shows while you type it**, not even dots.
+Type it and press Enter. Close the terminal when the guide says you are done.
+
 ## Shopping list {#parts}
 
 What to buy, and what to look for. Prices change; the brands named are the
@@ -138,6 +151,38 @@ connection** shows ArduPlane and its version. Then continue in the setup
 
 Mission Planner (Windows) can do later updates too, but not this first one.
 
+## The Ground Station on Linux {#linux-install}
+
+**What you need:** the file `UAV-SILM-Ground-Station-linux.tar.gz` from the
+website's download button (Ubuntu 22.04 or newer, or another recent 64-bit
+Linux).
+
+1. In your Downloads folder, **right-click the file → Extract Here**. A
+   folder named `UAV-SILM-Ground-Station` appears.
+2. Open that folder and **double-click `UAV-SILM-Ground-Station`** (the one
+   without a file ending). The Ground Station opens in your web browser,
+   with a small window to quit it.
+3. The first time it runs, it adds **UAV SILM Ground Station** to your
+   applications menu by itself. From then on, start it from the menu.
+
+**If double-clicking opens a text editor or does nothing:** your file manager
+does not run programs by double-click. Then, once, in a terminal
+(**Ctrl+Alt+T**; see the top of these guides):
+
+```bash
+cd ~/Downloads/UAV-SILM-Ground-Station && ./install.sh
+```
+
+`cd` goes into the extracted folder; `./install.sh` copies the program to
+your home folder and adds the menu entry. It prints "Installed." when done.
+Close the terminal; start it from the applications menu.
+
+**Check it worked:** the Ground Station is in the applications menu and
+opens in the browser.
+
+**Camera and USB access:** to read a USB stick named SILM, Linux shows it
+in the file manager by itself; the Ground Station finds it there.
+
 ## Writing the Raspberry Pi's memory card {#sd-card}
 
 **What you need:** the microSD card, a card reader on the laptop, **Raspberry
@@ -175,8 +220,10 @@ Wi-Fi. The stick must be **named SILM**.
   **SILM** → Start. (Only renaming: right-click → Rename → `SILM`.)
 - **macOS:** Disk Utility → the stick → **Erase** → Name **SILM**, Format
   **ExFAT** → Erase.
-- **Linux:** the Disks program → the stick → format as exFAT named SILM, or
-  `sudo exfatlabel /dev/sdX1 SILM` to rename only.
+- **Linux:** the **Disks** program (in the applications menu) → click the
+  stick in the left list → the ⚙ button under the picture of the stick →
+  **Format Partition…** → Volume name **SILM**, type **exFAT** (choose "Other"
+  if it is not listed) → Next → Format. No terminal needed.
 
 **Check it worked:** Send tab → C → the stick appears in the list.
 
@@ -192,32 +239,115 @@ Ground Station from the source folder.
 - **macOS:** python.org → Downloads → the macOS installer → run it. Then in
   the Applications/Python 3.x folder double-click **Install Certificates**.
   Check: Terminal, `python3 --version`.
-- **Linux (Ubuntu/Debian):** `sudo apt install python3 python3-venv python3-pip`.
+- **Linux (Ubuntu/Debian):** in a terminal (**Ctrl+Alt+T**; see the top of
+  these guides), one line:
+
+  ```bash
+  sudo apt install python3 python3-venv python3-pip
+  ```
+
+  It asks for your password (nothing shows while you type), then
+  `Do you want to continue? [Y/n]`: press **Enter**. A minute later the `$`
+  line is back. Check: `python3 --version` prints a version such as
+  `Python 3.12.3`. Close the terminal.
 
 Then close and reopen the Ground Station. The Teach tab's **Install the
 training tools** puts everything else in its own folder (`~/SILM/training-venv`,
 2-7 GB depending on the computer, so keep about 10 GB free); deleting that folder
 removes it again.
 
-## The simulator on Windows {#simulator}
+## The simulator {#simulator}
 
-ArduPilot's simulator (SITL) flies your exact mission with the GPS jammed
-halfway. It runs on Linux; on Windows inside **Ubuntu (WSL2)**, which is free
-and built into Windows 10/11.
+The Ground Station's **Simulator** tab flies your mission on the laptop in
+ArduPilot's simulator, on a live map, with the GPS jammed halfway or a normal
+flight. **On Windows and Linux nothing needs setting up:** open the tab and
+press **Install the simulator**. It downloads ArduPilot's own ready-made
+simulator program (7-25 MB) into your SILM folder, once. Then **Fly it in
+the simulator**.
 
-1. **PowerShell as administrator:** `wsl --install -d Ubuntu`, restart the
-   PC, open **Ubuntu** from the Start menu and choose a Linux username and
-   password.
-2. Inside Ubuntu, build the simulator once (about 30 minutes, mostly waiting):
-   follow **SITL_HOWTO.md** part A in the software folder. It is written
-   for first-time Linux users, every command explained.
-3. Start the Ground Station inside Ubuntu (`./start_ground_station.sh` in the
-   onboard folder) and open the browser address it shows: the **Simulator**
-   tab (7) then runs the simulator itself. Or run the commands the tab shows.
+**Check it worked:** the status line goes "Starting the simulator…", then
+"Taking off", and the blue line starts moving on the map. At the end:
+**Passed** with every check green.
 
-macOS and Linux: the same SITL_HOWTO.md part A, without the WSL step.
+**If the download fails:** the computer needs the internet for this one step,
+and the file comes from firmware.ardupilot.org. Company or school networks
+sometimes block downloads of programs; try at home or on a phone's hotspot.
 
-**Check it worked:** Simulator tab → **Fly it** → all seven checks PASS.
+### The simulator on a Mac {#simulator-mac}
+
+ArduPilot does not publish a ready-made simulator for Apple computers, so
+on a Mac it has to be built once (about 30-45 minutes, mostly waiting). You
+only need to type things in **Terminal** during this one-time build; the
+Ground Station finds the built simulator by itself afterwards. If you have a
+Windows or Linux computer, use that instead and skip this.
+
+**What you need:** a Mac with macOS 12 or newer, about 5 GB free, the
+internet, and the Mac's administrator password.
+
+**Terminal, in short:** it is a program that comes with every Mac, in which
+you type a command and press **Return** to run it. Open it with **Cmd+Space**,
+type `Terminal`, press Return. A window with a line ending in `%` (or `$`)
+appears: that is where you type. Copy each command below exactly (the Copy
+button in the app's guide copies the whole line), paste it with **Cmd+V**,
+press **Return**, and wait until the `%` line comes back before typing the
+next. When a command asks `Password:`, type your Mac password: **nothing
+shows while you type**, not even dots; press Return.
+
+1. **Apple's build tools.** Type:
+
+   ```bash
+   xcode-select --install
+   ```
+
+   A window asks to install the command line developer tools: **Install**,
+   agree, wait (5-15 minutes). If it says "already installed", good.
+
+2. **Homebrew** (a program that installs other programs). Copy the one
+   long command from <https://brew.sh> (it starts with `/bin/bash -c`), paste
+   it, Return, type your password, Return. At the end it prints two or three
+   lines starting with `echo` and `eval` under "Next steps": copy and run
+   those too. Check: `brew --version` prints a version.
+
+3. **The tools the build needs:**
+
+   ```bash
+   brew install git python@3.12 gcc
+   ```
+
+   ```bash
+   pip3 install --user future pexpect empy==3.3.4 pymavlink
+   ```
+
+4. **Get ArduPilot** (about 1 GB, 5-10 minutes):
+
+   ```bash
+   cd ~ && git clone --recursive https://github.com/ArduPilot/ardupilot
+   ```
+
+   `cd ~` means "go to your home folder"; `git clone` copies ArduPilot's
+   source code into a folder named `ardupilot` there.
+
+5. **Build the simulator** (15-30 minutes; the Mac's fans will run):
+
+   ```bash
+   cd ~/ardupilot && ./waf configure --board sitl && ./waf plane
+   ```
+
+   It ends with lines like `'plane' finished successfully`. If it stops
+   with an error, run the same command again once (a download may have
+   failed); if it fails the same way, the text of the error is what to
+   search for or ask about.
+
+6. **Check it:**
+
+   ```bash
+   ls ~/ardupilot/build/sitl/bin/arduplane
+   ```
+
+   prints that path back (no "No such file"). Close and reopen the Ground
+   Station: the Simulator tab now says **The simulator is installed**.
+
+**To remove it later:** delete the `ardupilot` folder in your home folder.
 
 ## The camera (SIYI A2 mini) {#camera}
 
@@ -235,9 +365,9 @@ and the software finds it at **192.168.144.25** (video
   the A2 mini user manual (chapter on firmware upgrade). Update only when SIYI
   lists a fix you need; afterwards check the address is still 192.168.144.25.
 - **Changed address?** If your camera was set to another address (with SIYI's
-  program), either set it back to 192.168.144.25, or change `camera.url` and
-  `gimbal.ip` in `config.yaml` on the Pi and the Pi's Ethernet address
-  (`sudo nmcli con modify siyi-camera ipv4.addresses <x.y.z>.20/24`).
+  program), the easy way is to set it back to **192.168.144.25** in SIYI's
+  program. (Keeping another address means editing `config.yaml` on the Pi and
+  the Pi's Ethernet address over SSH, which is for people who know Linux.)
 
 **Check it worked:** Tools tab → **Show the live picture**, and **Check
 everything** shows the camera and the gimbal PASS.
