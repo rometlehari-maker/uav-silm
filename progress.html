@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Progress | UAV SILM</title>
+<meta name="description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
+<meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
+<meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#3a494d">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://www.uavsilm.eu/progress.html">
+<meta property="og:url" content="https://www.uavsilm.eu/progress.html">
+<meta property="og:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="UAV SILM fixed-wing UAV, top view render with logo">
+<meta name="twitter:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UAV SILM">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Progress | UAV SILM">
+<meta property="og:description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Progress | UAV SILM">
+<meta name="twitter:description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
+<link rel="icon" type="image/jpeg" href="images/logo_small.jpg">
+<link rel="apple-touch-icon" href="images/logo_small.jpg">
+<link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="scrollbar" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="topbar">
+    <a class="brand" href="./"><img src="images/logo_small.jpg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
+    <nav class="crumbs" aria-label="Pages">
+      <a href="./">Overview</a>
+      <a href="design.html">Buteo</a>
+      <a href="inside.html">Layout</a>
+      <a href="onboard.html">Autonomy</a>
+      <a href="cfd.html">Aerodynamics</a>
+      <a href="downloads.html">Software</a>
+      <a href="monedula.html" class="nx">Monedula</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="about.html" class="proj on" aria-current="page">Student project</a>
+    </nav>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true">Progress</span></button>
+  </div>
+</header>
+
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Pages" inert>
+  <div class="menu-head">
+    <a class="brand" href="./"><img src="images/logo_small.jpg" alt="" width="34" height="34"><span>UAV SILM</span></a>
+    <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
+  </div>
+  <ol>
+    <li><a class="mi" href="./"><b>Overview</b><span>SILM Buteo at a glance</span></a></li>
+    <li><a class="mi" href="design.html"><b>Buteo</b><span>Geometry, calculated performance and modules</span></a></li>
+    <li><a class="mi" href="inside.html"><b>Layout</b><span>Interactive 3D layout and balance calculator</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
+    <li><a class="mi" href="cfd.html"><b>Aerodynamics</b><span>OpenFOAM airflow and pressure, in 3D</span></a></li>
+    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground station, settings and model, free to use</span></a></li>
+    <li><a class="mi" href="monedula.html"><b>Monedula</b><span>SILM Monedula, the next airframe</span></a></li>
+    <li class="mgrp">Student project</li>
+    <li><a class="mi sm" href="about.html"><b>About</b><span>The school project, subjects and team</span></a></li>
+    <li><a class="mi sm on" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
+    <li><a class="mi sm" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+  </ol>
+</div>
+
+<nav class="rail" aria-hidden="true" data-nav>
+  <a href="#learnt" tabindex="-1"><span>Lessons</span><i></i></a>
+  <a href="#progress" tabindex="-1"><span>Report</span><i></i></a>
+  <a href="#timeline" tabindex="-1"><span>Timeline</span><i></i></a>
+</nav>
+<main id="main">
+<div class="subtabs"><div class="wrap"><span class="st-k">Student project</span>
+    <nav aria-label="Student project">
+      <a href="about.html">About</a>
+      <a href="progress.html" class="on" aria-current="page">Progress</a>
+      <a href="build.html">Build and tests</a>
+    </nav></div></div>
+
+  <section class="s" id="learnt">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Lessons</span></div>
+      <h2 class="rv">What we learnt, and what went wrong</h2>
+      <p class="lead rv">The analysis caught several problems before anything was printed, while they were still cheap to fix. These are the lessons we are taking into the build, and the troubles that taught them.</p>
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Lessons and troubles">
+          <button class="tab" role="tab">Lessons</button>
+          <button class="tab" role="tab">Troubles</button>
+          <button class="tab" role="tab">Next time</button>
+          <span class="tab-ind"></span>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="lessons">
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M5 7l-3 7h6l-3-7M19 7l-3 7h6l-3-7"/></svg><h3>Weigh the airframe from the CAD</h3><p>Our first balance sheet used placeholder masses for the fuselage, wings and V-tail. Taking volumes from the 3D model gave a 574 g airframe with its own CG at 435 mm, and put the whole aircraft's CG at 411 mm: behind the neutral point, so it would have been unstable.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M2 13h20M7 13l3-5h4l3 5M12 13v6"/></svg><h3>Moving the wing beats adding weight</h3><p>Moving the wing 20 mm aft shifted the neutral point 18.2 mm but the CG only about 5 mm. It did the job of about 80 g of nose weight, for no extra mass.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0M12 18l4-6"/></svg><h3>Balance and trim speed move together</h3><p>Moving the CG aft lowers the stability margin and the trim speed at the same time: 21.2 m/s with the CG at 335 mm, 18.8 m/s at 345 mm. The tail incidence sets the rest.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg><h3>Check the fit in cross-section</h3><p>In side view everything fitted. Slicing the round fuselage showed three clashes, and that the battery can only sit on the centreline.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h12M3 17h7"/></svg><h3>Each tool sees a different aircraft</h3><p>XFLR5 models the wing and tail with partly laminar flow; OpenFOAM adds the fuselage and assumes turbulent flow everywhere. Lift agreed within 5%, while drag at 3° came out about 60% higher in CFD. Knowing what each tool includes tells us which number to use for what.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M12 3c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.5 2 1.5 3 3 3-1-3 0-6 0-8.5Z"/></svg><h3>Heat is a design load for printed parts</h3><p>LW-PLA softens at around 55 to 60 °C. The motor sits inside the tail cone and the ESC near the floor, so we are adding vents and printing trays and loaded parts in PETG.</p></div>
+            <div class="lesson"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.8-.7-.7-2.8Z"/></svg><h3>Some choices are mechanical, not about balance</h3><p>Putting the tail servos at x 520 or x 740 changes the CG by only 2.4 mm, so we will choose between them on pushrod stiffness, access and heat.</p></div>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="trouble">
+            <div class="row"><div class="what"><h4>Our first CG estimate would have made the aircraft unstable</h4><p>The CG came out at 411 mm, 47 mm behind the neutral point.</p></div><div class="fix"><b>What we did</b>Rebuilt the mass model from CAD volumes, moved the electronics forward, planned a lighter V-tail and moved the wing 20 mm aft. The static margin is now about 20%.</div></div>
+            <div class="row"><div class="what"><h4>Three components did not fit</h4><p>The Raspberry Pi, the camera and the motor all clashed with the round fuselage or the narrowing tail cone.</p></div><div class="fix"><b>What we did</b>Pi to the upper tray, camera behind a nose window, motor 19 mm further forward on its long shaft.</div></div>
+            <div class="row"><div class="what"><h4>The CAD would not mesh directly for CFD</h4><p>Some curved surfaces in the STEP export failed in the first meshing tool.</p></div><div class="fix"><b>What we did</b>Fused the parts and triangulated them another way before snappyHexMesh could use the geometry.</div></div>
+            <div class="row"><div class="what"><h4>Parallel CFD runs failed at first</h4><p>Running the solver on two cores clashed with the installed MPI library.</p></div><div class="fix"><b>What we did</b>A library workaround, after which each case ran in parallel to convergence.</div></div>
+            <div class="row"><div class="what"><h4>CFD drag disagreed with XFLR5</h4><p>0.0367 against 0.0227 at 3°.</p></div><div class="fix"><b>What we did</b>Traced it to the fuselage and the fully turbulent boundary layer in CFD. We treat the CFD drag as an upper estimate until flight tests.</div></div>
+            <div class="row"><div class="what"><h4>Our first failsafe settings assumed a radio we do not have</h4><p>They were written for a pilot with an ExpressLRS radio who would land by hand. Without one, a radio failsafe would trigger at once, the aircraft would refuse to arm, and a return home would end in circling until the battery ran out. Several parameter names did not exist in ArduPlane at all.</p></div><div class="fix"><b>What we did</b>Wrote a script that checks every parameter against the ArduPlane source, rebuilt the settings for hand launch and automatic landing with no radio, made every failsafe end in that landing, and wrote our own laptop mission planner that always adds the landing.</div></div>
+            <div class="row"><div class="what"><h4>The camera speed estimate had its sign reversed</h4><p>A test against an independent camera model showed forward flight reading as flying backwards. The estimate was switched off by default, so it never reached the autopilot.</p></div><div class="fix"><b>What we did</b>Fixed the signs, added correction for pitch and roll, and now test it on rendered images of the ground.</div></div>
+            <div class="row"><div class="what"><h4>The build started late</h4><p>Airframe printing has not started; the print settings for the foaming LW-PLA still need tuning.</p></div><div class="fix"><b>What we did</b>Planned test prints first (LW-PLA from 5 November, PETG from 13 November) and replaced the stage plan with dated tasks. See the <a href="#progress">progress report</a>.</div></div>
+            <div class="row"><div class="what"><h4>The second parts order slipped</h4><p>Carbon tube sizes, wire gauge and the arming connector had to come from the CAD first.</p></div><div class="fix"><b>What we did</b>Finished the sizes and set the order for 4 November.</div></div>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <ul class="plain">
+            <li>Build the mass model from the CAD on day one, and update it whenever a part changes.</li>
+            <li>Fit-check components in cross-section before choosing their positions.</li>
+            <li>Order the secondary parts together with the primary set.</li>
+            <li>Run a mesh-independence study before trusting drag values.</li>
+            <li>Leave room for cooling in every closed compartment.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="next"><a href="#progress">Next: <b>Progress report</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <section class="s" id="progress">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Progress</span></div>
+      <h2 class="rv">Progress report</h2>
+      <p class="lead rv">Interim report II covers 24 September to 2 November 2026: what we have done, what went well, what has been difficult, what comes next and how we are tracking against the schedule. We added the balance and layout work from 3 November.</p>
+
+      <div class="statgrid rv" style="margin:30px 0 0">
+        <div><div class="v">8 / 8</div><div class="l">primary components received</div></div>
+        <div><div class="v">V4</div><div class="l">full-aircraft CAD, wing moved 20 mm aft</div></div>
+        <div><div class="v">14 Nov</div><div class="l">first motor thrust test</div></div>
+        <div><div class="v" id="countdown">35 days</div><div class="l">to the presentation</div></div>
+      </div>
+
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Progress report">
+          <button class="tab" role="tab">What we did</button>
+          <button class="tab" role="tab">Went well</button>
+          <button class="tab" role="tab">Challenges</button>
+          <button class="tab" role="tab">Next steps</button>
+          <button class="tab" role="tab">Schedule review</button>
+          <button class="tab" role="tab">Report I</button>
+          <span class="tab-ind"></span>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <div class="log">
+            <div class="row"><span class="d">28 Sep</span><span class="t">Fuselage modelled with the tail boom and carbon rod.</span><span class="o">CAD</span></div>
+            <div class="row"><span class="d">13 Oct</span><span class="t">Wing V4 edge-cut test for splitting the wing into printable sections.</span><span class="o">CAD</span></div>
+            <div class="row"><span class="d">19 Oct</span><span class="t">First thrust rig parts printed and assembled on the base plate.</span><span class="o">Test rig</span></div>
+            <div class="row"><span class="d">20 Oct</span><span class="t">All eight primary components ordered and received: flight controller, ESC, GPS and compass, airspeed sensor, 4G module, camera, battery and motor.</span><span class="o">Procurement</span></div>
+            <div class="row"><span class="d">20 Oct</span><span class="t">Secondary component list started: servos, inserts, filament, carbon tubes, connectors.</span><span class="o">Procurement</span></div>
+            <div class="row"><span class="d">by 29 Oct</span><span class="t">Airframe CFD run in OpenFOAM on cleaned-up CAD, adding to the XFLR5 results.</span><span class="o">Analysis</span></div>
+            <div class="row"><span class="d">by 29 Oct</span><span class="t">Servo selection closed (SG90, 2 to 4× torque margin); tail and ruddervators modelled and sectioned.</span><span class="o">Design</span></div>
+            <div class="row"><span class="d">by 29 Oct</span><span class="t">Motor mount for the thrust test finished; the rig design went through sketches up to version 5.</span><span class="o">Test rig</span></div>
+            <div class="row"><span class="d">31 Oct to 2 Nov</span><span class="t">Wiring diagram for the flight controller, sensors, radio and servos updated using the H743 pinout reference.</span><span class="o">Electronics</span></div>
+            <div class="row"><span class="d">1 Nov</span><span class="t">Hollow tail with connectors, fuselage with nose mounts and the full-aircraft assembly V4.</span><span class="o">CAD</span></div>
+            <div class="row"><span class="d">2 Nov</span><span class="t">Thrust rig documented; day-by-day plan to the presentation agreed and assigned.</span><span class="o">Planning</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">OpenFOAM CFD of the full V4 aircraft at 0°, 3° and 6°: lift within 5% of XFLR5, neutral point at 363.6 mm.</span><span class="o">Analysis</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">Centre of gravity redone from the 3D model: the old sheet layout put the CG behind the neutral point.</span><span class="o">Analysis</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">Wing moved 20 mm aft in CAD and checked in OpenFOAM: neutral point from 363.6 to 381.8 mm, lift and drag unchanged.</span><span class="o">CAD, analysis</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">Internal layout fit-checked against fuselage cross-sections and three clashes fixed. CG 342.7 mm, static margin about 20%.</span><span class="o">Design</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">Website rebuilt with interactive 3D models of the airframe, the internal layout and the CFD results.</span><span class="o">Website</span></div>
+            <div class="row"><span class="d">3 Nov</span><span class="t">Two top hatches modelled, for the battery and for the Raspberry Pi and flight controller. Each has a tongue under the skin at one end and two 6×3 mm magnets at the other, with clearances set for foamed LW-PLA.</span><span class="o">CAD</span></div>
+            <div class="row fresh"><span class="d">9 Nov</span><span class="t">Nose cone printed in PolyLite and weighed: 29.6 g, against 43 g predicted by the slicer. The masses of all printed parts are now calibrated on it.</span><span class="o">Build</span></div>
+            <div class="row fresh"><span class="d">9 Nov</span><span class="t">V9 CAD: overlapping joints between the fuselage sections. The forward section's spigot slides 10 to 12 mm into the next one with 0.2 mm clearance, and stays clear of the hatches and components.</span><span class="o">CAD</span></div>
+            <div class="row fresh"><span class="d">9 Nov</span><span class="t">V9 CAD: lightweight battery tray with a strap channel, cooling vents for the ESC and motor, and SG90 aileron servo pockets with screw-on caps held by M2 heat-set inserts.</span><span class="o">CAD</span></div>
+            <div class="row fresh"><span class="d">9 Nov</span><span class="t">Mass and balance redone for V9: about 1.70 kg all-up, CG 341.7 mm, static margin about 21%. The onboard computer is now a Raspberry Pi 4.</span><span class="o">Analysis</span></div>
+            <div class="row fresh"><span class="d">10 Nov</span><span class="t">Full SolidWorks assembly built from the V9 parts, with the second wing mirrored, ready for fit checks.</span><span class="o">CAD</span></div>
+          </div>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <div class="eval good">
+            <div class="item"><span class="mk">✓</span><div><h4>Problems were found on paper</h4><p>The balance and fit checks found an unstable CG and three component clashes before any part was printed, while they were still cheap to fix.</p></div></div>
+            <div class="item"><span class="mk">✓</span><div><h4>Main components arrived on schedule</h4><p>We planned procurement for 6 to 19 October and had all eight primary components in hand on 20 October, so the electronics work is no longer waiting on deliveries.</p></div></div>
+            <div class="item"><span class="mk">✓</span><div><h4>The aerodynamic design is complete</h4><p>XFLR5 and OpenFOAM agree on lift and stability, and with the wing moved aft the aircraft has a static margin of about 20%. Aerodynamics is no longer holding up the build.</p></div></div>
+            <div class="item"><span class="mk">✓</span><div><h4>CAD reached a full-aircraft assembly</h4><p>Version 4 brings the fuselage, wing, hollow tail with connectors and nose mounts together in one model, which we now use for sectioning, part design and the balance calculation.</p></div></div>
+            <div class="item"><span class="mk">✓</span><div><h4>We built our own thrust rig</h4><p>Rather than relying on manufacturer data, we designed and built a stand that measures static thrust for any motor and propeller combination. It will let us check the propulsion choice before flight.</p></div></div>
+            <div class="item"><span class="mk">✓</span><div><h4>Clear split of work</h4><p>A shared task sheet with priorities and owners, and a dated plan to 8 December, means each of us knows what is due and when.</p></div></div>
+          </div>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <div class="eval hard">
+            <div class="item"><span class="mk">!</span><div><h4>The build phase started late</h4><p>Airframe printing has not started yet. LW-PLA is a foaming filament whose weight and strength depend strongly on temperature and flow, so we need test prints to dial it in (5 to 10 November), followed by PETG settings (13 to 16 November).</p></div></div>
+            <div class="item"><span class="mk">!</span><div><h4>The second component order slipped</h4><p>The secondary list has been open since 20 October, and several items still needed sizing from the CAD: carbon tube sizes, wire gauge and the battery arming connector. We will order on 4 November.</p></div></div>
+            <div class="item"><span class="mk">!</span><div><h4>Joining printed sections</h4><p>The wing and fuselage are printed in sections joined with overlapping edges, carbon-filament rivets, bolts and PETG root gaskets. Hole tolerances have to be proven with test pieces before we commit to full parts.</p></div></div>
+            <div class="item"><span class="mk">!</span><div><h4>One structural decision is still open</h4><p>We have not yet decided whether the 12 mm main spar joins at mid-fuselage or runs the full span. It affects transport, assembly and wing removal.</p></div></div>
+            <div class="item"><span class="mk">!</span><div><h4>Software work is behind the hardware</h4><p>Flight-controller programming and datalink research have not started. The internal layout is now fit-checked, but the trays and mounts still need to be modelled. These now sit on the critical path for ground testing.</p></div></div>
+            <div class="item"><span class="mk">!</span><div><h4>The thrust rig took longer than expected</h4><p>We sketched it up to version 5 before building, and it is still being finalised. It has not yet been run with a battery.</p></div></div>
+          </div>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <div class="filters" role="group" aria-label="Filter by team member">
+            <button class="chip" type="button" data-f="all" aria-pressed="true">Everyone</button>
+            <button class="chip" type="button" data-f="romet" aria-pressed="false">Romet</button>
+            <button class="chip" type="button" data-f="ludvig" aria-pressed="false">Ludvig</button>
+            <button class="chip" type="button" data-f="karl" aria-pressed="false">Karl-Robin</button>
+          </div>
+          <div class="log" id="nextlog">
+            <div class="row" data-o="romet"><span class="d">3 Nov</span><span class="t">Top hatch modelling</span><span class="o">Romet</span></div>
+            <div class="row" data-o="ludvig"><span class="d">3 Nov</span><span class="t">Body sectioning and shelling</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="karl"><span class="d">3 Nov</span><span class="t">Electronics wiring schematic</span><span class="o">Karl-Robin</span></div>
+            <div class="row" data-o="romet"><span class="d">3 Nov</span><span class="t">Website update and interim report</span><span class="o">Romet</span></div>
+            <div class="row" data-o="ludvig"><span class="d">4 Nov</span><span class="t">Camera mount</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="romet"><span class="d">4 Nov</span><span class="t">Body connectors modelling</span><span class="o">Romet</span></div>
+            <div class="row" data-o="romet"><span class="d">4 Nov</span><span class="t">Secondary component list finalised and ordered</span><span class="o">Romet</span></div>
+            <div class="row" data-o="ludvig"><span class="d">5 Nov</span><span class="t">Wing main carbon rod and ruddervator rod holes, connectors and research</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="romet"><span class="d">5 to 10 Nov</span><span class="t">LW-PLA print settings dialled in</span><span class="o">Romet</span></div>
+            <div class="row" data-o="romet"><span class="d">10 Nov</span><span class="t">Motor adapter: PETG slab to LW-PLA fuselage</span><span class="o">Romet</span></div>
+            <div class="row" data-o="romet"><span class="d">13 Nov</span><span class="t">Battery holder</span><span class="o">Romet</span></div>
+            <div class="row" data-o="ludvig"><span class="d">13 Nov</span><span class="t">Servo compartments</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="ludvig"><span class="d">13 Nov</span><span class="t">Wing connectors: overlapping sections, filament rivets, bolt holes, PETG root gasket</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="romet"><span class="d">13 to 16 Nov</span><span class="t">PETG print settings dialled in</span><span class="o">Romet</span></div>
+            <div class="row" data-o="romet"><span class="d">14 Nov</span><span class="t">Motor thrust test, if the rig is ready</span><span class="o">Romet</span></div>
+            <div class="row" data-o="ludvig"><span class="d">18 Nov</span><span class="t">Flight controller and Raspberry Pi mount</span><span class="o">Ludvig</span></div>
+            <div class="row" data-o="romet"><span class="d">24 Nov</span><span class="t">Motor thrust test (latest date)</span><span class="o">Romet</span></div>
+            <div class="row" data-o="karl"><span class="d">30 Nov</span><span class="t">Finished electronics circuit</span><span class="o">Karl-Robin</span></div>
+            <div class="row final" data-o="all"><span class="d">8 Dec</span><span class="t">Presentation day</span><span class="o">Team</span></div>
+          </div>
+          <p class="note">From our working plan of 2 November. Printing and assembly of the airframe sections follow as soon as each part model and the print settings are ready. The battery holder and the flight controller mount will follow the tray plan in Inside the airframe.</p>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <div class="tblwrap">
+            <table class="tbl">
+              <thead><tr><th>Stage</th><th>Planned</th><th>What happened</th><th>Status</th><th>Revised</th></tr></thead>
+              <tbody>
+                <tr><td>Design and analysis</td><td>to 5 Oct</td><td>Aerodynamics finished on time; balance redone and wing moved on 3 Nov. Detailed part CAD (mounts, connectors, compartments) continues alongside the build.</td><td><span class="tag ok">On track</span></td><td>Detail CAD to 18 Nov</td></tr>
+                <tr><td>Procurement</td><td>6 to 19 Oct</td><td>Primary set received 20 Oct. Secondary order delayed while sizes were finalised.</td><td><span class="tag late">Partly late</span></td><td>Secondary order 4 Nov</td></tr>
+                <tr><td>Build</td><td>20 Oct to 9 Nov</td><td>Thrust rig built. Airframe printing not started; print settings still to tune.</td><td><span class="tag late">About 2 weeks behind</span></td><td>5 to 30 Nov</td></tr>
+                <tr><td>Testing</td><td>10 to 27 Nov</td><td>Not started.</td><td><span class="tag next">Moved</span></td><td>14 Nov to 7 Dec</td></tr>
+                <tr><td>Presentation</td><td>28 Nov to 8 Dec</td><td>No change.</td><td><span class="tag ok">On track</span></td><td>28 Nov to 8 Dec</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="summary-box">We kept to the plan for the aerodynamic design and the main component order. The build is about two weeks behind, mainly because the secondary parts list and print settings took longer than expected. We have replaced the stage plan with a dated task list for each of us, moved the thrust test to 14 November (24 November at the latest), and made the first flight a stretch goal: it happens before 8 December only if the airframe and electronics are complete in time, otherwise right after the presentation. The revised dates are shown in the timeline below.</div>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <p>Our first interim report (23 September) recorded where the project stood before this period.</p>
+          <div class="cards c2" style="margin-top:20px">
+            <div class="hovercard"><div class="card-k" style="color:var(--cyan)">Done by 23 Sep</div><div class="hc-hint">Hover or tap for detail</div><div class="hc-wrap"><div class="hc-panel"><ul>
+              <li>CFD analysis in XFLR5 (VLM1 and VLM2); MH32 airfoil selected over RG15 and SD7037.</li>
+              <li>Full-aircraft geometry set: 1.40 m span, 0.263 m² wing, aspect ratio 7.46, high wing and V-tail.</li>
+              <li>Mass and CG modelling: centre of gravity 0.335 m, static margin 18.5% at 1.58 to 1.60 kg.</li>
+              <li>Aileron and ruddervator response evaluated.</li>
+              <li>Electronics selected and sourcing links collected; cost target under $500.</li>
+            </ul></div></div></div>
+            <div class="hovercard"><div class="card-k" style="color:var(--amber)">Planned next, 23 Sep</div><div class="hc-hint">Hover or tap for detail</div><div class="hc-wrap"><div class="hc-panel"><ul>
+              <li>Finalise V-tail geometry and construction details. <b style="color:var(--cyan)">Done</b></li>
+              <li>Order and receive components. <b style="color:var(--cyan)">Primary set done</b></li>
+              <li>3D-print the airframe and wing. <b style="color:var(--amber)">Moved to November</b></li>
+              <li>Assemble electronics and test the link. <b style="color:var(--amber)">Circuit due 30 Nov</b></li>
+              <li>First ground and flight tests. <b style="color:var(--amber)">Thrust test 14 Nov</b></li>
+            </ul></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="next"><a href="build.html">Next: <b>Build and testing</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <section class="s" id="timeline">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Timeline</span></div>
+      <h2 class="rv">Timeline, revised 2 November</h2>
+      <p class="lead rv">Five stages working back from the presentation on 8 December 2026. Struck-through dates are the original plan from September.</p>
+      <div class="timeline">
+        <div class="step done rv"><div class="num">01</div><div class="step-body hovercard">
+          <div class="meta"><span class="tag ok">Done</span><span class="date"><s>to 5 Oct</s><b>aerodynamics done; detail CAD to 18 Nov</b></span></div>
+          <h3>Design and analysis</h3>
+          <div class="hc-hint">Hover or tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Airfoil selection and XFLR5 analysis of the full aircraft</li><li>OpenFOAM airframe CFD, then a second run with the wing moved 20 mm aft (3 Nov)</li><li>CG from the 3D model and internal layout fit check (3 Nov)</li><li>Full-aircraft CAD assembly V4; part models continue</li></ul></div></div>
+        </div></div>
+        <div class="step now rv"><div class="num">02</div><div class="step-body hovercard">
+          <div class="meta"><span class="tag late">Partly done</span><span class="date"><s>6 to 19 Oct</s><b>primary 20 Oct; secondary 4 Nov</b></span></div>
+          <h3>Procurement</h3>
+          <div class="hc-hint">Hover or tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Primary electronics received 20 Oct</li><li>Secondary order (servos, inserts, filament, carbon tubes, connectors) on 4 Nov</li></ul></div></div>
+        </div></div>
+        <div class="step now rv"><div class="num">03</div><div class="step-body hovercard">
+          <div class="meta"><span class="tag late">In progress</span><span class="date"><s>20 Oct to 9 Nov</s><b>5 to 30 Nov</b></span></div>
+          <h3>Build</h3>
+          <div class="hc-hint">Hover or tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>LW-PLA settings 5 to 10 Nov, PETG settings 13 to 16 Nov</li><li>Printing the fuselage and wing sections; joining with rivets, bolts and gaskets</li><li>PETG trays for the battery and electronics</li><li>Electronics circuit finished by 30 Nov</li><li>4G and WireGuard link added after the core system works</li></ul></div></div>
+        </div></div>
+        <div class="step rv"><div class="num">04</div><div class="step-body hovercard">
+          <div class="meta"><span class="tag next">Ahead</span><span class="date"><s>10 to 27 Nov</s><b>14 Nov to 7 Dec</b></span></div>
+          <h3>Testing</h3>
+          <div class="hc-hint">Hover or tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Static thrust test 14 Nov (24 Nov at the latest)</li><li>Weighing the printed parts and checking the CG</li><li>Ground tests of control surfaces, link and failsafe after 30 Nov</li><li>First hand-launch as a stretch goal before 8 Dec</li><li>Endurance and range validation after the presentation</li></ul></div></div>
+        </div></div>
+        <div class="step rv"><div class="num">05</div><div class="step-body hovercard">
+          <div class="meta"><span class="tag ok">On track</span><span class="date"><b>28 Nov to 8 Dec</b></span></div>
+          <h3>Presentation and documentation</h3>
+          <div class="hc-hint">Hover or tap for detail</div>
+          <div class="hc-wrap"><div class="hc-panel"><ul><li>Results summary and final website update</li><li>Presentation day: 8 December 2026</li></ul></div></div>
+        </div></div>
+      </div>
+      <div class="next"><a href="about.html#team">Next: <b>Team</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <section class="s" style="border-bottom:none">
+    <div class="wrap">
+      <div class="status-note rv">
+        <svg viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01M10.3 3.9 2.5 17.5A1.5 1.5 0 0 0 3.8 20h16.4a1.5 1.5 0 0 0 1.3-2.5L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/></svg>
+        <div>
+          <p>UAV SILM is an ongoing student STEAM project, not a finished aircraft. Every figure on this page (mass, endurance, cost, balance, control response) is a theoretical estimate from CFD analysis and hand calculation, not from flight-test data. The 3D models show our CAD and simulation results, not a built aircraft.</p>
+          <p>We have not held formal discussions with Kaitseliit or the Estonian Defence Forces; we present the platform as a design study and a longer-term aim toward a working, versatile aircraft.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img class="wm" src="images/logo_big.jpg" alt="" width="720" height="720" loading="lazy" decoding="async">
+  <div class="wrap">
+    <div class="flogos">
+      <div class="fl"><img src="images/logo_small.jpg" alt="UAV SILM logo" width="96" height="96" loading="lazy" decoding="async"> UAV SILM</div>
+      <img class="crest" src="images/crest.png" alt="Gustav Adolfi Gümnaasium crest" width="200" height="172" loading="lazy" decoding="async">
+    </div>
+    <div class="fgrid">
+      <div class="fcol">
+        <div class="ftag">Aircraft</div>
+        <a href="./">SILM Buteo</a>
+        <a href="design.html">Buteo</a>
+        <a href="inside.html">Layout</a>
+        <a href="onboard.html">Autonomy</a>
+        <a href="cfd.html">Aerodynamics</a>
+        <a href="downloads.html">Software</a>
+        <a href="monedula.html">SILM Monedula (next)</a>
+        <div class="ftag" style="margin-top:18px">Student project</div>
+        <a href="about.html">About</a>
+        <a href="progress.html">Progress</a>
+        <a href="build.html">Build and tests</a>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Team</div>
+        <p>UAV SILM is developed by Romet Salvador Lehari (Romet Lehari), project management and flight dynamics; Ludvig Janisk, 3D modelling and research; and Karl-Robin Koppel, electronics. Gustav Adolfi Gümnaasium, Tallinn, Estonia.</p>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Contact</div>
+        <a href="#">team@uavsilm.example (placeholder)</a>
+        <a href="#">github.com/uav-silm (placeholder)</a>
+        <a href="#">Instagram (placeholder)</a>
+      </div>
+    </div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 15 November 2026</span></div>
+    <div class="privacy hb">
+      <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
+      <div class="acc-wrap"><div class="acc-body">
+        <p>This site is a personal, non-commercial student project.</p>
+        <p>Basic technical data (such as IP address and browser type) is processed by the hosting provider (GitHub) for the security and operation of the site.</p>
+        <p>We collect no additional personal data unless you contact us directly.</p>
+        <p>We use no tracking or analytics cookies, and the site loads no external fonts or scripts. The 3D viewers run entirely in your browser from files on this site and send nothing anywhere.</p>
+        <p>You can contact us to ask for any data we hold about you to be deleted.</p>
+      </div></div>
+    </div>
+  </div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
+<button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

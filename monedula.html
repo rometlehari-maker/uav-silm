@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SILM Monedula, the next airframe | UAV SILM</title>
+<meta name="description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
+<meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#3a494d">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://www.uavsilm.eu/monedula.html">
+<meta property="og:url" content="https://www.uavsilm.eu/monedula.html">
+<meta property="og:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="UAV SILM fixed-wing UAV, top view render with logo">
+<meta name="twitter:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UAV SILM">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="SILM Monedula, the next airframe | UAV SILM">
+<meta property="og:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SILM Monedula, the next airframe | UAV SILM">
+<meta name="twitter:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<link rel="icon" type="image/jpeg" href="images/logo_small.jpg">
+<link rel="apple-touch-icon" href="images/logo_small.jpg">
+<link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="scrollbar" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="topbar">
+    <a class="brand" href="./"><img src="images/logo_small.jpg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
+    <nav class="crumbs" aria-label="Pages">
+      <a href="./">Overview</a>
+      <a href="design.html">Buteo</a>
+      <a href="inside.html">Layout</a>
+      <a href="onboard.html">Autonomy</a>
+      <a href="cfd.html">Aerodynamics</a>
+      <a href="downloads.html">Software</a>
+      <a href="monedula.html" class="nx on" aria-current="page">Monedula</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="about.html" class="proj">Student project</a>
+    </nav>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true">Monedula</span></button>
+  </div>
+</header>
+
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Pages" inert>
+  <div class="menu-head">
+    <a class="brand" href="./"><img src="images/logo_small.jpg" alt="" width="34" height="34"><span>UAV SILM</span></a>
+    <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
+  </div>
+  <ol>
+    <li><a class="mi" href="./"><b>Overview</b><span>SILM Buteo at a glance</span></a></li>
+    <li><a class="mi" href="design.html"><b>Buteo</b><span>Geometry, calculated performance and modules</span></a></li>
+    <li><a class="mi" href="inside.html"><b>Layout</b><span>Interactive 3D layout and balance calculator</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
+    <li><a class="mi" href="cfd.html"><b>Aerodynamics</b><span>OpenFOAM airflow and pressure, in 3D</span></a></li>
+    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground station, settings and model, free to use</span></a></li>
+    <li><a class="mi on" href="monedula.html"><b>Monedula</b><span>SILM Monedula, the next airframe</span></a></li>
+    <li class="mgrp">Student project</li>
+    <li><a class="mi sm" href="about.html"><b>About</b><span>The school project, subjects and team</span></a></li>
+    <li><a class="mi sm" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
+    <li><a class="mi sm" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+  </ol>
+</div>
+
+<main id="main">
+
+  <section class="s" id="monedula">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Next plan</span></div>
+      <div class="kicker rv">Planned next airframe, not built yet</div>
+      <h2 class="rv">SILM Monedula</h2>
+      <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor outside the tail, and a belly hardpoint for heavier payloads. Monedula is the Latin name of the jackdaw.</p>
+
+      <figure class="rv" style="margin-top:34px"><img class="zoom" src="images/monedula.jpg" alt="SILM Monedula CAD render: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" data-cap="SILM Monedula, CAD model. Orange: ailerons and ruddervators. Light blue: battery and electronics hatches." width="1800" height="1000" loading="lazy" decoding="async"><figcaption>CAD model of Monedula. Every part is a separate, print-ready file for a 220 mm print bed.</figcaption></figure>
+
+      <div class="statgrid rv">
+        <div><div class="v">1.5 m</div><div class="l">wingspan, up from 1.4 m</div></div>
+        <div><div class="v">≈1.70 kg</div><div class="l">empty, calculated from the model</div></div>
+        <div><div class="v">1 kg</div><div class="l">payload hardpoint at the balance point (bungee launch when loaded)</div></div>
+        <div><div class="v">79 mm</div><div class="l">fuselage width, down from about 98 mm</div></div>
+      </div>
+
+      <h3 class="rv" style="margin-top:56px">What changes from SILM Buteo</h3>
+      <table class="tbl rv">
+        <thead><tr><th>Area</th><th>SILM Buteo</th><th>Monedula</th></tr></thead>
+        <tbody>
+          <tr><td>Fuselage</td><td>About 98 mm round, components spread out</td><td>79 x 81 mm, electronics on two removable racks behind the battery</td></tr>
+          <tr><td>Wing</td><td>1.4 m, 3° dihedral, 7 mm carbon tube</td><td>1.5 m, flat, 10 mm carbon tube with 6 mm rods outboard; bolts on with two screws</td></tr>
+          <tr><td>Motor</td><td>Inside the tail cone</td><td>Outside on a PETG end plug, in free air for cooling</td></tr>
+          <tr><td>Tail</td><td>V-tail close to the propeller</td><td>V-tail moved forward and 8 % larger, 70 mm clear of the propeller</td></tr>
+          <tr><td>Payload</td><td>Camera in the nose</td><td>Swappable nose module on four heat-set inserts, plus a 1 kg hardpoint under the balance point</td></tr>
+          <tr><td>Design method</td><td>Hand-modelled in SolidWorks</td><td>Generated from parametric Python code, so a dimension change rebuilds and rechecks every part</td></tr>
+        </tbody>
+      </table>
+      <p class="note rv">Calculated with a quick aerodynamic method: stall about 9.8 m/s empty, static margin about 14 %. These are design estimates only; Monedula has not had a full CFD run yet.</p>
+
+      <h3 class="rv" style="margin-top:56px">Steps before it flies</h3>
+      <div class="eval rv">
+        <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Open every part in SolidWorks and confirm the parts fit together as modelled.</p></div></div>
+        <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print one fuselage joint, the nose and a wing root, fit the real camera and spar, and load-test the joint.</p></div></div>
+        <div class="item"><span class="mk">3</span><div><h4>Run CFD</h4><p>Run OpenFOAM on the new shape to replace the quick estimates for drag, stability and endurance.</p></div></div>
+        <div class="item"><span class="mk">4</span><div><h4>Build and weigh</h4><p>Print the full airframe, weigh every part and correct the balance before the first flight.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="s" style="border-bottom:none">
+    <div class="wrap">
+      <p class="fineprint rv">SILM Buteo is in development and has not flown yet. Figures are design estimates from CFD and calculation, not flight-test data. <a href="about.html">About the student project</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img class="wm" src="images/logo_big.jpg" alt="" width="720" height="720" loading="lazy" decoding="async">
+  <div class="wrap">
+    <div class="flogos">
+      <div class="fl"><img src="images/logo_small.jpg" alt="UAV SILM logo" width="96" height="96" loading="lazy" decoding="async"> UAV SILM</div>
+      <img class="crest" src="images/crest.png" alt="Gustav Adolfi Gümnaasium crest" width="200" height="172" loading="lazy" decoding="async">
+    </div>
+    <div class="fgrid">
+      <div class="fcol">
+        <div class="ftag">Aircraft</div>
+        <a href="./">SILM Buteo</a>
+        <a href="design.html">Buteo</a>
+        <a href="inside.html">Layout</a>
+        <a href="onboard.html">Autonomy</a>
+        <a href="cfd.html">Aerodynamics</a>
+        <a href="downloads.html">Software</a>
+        <a href="monedula.html">SILM Monedula (next)</a>
+        <div class="ftag" style="margin-top:18px">Student project</div>
+        <a href="about.html">About</a>
+        <a href="progress.html">Progress</a>
+        <a href="build.html">Build and tests</a>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Team</div>
+        <p>UAV SILM is developed by Romet Salvador Lehari (Romet Lehari), project management and flight dynamics; Ludvig Janisk, 3D modelling and research; and Karl-Robin Koppel, electronics. Gustav Adolfi Gümnaasium, Tallinn, Estonia.</p>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Contact</div>
+        <a href="#">team@uavsilm.example (placeholder)</a>
+        <a href="#">github.com/uav-silm (placeholder)</a>
+        <a href="#">Instagram (placeholder)</a>
+      </div>
+    </div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 15 November 2026</span></div>
+    <div class="privacy hb">
+      <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
+      <div class="acc-wrap"><div class="acc-body">
+        <p>This site is a personal, non-commercial student project.</p>
+        <p>Basic technical data (such as IP address and browser type) is processed by the hosting provider (GitHub) for the security and operation of the site.</p>
+        <p>We collect no additional personal data unless you contact us directly.</p>
+        <p>We use no tracking or analytics cookies, and the site loads no external fonts or scripts. The 3D viewers run entirely in your browser from files on this site and send nothing anywhere.</p>
+        <p>You can contact us to ask for any data we hold about you to be deleted.</p>
+      </div></div>
+    </div>
+  </div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
+<button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+
+<script src="assets/site.js"></script>
+</body>
+</html>
