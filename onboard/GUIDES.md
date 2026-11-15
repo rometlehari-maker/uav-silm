@@ -199,25 +199,98 @@ training tools** puts everything else in its own folder (`~/SILM/training-venv`,
 2-7 GB depending on the computer, so keep about 10 GB free); deleting that folder
 removes it again.
 
-## The simulator on Windows {#simulator}
+## The simulator {#simulator}
 
-ArduPilot's simulator (SITL) flies your exact mission with the GPS jammed
-halfway. It runs on Linux; on Windows inside **Ubuntu (WSL2)**, which is free
-and built into Windows 10/11.
+The Ground Station's **Simulator** tab flies your mission on the laptop in
+ArduPilot's simulator, on a live map, with the GPS jammed halfway or a normal
+flight. **On Windows and Linux nothing needs setting up:** open the tab and
+press **Install the simulator**. It downloads ArduPilot's own ready-made
+simulator program (7-25 MB) into your SILM folder, once. Then **Fly it in
+the simulator**.
 
-1. **PowerShell as administrator:** `wsl --install -d Ubuntu`, restart the
-   PC, open **Ubuntu** from the Start menu and choose a Linux username and
-   password.
-2. Inside Ubuntu, build the simulator once (about 30 minutes, mostly waiting):
-   follow **SITL_HOWTO.md** part A in the software folder. It is written
-   for first-time Linux users, every command explained.
-3. Start the Ground Station inside Ubuntu (`./start_ground_station.sh` in the
-   onboard folder) and open the browser address it shows: the **Simulator**
-   tab (7) then runs the simulator itself. Or run the commands the tab shows.
+**Check it worked:** the status line goes "Starting the simulator…", then
+"Taking off", and the blue line starts moving on the map. At the end:
+**Passed** with every check green.
 
-macOS and Linux: the same SITL_HOWTO.md part A, without the WSL step.
+**If the download fails:** the computer needs the internet for this one step,
+and the file comes from firmware.ardupilot.org. Company or school networks
+sometimes block downloads of programs; try at home or on a phone's hotspot.
 
-**Check it worked:** Simulator tab → **Fly it** → all seven checks PASS.
+### The simulator on a Mac {#simulator-mac}
+
+ArduPilot does not publish a ready-made simulator for Apple computers, so
+on a Mac it has to be built once (about 30-45 minutes, mostly waiting). You
+only need to type things in **Terminal** during this one-time build; the
+Ground Station finds the built simulator by itself afterwards. If you have a
+Windows or Linux computer, use that instead and skip this.
+
+**What you need:** a Mac with macOS 12 or newer, about 5 GB free, the
+internet, and the Mac's administrator password.
+
+**Terminal, in short:** it is a program that comes with every Mac, in which
+you type a command and press **Return** to run it. Open it with **Cmd+Space**,
+type `Terminal`, press Return. A window with a line ending in `%` (or `$`)
+appears: that is where you type. Copy each command below exactly (the Copy
+button in the app's guide copies the whole line), paste it with **Cmd+V**,
+press **Return**, and wait until the `%` line comes back before typing the
+next. When a command asks `Password:`, type your Mac password: **nothing
+shows while you type**, not even dots; press Return.
+
+1. **Apple's build tools.** Type:
+
+   ```bash
+   xcode-select --install
+   ```
+
+   A window asks to install the command line developer tools: **Install**,
+   agree, wait (5-15 minutes). If it says "already installed", good.
+
+2. **Homebrew** (a program that installs other programs). Copy the one
+   long command from <https://brew.sh> (it starts with `/bin/bash -c`), paste
+   it, Return, type your password, Return. At the end it prints two or three
+   lines starting with `echo` and `eval` under "Next steps": copy and run
+   those too. Check: `brew --version` prints a version.
+
+3. **The tools the build needs:**
+
+   ```bash
+   brew install git python@3.12 gcc
+   ```
+
+   ```bash
+   pip3 install --user future pexpect empy==3.3.4 pymavlink
+   ```
+
+4. **Get ArduPilot** (about 1 GB, 5-10 minutes):
+
+   ```bash
+   cd ~ && git clone --recursive https://github.com/ArduPilot/ardupilot
+   ```
+
+   `cd ~` means "go to your home folder"; `git clone` copies ArduPilot's
+   source code into a folder named `ardupilot` there.
+
+5. **Build the simulator** (15-30 minutes; the Mac's fans will run):
+
+   ```bash
+   cd ~/ardupilot && ./waf configure --board sitl && ./waf plane
+   ```
+
+   It ends with lines like `'plane' finished successfully`. If it stops
+   with an error, run the same command again once (a download may have
+   failed); if it fails the same way, the text of the error is what to
+   search for or ask about.
+
+6. **Check it:**
+
+   ```bash
+   ls ~/ardupilot/build/sitl/bin/arduplane
+   ```
+
+   prints that path back (no "No such file"). Close and reopen the Ground
+   Station: the Simulator tab now says **The simulator is installed**.
+
+**To remove it later:** delete the `ardupilot` folder in your home folder.
 
 ## The camera (SIYI A2 mini) {#camera}
 

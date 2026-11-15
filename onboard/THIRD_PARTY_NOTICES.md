@@ -24,7 +24,7 @@ them.
 
 | Software | Used for | Licence |
 |---|---|---|
-| **ArduPilot / ArduPlane** | the flight controller firmware and the simulator (SITL). `ardupilot/gps_denied_failsafe.param` and `ardupilot/scripts/silm_gps_loss.lua` are our settings and script *for* it | GPL-3.0 |
+| **ArduPilot / ArduPlane** | the flight controller firmware and the simulator (SITL). The Ground Station's Simulator tab downloads the simulator program built by the ArduPilot project (firmware.ardupilot.org: `Plane/stable/SITL_x86_64_linux_gnu/arduplane`, or the Cygwin `Tools/MissionPlanner/sitl/PlaneStable/ArduPlane.elf` with its DLLs on Windows) into `~/SILM/sitl`; it is not inside the app. `ardupilot/gps_denied_failsafe.param` and `ardupilot/scripts/silm_gps_loss.lua` are our settings and script *for* it; `ardupilot/sitl_defaults.parm` repeats ArduPilot's `Tools/autotest/models/plane.parm` (simulator defaults) with scripting switched on | GPL-3.0 (source: github.com/ArduPilot/ardupilot) |
 | COCO SSD MobileNet v1 (quantised), TensorFlow | the standard recognition model, downloaded by `pi/install.sh` | Apache-2.0 |
 | pymavlink | talking to the flight controller | LGPL-3.0 |
 | MAVProxy (optional) | simulator console | GPL-3.0 |
@@ -34,7 +34,8 @@ them.
 | PyYAML | settings files | MIT |
 | pySerial | finding USB ports | BSD-3-Clause |
 | Paramiko (with cryptography, bcrypt, PyNaCl) | installing the aircraft computer over SSH from the Ground Station | LGPL-2.1 (Paramiko; source at github.com/paramiko/paramiko), Apache-2.0 / BSD (the others) |
-| Matplotlib | simulator result picture | Matplotlib licence (PSF-based) |
+| Matplotlib | simulator result picture (from the source only; the app shows the live map) | Matplotlib licence (PSF-based) |
+| certifi | trusted certificates when the app downloads the simulator | MPL-2.0 |
 | Ultralytics, PyTorch | training your own models (optional) | AGPL-3.0, BSD-3-Clause |
 | pytest, lupa, Playwright | automated tests | MIT, MIT, Apache-2.0 |
 

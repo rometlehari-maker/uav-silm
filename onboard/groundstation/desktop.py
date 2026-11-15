@@ -121,6 +121,9 @@ def selftest() -> int:
         params = _get(url + "api/files/params", {"project": project}).decode()
         assert "INITIAL_MODE" in params and "SERIAL2_BAUD" in params, "parameter file"
         assert len(_get(url + "api/setup")["steps"]) == 10, "setup"
+        sim = _get(url + "api/sim/status")
+        assert sim["state"] == "idle" and "jam" in sim["scenarios"] and "platform" in sim, "simulator"
+        import certifi  # noqa: F401  - the simulator download needs trusted certificates
         assert isinstance(_get(url + "api/ports"), list), "ports"
         assert any(m["name"] == "silm_oi" for m in meta["models"]), "ready-made model"
         _mavlink_loopback()

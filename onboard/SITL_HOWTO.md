@@ -10,17 +10,11 @@ This guide has these parts (plus Part 0, basics, a Troubleshooting table and Not
 
 If you're new to Ubuntu or terminals, read **Part 0** first.
 
-> **Shortcut once Part A is done: the Ground Station does Parts B and C for you.**
-> Start the Ground Station *inside Ubuntu* (the simulator runs there):
-> ```bash
-> cd ~/uav-silm/onboard && ./start_ground_station.sh --no-browser
-> ```
-> then open <http://127.0.0.1:8765> in your normal Windows browser, go to tab
-> **7 Simulator** and press **Start the simulated flight**. It starts the
-> simulator at your mission's launch point, sets the battery, restarts once
-> for the script, flies your mission with the GPS jammed and shows the six
-> checks and the track. The rest of this guide is the manual way, and explains
-> what you see.
+> **You probably don't need this guide.** The Ground Station's **Simulator**
+> tab (7) installs ArduPilot's ready-made simulator with one click (Windows
+> and Linux) and flies your mission on a live map. This guide is the manual
+> way, for developers and for a Mac (where the simulator has to be built
+> once): it explains every window, command and output.
 
 ---
 

@@ -154,11 +154,11 @@ Optional, against **your** firmware version: `python3 tools/check_params.py
 
 Fly your mission in ArduPilot's simulator, with the GPS jammed halfway:
 
-- **Ground Station tab 7 Simulator** (needs Linux, or Ubuntu in WSL2 on Windows,
-  with the simulator installed once: [`SITL_HOWTO.md`](SITL_HOWTO.md) part A):
-  **Start the simulated flight**. It sets up the simulator, flies, and reports
-  seven checks plus the track.
-- By hand: [`SITL_HOWTO.md`](SITL_HOWTO.md).
+- **Ground Station tab 7 Simulator**: the first time press **Install the
+  simulator** (it downloads ArduPilot's own simulator; Windows and Linux),
+  then **Fly it in the simulator**. You watch the flight on a map; it reports
+  seven checks. On a Mac: the guide *The simulator on a Mac*.
+- By hand (developers): [`SITL_HOWTO.md`](SITL_HOWTO.md).
 
 **Every check must pass before a real flight.** The simulator's 3S battery is
 matched to your cell count automatically (simulator only).

@@ -242,37 +242,49 @@
     </section>
 
     <!-- ======================================================== SIM -->
-    <section id="tab-sim" class="page">
+    <section id="tab-sim" class="page wide">
       <div class="eyebrow" aria-hidden="true"><img src="/static/logo.jpg" alt=""><i></i><span>7 · Simulator</span></div>
       <h1>Simulator</h1>
-      <p class="lead">Fly this exact mission, with your aircraft settings and today's wind, in
-        ArduPilot's simulator. Halfway through, the GPS is jammed: it must turn back, land on the
-        strip and switch itself off. Do this before every new mission.</p>
+      <p class="lead">Fly this exact mission on the computer first: your aircraft settings, your route,
+        today's wind, and something going wrong. Watch it on the map. Nothing to set up by hand: the
+        simulator is ArduPilot's own, and the button below fetches it.</p>
       <div class="card" id="sim-avail"></div>
-      <div class="card">
-        <div class="q">What should go wrong in the simulated flight?</div>
-        <select id="sim-fault" aria-label="Fault">
-          <option value="jam">GPS jammed (signal scrambled)</option>
-          <option value="disable">GPS lost completely</option>
-          <option value="none">Nothing goes wrong (a normal flight)</option>
-        </select>
-        <div id="sim-fault-len"><div class="q">For how long?</div>
-        <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div></div>
-        <p class="help" id="sim-none-help" hidden>The whole mission flown as planned: it must fly the complete survey with
-          no failsafe, stay inside the geofence, know its position all the way, land on the landing point and switch
-          itself off. Good for checking the route, the flight time and the landing. The GPS-loss test above is still
-          needed before the first flight.</p>
-        <div class="row-btns">
-          <button class="btn primary" id="sim-start">Start the simulated flight</button>
-          <button class="btn ghost" id="sim-stop">Stop</button>
+      <div class="cards two">
+        <div class="card">
+          <div class="q">What should happen in the simulated flight?</div>
+          <select id="sim-fault" aria-label="Scenario">
+            <option value="jam">GPS jammed halfway (the test before the first flight)</option>
+            <option value="disable">GPS lost completely halfway</option>
+            <option value="gusty">Strong, gusty wind (10 m/s) with GPS jammed</option>
+            <option value="none">A normal flight (nothing goes wrong)</option>
+          </select>
+          <p class="help" id="sim-scenario-help"></p>
+          <div id="sim-fault-len"><div class="q">How long is the GPS bad?</div>
+          <div class="inline"><input id="sim-fault-s" type="number" value="90" min="10" max="600" step="10" aria-label="Seconds"> <span class="unit">seconds</span></div></div>
+          <div class="q">How fast?</div>
+          <select id="sim-speed" aria-label="Speed">
+            <option value="real">Real time, like the real flight (5-8 minutes)</option>
+            <option value="fast">Fast (about 2 minutes)</option>
+          </select>
+          <div class="row-btns">
+            <button class="btn primary big" id="sim-start">▶ Fly it in the simulator</button>
+            <button class="btn ghost" id="sim-stop">Stop</button>
+          </div>
+          <div class="result" id="sim-result" role="status"></div>
+          <div id="sim-checks"></div>
         </div>
-        <div class="result" id="sim-result" role="status"></div>
-        <div id="sim-checks"></div>
+        <div class="card sim-live-card">
+          <div class="sim-status" id="sim-status"><b id="sim-status-title">Ready when you are</b><span id="sim-status-sub">The flight appears here, live.</span></div>
+          <div id="sim-map" class="sim-map" role="img" aria-label="Live map of the simulated flight"></div>
+          <div class="sim-legend"><span><i class="sw sw-plan"></i>planned route</span><span><i class="sw sw-true"></i>where it really is</span><span><i class="sw sw-est"></i>where it thinks it is (GPS bad)</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <details><summary>Progress log (the simulator's own messages)</summary><pre id="sim-log" class="log"></pre></details>
         <img id="sim-track" alt="Simulated flight track" hidden>
-        <details open><summary>Progress</summary><pre id="sim-log" class="log"></pre></details>
       </div>
       <div class="card" id="sim-cmds-card" hidden>
-        <h2>Run it yourself in Ubuntu (WSL2)</h2>
+        <h2>The same run by hand (for developers)</h2>
         <pre id="sim-cmds" class="log"></pre>
       </div>
     </section>

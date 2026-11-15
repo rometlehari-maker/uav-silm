@@ -75,6 +75,22 @@ sys.path.insert(0, os.path.join(HERE, "..", "planner"))
 MODE_AUTO, MODE_RTL = 10, 11
 R_EARTH = 6378137.0
 
+# The Ground Station runs this file inside its own process: it gets every line
+# that would be printed and every recorded position (for its live map).
+_log = print
+_on_row = None
+
+
+def set_hooks(log=None, on_row=None):
+    """log(text): called instead of print; on_row(row): every recorded sample."""
+    global _log, _on_row
+    _log = log or print
+    _on_row = on_row
+
+
+def say(*parts):
+    _log(" ".join(str(p) for p in parts))
+
 
 # ------------------------------------------------------------------ geometry
 
@@ -238,7 +254,7 @@ class Sitl:
         msg = self.m.recv_match(type=types, blocking=True, timeout=timeout)
         if msg is not None and msg.get_type() == "STATUSTEXT":
             self.texts.append(msg.text)
-            print(f"  [ap] {msg.text}")
+            say(f"  [ap] {msg.text}")
         return msg
 
     def set_param(self, name, value, retries=5):
@@ -271,6 +287,12 @@ class Sitl:
     def set_mode(self, mode):
         self.m.mav.set_mode_send(self.m.target_system,
                                  self.mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode)
+
+    def sim_time(self):
+        """Seconds since the autopilot booted, by its own clock: the right clock
+        when the simulator runs faster than real time (--speedup)."""
+        st = self.m.messages.get("SYSTEM_TIME")
+        return st.time_boot_ms / 1000.0 if st else None
 
     def true_pos(self):
         s = self.m.messages.get("SIMSTATE")
@@ -334,17 +356,17 @@ def match_sim_battery(s, params: dict) -> None:
             v = msg.voltage_battery / 1000.0
     mult = s.get_param("BATT_VOLT_MULT")
     if v is None or not mult:
-        print("WARNING: could not read the simulator's battery voltage")
+        say("WARNING: could not read the simulator's battery voltage")
         return
     new = sim_battery_mult(v, mult, cells)
     if new is None:
-        print(f"simulator battery reads {v:.1f} V = full {cells}S (matches your parameters)")
+        say(f"simulator battery reads {v:.1f} V = full {cells}S (matches your parameters)")
         return
     if s.set_param("BATT_VOLT_MULT", new):
-        print(f"simulator battery read {v:.1f} V; scaled to a full {cells}S pack "
+        say(f"simulator battery read {v:.1f} V; scaled to a full {cells}S pack "
               f"({4.2 * cells:.1f} V) for your battery failsafes (simulator only)")
     else:
-        print("WARNING: could not scale the simulator's battery voltage")
+        say("WARNING: could not scale the simulator's battery voltage")
 
 
 def build_mission(args, home):
@@ -380,30 +402,31 @@ def build_mission(args, home):
 def run(args) -> int:
     from silm_recon import mavmission as mm
     s = Sitl(args.connect)
-    print("connected to SITL")
+    say("connected to SITL")
 
     # Parameters: your file + test setup. SITL's plane rolls off a runway, so the
     # throw-detection threshold is switched off in the simulator only.
     params = read_param_file(args.params)
     params += [("SIM_WIND_SPD", args.wind), ("SIM_WIND_DIR", args.wind_dir),
+               ("SIM_WIND_TURB", getattr(args, "turbulence", 0.0) or 0.0),
                ("SIM_GPS1_ENABLE", 1), ("SIM_GPS1_JAM", 0), ("TKOFF_THR_MINACC", 0)]
     bad = [n for n, v in params if not s.set_param(n, v)]
     if bad:
-        print(f"WARNING: could not set {bad}")
+        say(f"WARNING: could not set {bad}")
     match_sim_battery(s, dict(params))
 
     slm = s.get_param("SLM_ENABLE")
     if slm is None:
-        print("\nThe silm_gps_loss.lua script is not running in SITL (no SLM_ENABLE).")
-        print("Check that scripts/silm_gps_loss.lua exists where you started sim_vehicle.py,")
-        print("SCR_ENABLE is now 1 - restart SITL once, then re-run this test.")
+        say("\nThe silm_gps_loss.lua script is not running in SITL (no SLM_ENABLE).")
+        say("Check that scripts/silm_gps_loss.lua exists where you started sim_vehicle.py,")
+        say("SCR_ENABLE is now 1 - restart SITL once, then re-run this test.")
         return 2
     loss_s = s.get_param("SLM_GPS_LOSS_S") or 5.0
     fence_r = s.get_param("FENCE_RADIUS") or args.fence_m
     args.fence_m = fence_r
 
     # Wait for a position, take home = true position on the ground.
-    print("waiting for GPS/EKF ...")
+    say("waiting for GPS/EKF ...")
     t0 = time.time()
     while time.time() - t0 < 120 and (s.true_pos() is None or s.est_pos() is None):
         s.recv(timeout=1)
@@ -412,25 +435,30 @@ def run(args) -> int:
 
     items, land, land_start = build_mission(args, home)
     if dist_m(hl, hn, items[1].lat or hl, items[1].lon or hn) > 200:
-        print("WARNING: the mission's takeoff is far from where SITL started - start SITL with "
+        say("WARNING: the mission's takeoff is far from where SITL started - start SITL with "
               "--custom-location=<lat>,<lon>,<alt>,0 at the mission's launch point")
     try:
         mm.upload(s.m, items)
     except RuntimeError as exc:
-        print(f"mission upload failed: {exc}")
+        say(f"mission upload failed: {exc}")
         return 1
-    print(f"mission uploaded ({len(items) - 1} items; landing sequence from item {land_start}, "
+    say(f"mission uploaded ({len(items) - 1} items; landing sequence from item {land_start}, "
           f"touchdown {land[0]:.6f}, {land[1]:.6f})")
 
     if not s.arm():
-        print("could not arm (check pre-arm messages above)")
+        say("could not arm (check pre-arm messages above)")
         return 1
     s.set_mode(MODE_AUTO)
-    print("armed, AUTO - no RC from here on")
+    say("armed, AUTO - no RC from here on")
 
     os.makedirs(args.out, exist_ok=True)
     rows = []
     t_start = time.time()
+    sim0 = s.sim_time()                 # the autopilot's clock at the start, if it sends one
+
+    def elapsed():
+        st = s.sim_time()
+        return st - sim0 if st is not None and sim0 is not None else time.time() - t_start
     fault_t = restore_t = None
     phase = "survey"
     last_log = 0.0
@@ -441,10 +469,10 @@ def run(args) -> int:
         if s.recv(timeout=0.2) is not None:
             last_rx = time.time()
         elif time.time() - last_rx > 15:
-            print("lost the connection to SITL (nothing received for 15 s) - did SITL stop? "
+            say("lost the connection to SITL (nothing received for 15 s) - did SITL stop? "
                   "Restart it and run the test again.")
             return 1
-        now = time.time() - t_start
+        now = elapsed()
         tp, ep = s.true_pos(), s.est_pos()
         if tp is None or ep is None:
             continue
@@ -461,6 +489,8 @@ def run(args) -> int:
         if now - last_log >= 0.2 or (rows and rows[-1]["armed"] != armed):
             rows.append(row)
             last_log = now
+            if _on_row:
+                _on_row(row)
         d_home = dist_m(hl, hn, tp[0], tp[1])
 
         if args.fault == "none":
@@ -473,13 +503,13 @@ def run(args) -> int:
                 s.set_param("SIM_GPS1_JAM", 1)
             else:
                 s.set_param("SIM_GPS1_ENABLE", 0)
-            print(f"t={now:.0f}s  {d_home:.0f} m from home: GPS {args.fault.upper()} ON")
+            say(f"t={now:.0f}s  {d_home:.0f} m from home: GPS {args.fault.upper()} ON")
         elif fault_t is not None and restore_t is None and now - fault_t >= args.fault_s:
             restore_t = now
             phase = "gps_restored"
             s.set_param("SIM_GPS1_JAM", 0)
             s.set_param("SIM_GPS1_ENABLE", 1)
-            print(f"t={now:.0f}s  GPS restored, true distance to touchdown "
+            say(f"t={now:.0f}s  GPS restored, true distance to touchdown "
                   f"{dist_m(land[0], land[1], tp[0], tp[1]):.0f} m")
         if restore_t is not None and not reconverged:
             reconverged = dist_m(tp[0], tp[1], ep[0], ep[1]) < 15.0
@@ -488,20 +518,20 @@ def run(args) -> int:
         # own GPS checks) or the 40 s grading window has passed.
         if restore_t is not None and flew and not armed and now - restore_t >= 10 and (
                 reconverged or now - restore_t >= 45):
-            print(f"t={now:.0f}s  landed and disarmed")
+            say(f"t={now:.0f}s  landed and disarmed")
             if rows[-1] is not row:
                 rows.append(row)          # the sample that ended the run is graded too
             break
         if fault_t is None and flew and not armed:
             if args.fault == "none":
-                print(f"t={now:.0f}s  landed and disarmed")
+                say(f"t={now:.0f}s  landed and disarmed")
                 if rows[-1] is not row:
                     rows.append(row)
             else:
-                print("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
+                say("it landed before the fault was triggered - reduce --trigger-m or use --trigger-s")
             break
         if now > args.timeout_s:
-            print("timeout")
+            say("timeout")
             break
 
     csv_path = os.path.join(args.out, "track.csv")
@@ -512,14 +542,14 @@ def run(args) -> int:
 
     if args.fault == "none":
         if not flew:
-            print("it never took off - check the pre-arm messages above")
+            say("it never took off - check the pre-arm messages above")
             return 1
         res = analyse_normal(rows, home, land_start, fence_radius=fence_r, land=land,
                              land_radius_m=args.land_radius_m)
         report = ("last_survey_item_reached", "max_true_dist_m", "estimate_error_max_m",
                   "touchdown_error_m", "armed_on_ground_s", "flight_time_s")
     elif fault_t is None or restore_t is None:
-        print("fault was never triggered/restored - increase --timeout-s or reduce --trigger-m")
+        say("fault was never triggered/restored - increase --timeout-s or reduce --trigger-m")
         return 1
     else:
         res = analyse(rows, fault_t, restore_t, home, loss_s=loss_s, fence_radius=fence_r,
@@ -534,12 +564,12 @@ def run(args) -> int:
         json.dump(res, fh, indent=2)
 
     plot(rows, home, fault_t, restore_t, os.path.join(args.out, "track.png"), land)
-    print("\n=== RESULT ===")
+    say("\n=== RESULT ===")
     for k, v in res["checks"].items():
-        print(f"  {'PASS' if v else 'FAIL'}  {k}")
+        say(f"  {'PASS' if v else 'FAIL'}  {k}")
     for k in report:
-        print(f"        {k}: {res[k]}")
-    print(f"\n{'PASSED' if res['passed'] else 'FAILED'} - details in {args.out}/")
+        say(f"        {k}: {res[k]}")
+    say(f"\n{'PASSED' if res['passed'] else 'FAILED'} - details in {args.out}/")
     return 0 if res["passed"] else 1
 
 
@@ -603,6 +633,8 @@ def main() -> int:
     ap.add_argument("--alt", type=float, default=100)
     ap.add_argument("--wind", type=float, default=5.0, help="simulated wind m/s")
     ap.add_argument("--wind-dir", type=float, default=250.0, help="wind from, degrees")
+    ap.add_argument("--turbulence", type=float, default=0.0,
+                    help="gustiness, SIM_WIND_TURB (0 = steady wind; 5-10 is rough)")
     ap.add_argument("--timeout-s", type=float, default=1500)
     ap.add_argument("--out", default="sitl_results")
     return run(ap.parse_args())

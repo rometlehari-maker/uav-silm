@@ -463,7 +463,27 @@ tr.sv-off td:first-child { color: var(--faint); }
 .gd-body li { margin: 4px 0; }
 .gd-body code { font-family: var(--mono); font-size: 13px; background: var(--deep); padding: 1px 5px; border-radius: 5px; }
 .gd-table { overflow-x: auto; margin: 10px 0; }
+.gd-body pre.gd-code { position: relative; font-family: var(--mono); font-size: 13px; background: var(--deep); border: 1px solid var(--line-soft);
+  border-radius: 10px; padding: 12px 84px 12px 14px; margin: 8px 0 12px; white-space: pre-wrap; word-break: break-all; }
+.gd-body pre.gd-code code { background: none; padding: 0; }
+.gd-copy { position: absolute; top: 8px; right: 8px; }
 .gd-table table { border-collapse: collapse; width: 100%; font-size: 14px; }
 .gd-table th, .gd-table td { border-bottom: 1px solid var(--line-soft); padding: 7px 10px; text-align: left; vertical-align: top; }
 .gd-table th { color: var(--faint); font-weight: 560; }
 @media (max-width: 900px) { .gd-layout { grid-template-columns: 1fr; } .gd-list { position: static; flex-direction: row; flex-wrap: wrap; } }
+
+/* ---------- simulator */
+.sim-map { height: 420px; min-height: 320px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--deep); }
+.sim-status { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.sim-status b { font-size: 19px; letter-spacing: -.01em; }
+.sim-status span { color: var(--faint); font-size: 14px; }
+.sim-status.busy b::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 9px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--cyan); animation: spin 1s linear infinite; vertical-align: -1px; }
+.sim-status.ok b { color: var(--cyan); } .sim-status.err b { color: var(--red); }
+.sim-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 13px; color: var(--faint); }
+.sim-legend .sw { display: inline-block; width: 22px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.sw-plan { background: #f0b64a; } .sw-true { background: #a1e6f3; } .sw-est { background: #e88a7a; }
+.sim-plane { width: 26px; height: 26px; color: #a1e6f3; filter: drop-shadow(0 0 3px #000); }
+.sim-install { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sim-bar { flex: 1 1 220px; height: 10px; background: var(--field); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.sim-bar i { display: block; height: 100%; background: var(--cyan); transition: width .4s; }

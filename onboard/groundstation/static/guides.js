@@ -17,6 +17,12 @@ async function gdShow(id, scroll) {
   const g = d.guides.find((x) => x.id === id) || d.guides[0];
   GD.cur = g.id;
   $("gd-body").innerHTML = `<h2>${esc(g.title)}</h2>` + g.html;
+  // every command block gets a Copy button: nothing has to be typed by hand
+  $("gd-body").querySelectorAll("pre.gd-code").forEach((pre) => {
+    const b = document.createElement("button"); b.className = "btn ghost small gd-copy"; b.type = "button"; b.textContent = "Copy";
+    b.addEventListener("click", async () => { try { await navigator.clipboard.writeText(pre.querySelector("code").textContent); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); } catch (e) { toast("Select the text and copy it with Ctrl+C / Cmd+C"); } });
+    pre.appendChild(b);
+  });
   $("gd-list").querySelectorAll("[data-gd]").forEach((b) => b.classList.toggle("on", b.dataset.gd === g.id));
   if (scroll) $("gd-body").scrollIntoView({ behavior: "smooth", block: "start" });
   try { history.replaceState(null, "", "#guides/" + g.id); } catch (e) {}

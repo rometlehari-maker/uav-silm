@@ -338,16 +338,20 @@ class Station:
 
     # ---------------------------------------------------------- simulator
     def sim_start(self, body: dict) -> dict:
+        from groundstation.sim import SCENARIOS
         o = self.outputs(body.get("project") or {})
         pr = o["project"]
         w = pr.get("wind") or {}
         launch = pr["mission"]["launch"]
+        sc = SCENARIOS.get(body.get("scenario") or body.get("fault") or "jam") or SCENARIOS["jam"]
+        fault_s = float(body.get("fault_s") or sc["fault_s"] or 90)
         return self.sim.start(o["params_text"], o["mission_wpl"], (launch[0], launch[1], 0.0),
-                              float(w.get("speed_mps") or 0), float(w.get("from_deg") or 0),
-                              fault=body.get("fault", "jam") if body.get("fault", "jam") in ("jam", "disable", "none")
-                              else "jam",
-                              fault_s=float(body.get("fault_s") or 90),
-                              trigger_s=float(body.get("trigger_s") or 150))
+                              float(sc.get("wind") or w.get("speed_mps") or 0), float(w.get("from_deg") or 0),
+                              fault=sc["fault"], fault_s=fault_s,
+                              trigger_s=float(body.get("trigger_s") or 150),
+                              speed=body.get("speed") if body.get("speed") in ("real", "fast") else "real",
+                              turbulence=float(sc.get("turbulence") or 0),
+                              scenario=next(k for k, v in SCENARIOS.items() if v is sc))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -457,6 +461,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"name": n, "boxes": st.dataset.get_boxes(n)})
             if path == "/api/sim/status":
                 return self._send(200, st.sim.status())
+            if path.startswith("/api/sim/live"):
+                q = urllib.parse.parse_qs(urllib.parse.urlparse(path).query)
+                return self._send(200, st.sim.live(int((q.get("since") or ["0"])[0])))
             if path == "/api/sim/track.png":
                 s = st.sim.status()
                 return self._file(s.get("track_png"))
@@ -595,6 +602,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, st.sim_start(body))
             if path == "/api/sim/stop":
                 return self._send(200, st.sim.stop())
+            if path == "/api/sim/install":
+                return self._send(200, st.sim.install())
+            if path == "/api/sim/remove":
+                return self._send(200, st.sim.remove())
             if path == "/api/sim/commands":
                 pr = P.merge_defaults(body.get("project") or {})
                 w = pr["wind"]

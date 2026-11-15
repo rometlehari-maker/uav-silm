@@ -113,9 +113,12 @@ let PAGE = null;
   // simulator: "Nothing goes wrong" needs no fault length and explains itself
   await tab("sim");
   await page.selectOption("#sim-fault", "none");
-  assert(await page.isHidden("#sim-fault-len") && await page.isVisible("#sim-none-help"), "normal flight option");
+  assert(await page.isHidden("#sim-fault-len") && (await page.textContent("#sim-scenario-help")).includes("whole mission"), "normal flight option");
+  await page.selectOption("#sim-fault", "gusty");
+  assert(await page.isVisible("#sim-fault-len") && (await page.textContent("#sim-scenario-help")).includes("10 m/s"), "gusty option");
   await page.selectOption("#sim-fault", "jam");
-  assert(await page.isVisible("#sim-fault-len") && await page.isHidden("#sim-none-help"), "fault options back");
+  assert(await page.isVisible("#sim-map .leaflet-tile-pane, #sim-map .leaflet-pane"), "live map is drawn");
+  assert((await page.textContent("#sim-avail")).match(/simulator/i), "simulator availability shown");
 
   // ---------------- flights & pictures
   await tab("flights");

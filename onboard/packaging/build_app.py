@@ -64,7 +64,7 @@ def data_files() -> list[tuple[str, str]]:
     for f in ("silm_oi.tflite", "silm_oi_labels.txt", "silm_oi.json", "LICENSE-silm_oi-AGPL-3.0.txt",
               "coco_labels.txt", "README.md"):
         d.append((os.path.join("models", f), "models"))
-    d.append(("tools/sitl_failsafe_test.py", "tools"))           # run by a system Python
+    d.append(("tools/sitl_failsafe_test.py", "tools"))           # the simulator run, loaded by groundstation/sim.py
     for f in sorted(glob.glob(os.path.join(ONBOARD, "training", "*"))):
         if os.path.isfile(f) and f.endswith((".py", ".yaml", ".md")):
             d.append((os.path.relpath(f, ONBOARD), "training"))

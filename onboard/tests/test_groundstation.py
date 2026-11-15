@@ -548,7 +548,7 @@ def test_http_errors_are_messages_not_crashes(http):
     r, _ = call(url + "/api/usb/read", {"path": "/nonexistent"})
     assert r["ok"] and r["present"] is False
     r, _ = call(url + "/api/sim/commands", {"project": full_project()})
-    assert "sim_vehicle.py" in r["text"] and "58.380000,26.720000" in r["text"]
+    assert "arduplane" in r["text"] and "58.380000,26.720000" in r["text"]
 
 
 import urllib.error  # noqa: E402
