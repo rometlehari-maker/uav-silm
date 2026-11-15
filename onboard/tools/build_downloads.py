@@ -7,7 +7,7 @@
 Commit your onboard/ changes first: only committed files are packed.
 
 The website (default) offers only the app: its download buttons link to the
-latest GitHub release. This writes the line under them in `index.html`
+latest GitHub release. This writes the line under them in `downloads.html`
 (between the downloads:begin/end markers): the version and the commit it was
 built from. No files are put on the website.
 
@@ -194,7 +194,7 @@ def site_meta(commit: str) -> dict:
 
 
 def site_block(meta: dict) -> str:
-    """The line under the app's download buttons in index.html (between the markers)."""
+    """The line under the app's download buttons in downloads.html (between the markers)."""
     src = f"https://github.com/rometlehari-maker/uav-silm/tree/{meta['commit']}/onboard"
     rel = "https://github.com/rometlehari-maker/uav-silm/releases/latest"
     return (f"{SITE_BEGIN}\n"
@@ -222,7 +222,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=None, help="folder for the release files (with --release)")
     ap.add_argument("--commit", default=None,
                     help="git commit to pack (default: the last commit that changed onboard/)")
-    ap.add_argument("--site", default=os.path.join(ROOT, "index.html"),
+    ap.add_argument("--site", default=os.path.join(ROOT, "downloads.html"),
                     help="website page whose version line to update ('' to skip)")
     ap.add_argument("--release", action="store_true",
                     help="build every file for a GitHub release; doesn't touch the website")

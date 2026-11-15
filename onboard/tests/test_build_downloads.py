@@ -104,7 +104,7 @@ def test_website_offers_only_the_app(tmp_path):
 
 
 def test_the_live_page_has_no_download_files():
-    html = open(os.path.join(bd.ROOT, "index.html"), encoding="utf-8").read()
+    html = open(os.path.join(bd.ROOT, "downloads.html"), encoding="utf-8").read()
     block = html[html.index(bd.SITE_BEGIN):html.index(bd.SITE_END)]
     assert "downloads/" not in block and "Version " in block
     assert "releases/latest/download/UAV-SILM-Ground-Station-Setup.exe" in html

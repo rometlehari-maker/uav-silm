@@ -484,6 +484,8 @@ User's answers to questions asked:
   guide linux-install, Python/USB/Pi-by-hand/camera terminal steps written
   for first-timers, fenced ``` blocks now render with Copy buttons
   (guides.py + guides.js). e2e: tab() opens More first; home actions checked.
+  Website moved its download section to downloads.html (main, #10):
+  build_downloads.py --site default and its test now use downloads.html.
   Docs: GROUND_STATION.md (screen, section 7, troubleshooting), FLIGHT_READY
   2.3, SITL_HOWTO intro (developers only now), README, notices, release
   notes' Linux line. VERSION 2.3.0.
