@@ -198,6 +198,29 @@ def _browser(url: str, srv) -> None:
             pass
 
 
+def linux_menu_entry() -> str | None:
+    """On Linux the unpacked app adds itself to the applications menu the
+    first time it runs, so nothing has to be typed. Returns the entry's path."""
+    if sys.platform != "linux" or not getattr(sys, "frozen", False):
+        return None
+    try:
+        exe = os.path.realpath(sys.executable)
+        folder = os.path.dirname(exe)
+        apps = os.path.join(os.path.expanduser("~"), ".local", "share", "applications")
+        os.makedirs(apps, exist_ok=True)
+        icon = os.path.join(folder, "icon.png")
+        entry = os.path.join(apps, "uav-silm-ground-station.desktop")
+        text = ("[Desktop Entry]\nType=Application\nName=UAV SILM Ground Station\n"
+                "Comment=Plan, send and review UAV SILM survey flights\n"
+                f"Exec=\"{exe}\"\nIcon={icon}\nTerminal=false\nCategories=Science;Utility;\n")
+        if not os.path.isfile(entry) or open(entry).read() != text:
+            with open(entry, "w") as fh:
+                fh.write(text)
+        return entry
+    except OSError:
+        return None
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", type=int, default=8765)

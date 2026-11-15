@@ -200,9 +200,12 @@ const WZ_RENDER = {
       <li>Fill in and press <b>Install</b>:</li>
     </ol>
     ${piInstallForm()}
-    <details class="wz-byhand"><summary>Or install by hand in a terminal</summary>
-      <p>Connect to the Pi (Windows: <b>PowerShell</b>):${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
-      then paste this line. It asks for a password for the aircraft's own Wi-Fi, installs everything and restarts the Pi:${copyBox(PI_ONE_LINE, "wz-oneline")}</p>
+    <details class="wz-byhand"><summary>Or install by hand in a terminal (only if the Install button cannot reach the Pi)</summary>
+      <p>A terminal is a window where you type one line and press Enter. Open one: Windows → Start menu, type <b>PowerShell</b>, Enter; Mac → Cmd+Space, <b>Terminal</b>; Ubuntu → Ctrl+Alt+T.</p>
+      <p>1. Connect to the Pi. Copy this, put your Pi username in place of YOUR-USERNAME, paste it, Enter:${copyBox("ssh YOUR-USERNAME@silm.local", "wz-ssh")}
+      The first time it asks <i>Are you sure you want to continue connecting (yes/no)?</i>: type <b>yes</b>, Enter. Then <i>password:</i> type the Pi password: <b>nothing shows while you type</b>, not even dots. Enter. The line now ends in <code>silm:~ $</code>: you are typing on the Pi.</p>
+      <p>2. Copy this whole line (one line), paste it, Enter:${copyBox(PI_ONE_LINE, "wz-oneline")}
+      It asks for the Pi password once more, then for a password for the aircraft's own Wi-Fi (choose one, 8 characters or more, and write it down), then installs for 10-20 minutes and restarts the Pi (the connection closes: that is the end). Close the terminal.</p>
     </details>
     <label class="wz-confirm"><input type="checkbox" id="wz-pi-installed" ${wzIsDone("pi_install") ? "checked" : ""}> The installer finished and the Pi restarted</label>`,
   pi_connect: () => `<p class="wz-lead">After the restart, the Pi makes its own Wi-Fi network named <b>SILM-silm</b> whenever your home Wi-Fi is out of reach (at the field, or with the aircraft away from home).</p>

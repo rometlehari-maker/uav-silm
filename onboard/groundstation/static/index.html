@@ -20,16 +20,20 @@
 <div class="layout">
   <nav class="tabs" aria-label="Steps">
     <button data-tab="setup" class="tab tab-setup"><b>✦</b> Setup <span class="tab-badge" id="setup-badge"></span></button>
+    <div class="tab-group">Fly a mission</div>
     <button data-tab="start" class="tab"><b>1</b> Start</button>
     <button data-tab="aircraft" class="tab"><b>2</b> Aircraft</button>
     <button data-tab="mission" class="tab"><b>3</b> Mission</button>
     <button data-tab="camera" class="tab"><b>4</b> Camera</button>
     <button data-tab="send" class="tab"><b>5</b> Send to aircraft</button>
     <button data-tab="launch" class="tab"><b>6</b> Launch</button>
+    <div class="tab-group">Before and after</div>
     <button data-tab="sim" class="tab"><b>7</b> Simulator</button>
     <button data-tab="flights" class="tab"><b>8</b> Flights &amp; pictures</button>
-    <button data-tab="train" class="tab"><b>9</b> Teach new objects</button>
-    <button data-tab="tools" class="tab"><b>10</b> Tools</button>
+    <button class="tab tab-more" id="tab-more" aria-expanded="false"><b>…</b> More</button>
+    <div class="tab-group tab-more-only">More</div>
+    <button data-tab="train" class="tab tab-more-only"><b>9</b> Teach new objects</button>
+    <button data-tab="tools" class="tab tab-more-only"><b>10</b> Tools</button>
     <button data-tab="guides" class="tab tab-guides"><b>?</b> Guides</button>
   </nav>
 
@@ -62,9 +66,15 @@
           <div class="help" id="setup-banner-text">A guided setup checks every part for you, one step at a time.</div></div>
         <button class="btn primary" id="setup-banner-go">Start the setup</button>
       </div>
+      <h2 class="sub">What do you want to do?</h2>
+      <div class="home-actions">
+        <button class="home-action" data-home="fly"><span class="ha-icon">✈</span><b>Fly a mission</b><span id="home-fly-sub">Plan it, send it, launch it</span></button>
+        <button class="home-action" data-home="sim"><span class="ha-icon">◎</span><b>Practise in the simulator</b><span>Fly this mission on the laptop first</span></button>
+        <button class="home-action" data-home="flights"><span class="ha-icon">▣</span><b>See the pictures</b><span>From the last flights</span></button>
+        <button class="home-action" data-home="setup"><span class="ha-icon">✦</span><b>Set up an aircraft</b><span id="home-setup-sub">The guided setup, step by step</span></button>
+      </div>
       <p class="lead">Plan a fully automatic survey flight, send it to the aircraft, launch it,
-        and look at the pictures it took. Work through the steps on the left from top to bottom.
-        Everything is saved on this laptop as you go.</p>
+        and look at the pictures it took. Everything is saved on this laptop as you go.</p>
       <div class="cards two">
         <div class="card">
           <h2>Your progress</h2>
@@ -249,7 +259,7 @@
         today's wind, and something going wrong. Watch it on the map. Nothing to set up by hand: the
         simulator is ArduPilot's own, and the button below fetches it.</p>
       <div class="card" id="sim-avail"></div>
-      <div class="cards two">
+      <div class="cards two sim-grid">
         <div class="card">
           <div class="q">What should happen in the simulated flight?</div>
           <select id="sim-fault" aria-label="Scenario">

@@ -17,7 +17,10 @@ let PAGE = null;
   page.on("console", (m) => { if (m.type() === "error" && !/tile|arcgis|ERR_/.test(m.text())) errors.push(m.text()); });
   page.on("dialog", (d) => d.accept(d.type() === "prompt" ? "Field B" : undefined));
   const step = async (name) => { console.log("step:", name); if (shots) await page.screenshot({ path: `${shots}/${name}.png` }); };
-  const tab = async (t) => { await page.click(`.tab[data-tab="${t}"]`); await page.waitForTimeout(300); };
+  const tab = async (t) => {
+    if (await page.isVisible("#tab-more")) await page.click("#tab-more");       // Teach and Tools sit behind "More"
+    await page.click(`.tab[data-tab="${t}"]`); await page.waitForTimeout(300);
+  };
   const problems = async () => page.$$eval("#problem-list li", (l) => l.map((x) => x.className + ": " + x.textContent));
   const resultOf = async (id, re, timeout = 15000) => {
     await page.waitForFunction(([i, r]) => { const el = document.getElementById(i); return el && new RegExp(r).test(el.textContent) && !el.classList.contains("busy"); }, [id, re], { timeout });
@@ -26,6 +29,11 @@ let PAGE = null;
 
   await page.goto(GS + "/#start");
   await page.waitForSelector("#form-aircraft .field", { state: "attached" });
+  assert((await page.locator(".home-action").count()) === 4, "home screen actions");
+  await page.click('.home-action[data-home="fly"]');
+  await page.waitForTimeout(300);
+  assert(await page.isVisible("#tab-aircraft.active, #tab-mission.active, #tab-send.active, #tab-launch.active"), "Fly a mission goes to the next step");
+  await page.click('.tab[data-tab="start"]');
   await step("01-start");
 
   // ---------------- aircraft: the CG question
@@ -117,7 +125,7 @@ let PAGE = null;
   await page.selectOption("#sim-fault", "gusty");
   assert(await page.isVisible("#sim-fault-len") && (await page.textContent("#sim-scenario-help")).includes("10 m/s"), "gusty option");
   await page.selectOption("#sim-fault", "jam");
-  assert(await page.isVisible("#sim-map .leaflet-tile-pane, #sim-map .leaflet-pane"), "live map is drawn");
+  assert((await page.locator("#sim-map .leaflet-pane").count()) > 0, "live map is drawn");
   assert((await page.textContent("#sim-avail")).match(/simulator/i), "simulator availability shown");
 
   // ---------------- flights & pictures

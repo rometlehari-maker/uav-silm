@@ -23,13 +23,13 @@ not need the internet except for the map background.
 |---|---|---|
 | **Windows** | `UAV-SILM-Ground-Station-Setup.exe`, double-click, Next, Install. No administrator rights needed. Windows may say the publisher is unknown (the app isn't code-signed): **More info → Run anyway** | the **UAV SILM Ground Station** icon on the desktop or in the Start menu |
 | **macOS** (Apple silicon) | unzip `UAV-SILM-Ground-Station-macos.zip`, drag the app to Applications | the first time **right-click → Open** (it isn't notarised), then as usual |
-| **Linux** | unpack `UAV-SILM-Ground-Station-linux.tar.gz`, run `./install.sh` in it | the applications menu, or `uav-silm-ground-station` |
+| **Linux** | right-click `UAV-SILM-Ground-Station-linux.tar.gz` → Extract Here, then double-click `UAV-SILM-Ground-Station` in the extracted folder (guide *The Ground Station on Linux*) | the applications menu (it adds itself the first time) |
 
 It opens in its own window (on Linux in the browser, with a small window to
 quit it). Nothing else to install: Python is inside the app. Only the
 simulator and training need Python on the computer; their tabs tell you.
 
-**From the source** (developers, or the simulator on Linux/WSL): install
+**From the source** (developers): install
 **Python 3** (<https://www.python.org/downloads/>; on Windows tick **"Add
 python.exe to PATH"**), get the software (the software zip attached to each GitHub release, GitHub
 **Code → Download ZIP**, or `git clone https://github.com/rometlehari-maker/uav-silm`), then:
@@ -56,19 +56,29 @@ just opens the page.
 | SILM Ground Station           Mission [Field A     ]  [Save]  [Ready]    |
 +--------------+---------------------------------------+-------------------+
 | ✦ Setup 4/10 |                                       | Before you fly    |
-| 1 Start      |                                       |                   |
-| 2 Aircraft   |   the step you are on                 |  - problems to    |
-| 3 Mission    |   (questions, map, buttons)           |    fix (red)      |
-| 4 Camera     |                                       |  - notes          |
-| 5 Send       |                                       |    (orange)       |
+| FLY A MISSION|   the step you are on                 |                   |
+| 1 Start      |   (questions, map, buttons)           |  - problems to    |
+| 2 Aircraft   |                                       |    fix (red)      |
+| 3 Mission    |                                       |  - notes          |
+| 4 Camera     |                                       |    (orange)       |
+| 5 Send       |                                       |                   |
 | 6 Launch     |                                       |                   |
+| BEFORE/AFTER |                                       |                   |
 | 7 Simulator  |                                       |                   |
 | 8 Flights    |                                       |                   |
-| 9 Teach      |                                       |                   |
+| … More       |  (9 Teach new objects, 10 Tools)      |                   |
+| ? Guides     |                                       |                   |
 +--------------+---------------------------------------+-------------------+
 ```
 
-- **Left:** the steps, top to bottom. A green tick appears on a step once it is done.
+- **Start** asks **What do you want to do?** with four big buttons: **Fly a
+  mission** (takes you to the next thing that is still open: the aircraft
+  questions, the map, sending, or launching), **Practise in the simulator**,
+  **See the pictures**, **Set up an aircraft**.
+- **Left:** the steps, top to bottom, in three groups. A green tick appears on
+  a step once it is done. **More** shows the two tabs most people never need
+  (teaching the aircraft new objects, and the tools for the aircraft's
+  computer and flight controller); once opened they stay visible.
 - **Middle:** every value you can change has a **question above it** in bold
   ("What is the center of gravity of your aircraft?"), the box to answer in,
   and an explanation underneath. Questions with a red **\*** must be answered.
@@ -463,4 +473,4 @@ On the aircraft's Pi: settings in `~/silm-settings/` (`settings.yaml`,
 | Simulator: "Could not download" | No internet, or firmware.ardupilot.org is blocked by a firewall; try again later or from another network |
 | Simulator: "no ready-made simulator for this computer" | A Mac: guide *The simulator on a Mac* (one-time build), or use a Windows/Linux computer |
 | Simulator: "something else is using port 5760" | Another simulator is running on this computer (close it) |
-| Training: "tools are not installed" | Run the command the tab shows, once (`python -m pip install ultralytics litert-torch`; `litert-torch` turns the trained model into the file the Pi runs) |
+| Training: "tools are not installed" | Press **Install the training tools** on the Teach tab (needs Python on the computer: guide *Installing Python*) |

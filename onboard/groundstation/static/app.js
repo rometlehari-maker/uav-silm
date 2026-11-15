@@ -42,7 +42,28 @@ function markDone(k) {
 }
 
 /* ------------------------------------------------------------------ tabs */
+function navMore(on) {                       // Teach and Tools are behind "More" until wanted
+  document.querySelector("nav.tabs").classList.toggle("more", on);
+  try { localStorage.setItem("silm-nav-more", on ? "1" : ""); } catch (e) {}
+}
+$("tab-more").addEventListener("click", () => navMore(true));
+try { if (localStorage.getItem("silm-nav-more")) navMore(true); } catch (e) {}
+function nextOpenStep() {                   // where "Fly a mission" should take you
+  if (!P) return "aircraft";
+  const missionOK = CHECK && CHECK.plan && !CHECK.errors.some((e) => e.startsWith("Mission"));
+  const aircraftOK = CHECK && !CHECK.errors.some((e) => META.questions.some((q) => q.tab === "aircraft" && e.includes(q.q)));
+  const windOK = P.wind.speed_mps != null && P.wind.from_deg != null;
+  if (!aircraftOK) return "aircraft";
+  if (!missionOK || !windOK) return "mission";
+  if (!DONE.fc || !DONE.pi) return "send";
+  return "launch";
+}
+document.querySelectorAll(".home-action").forEach((b) => b.addEventListener("click", () => {
+  const k = b.dataset.home;
+  showTab(k === "fly" ? nextOpenStep() : k);
+}));
 function showTab(name) {
+  if (name === "train" || name === "tools") navMore(true);
   document.querySelectorAll(".page").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   window.scrollTo(0, 0);                       // every step starts at its top
@@ -170,6 +191,8 @@ function renderProgress() {
     ["Today's wind entered", windOK, "mission"], ["Flown in the simulator", DONE.sim, "sim"],
     ["Sent to the flight controller", DONE.fc, "send"], ["Sent to the aircraft computer", DONE.pi, "send"]];
   $("progress").innerHTML = steps.map(([t, d, tab]) => `<li class="${d ? "done" : ""}"><a href="#${tab}" data-go="${tab}">${esc(t)}</a></li>`).join("");
+  const open = steps.filter(([, d]) => !d);
+  $("home-fly-sub").textContent = open.length ? `Next: ${open[0][0].toLowerCase()}` : "Everything is ready: go to Launch";
   $("progress").querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); showTab(a.dataset.go); }));
   const tabDone = { aircraft: aircraftOK, mission: missionOK && windOK, send: DONE.fc && DONE.pi, sim: DONE.sim };
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("done", !!tabDone[b.dataset.tab]));
@@ -470,7 +493,7 @@ function simSetStatus(cls, title, sub) {
   const el = $("sim-status"); el.className = "sim-status " + (cls || ""); $("sim-status-title").textContent = title; $("sim-status-sub").textContent = sub || "";
 }
 function simScenarioUI() {
-  const sc = (META.sim && META.sim.scenarios) || {}, v = $("sim-fault").value, none = v === "none";
+  const sc = (META && META.sim && META.sim.scenarios) || {}, v = $("sim-fault").value, none = v === "none";
   $("sim-fault-len").hidden = none;
   $("sim-scenario-help").textContent = sc[v] ? sc[v].what : "";
 }
@@ -541,7 +564,6 @@ $("sim-start").addEventListener("click", async () => {
 });
 $("sim-stop").addEventListener("click", async () => { await api("/api/sim/stop", {}); simPoll(); });
 $("sim-fault").addEventListener("change", simScenarioUI);
-simScenarioUI();
 
 /* ------------------------------------------------------------------ flights */
 let flMap = null, flLayers = null, FL = null, flOn = new Set(), flShown = [], lbIndex = 0;
