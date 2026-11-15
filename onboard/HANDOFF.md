@@ -446,7 +446,7 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
-- **2.3.0 on the branch, NOT merged yet** (user, 15 Nov: "make it mooore easy
+- **2.3.0 merged and released** (PR #12 squash-merged as 265f035, release gs-v2.3.0 published 21:33 UTC 15 Nov, 12 files; website version line via a follow-up PR). (User, 15 Nov: "make it mooore easy
   to use, its too much for a farmer or soldier; anything in a terminal must
   be explained thoroughly; realistic simulations inside the app"; the Android
   app was asked for and then withdrawn: "scratch the mobile thing").
