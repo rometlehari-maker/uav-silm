@@ -243,7 +243,16 @@ class Sitl:
     def __init__(self, url):
         from pymavlink import mavutil
         self.mavutil = mavutil
-        self.m = mavutil.mavlink_connection(url, source_system=250)
+        # the simulator may still be opening its port: keep trying for a minute
+        t0 = time.time()
+        while True:
+            try:
+                self.m = mavutil.mavlink_connection(url, source_system=250)
+                break
+            except OSError as exc:            # connection refused, not yet listening
+                if time.time() - t0 > 60:
+                    raise RuntimeError(f"could not connect to the simulator at {url}: {exc}") from exc
+                time.sleep(1.0)
         self.m.wait_heartbeat(timeout=60)
         self.texts: list[str] = []
         for sid in (mavutil.mavlink.MAV_DATA_STREAM_ALL,):
