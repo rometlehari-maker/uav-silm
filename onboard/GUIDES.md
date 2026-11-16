@@ -270,8 +270,18 @@ the simulator**.
 **Passed** with every check green.
 
 **If the download fails:** the computer needs the internet for this one step,
-and the file comes from firmware.ardupilot.org. Company or school networks
-sometimes block downloads of programs; try at home or on a phone's hotspot.
+and the files come from firmware.ardupilot.org. Press **Install** again: it
+carries on where it stopped. Company or school networks sometimes block
+downloads of programs; try at home or on a phone's hotspot.
+
+**If it says part of the simulator is missing** (Windows): Windows Defender
+sometimes removes the simulator program after the download, because it is
+not signed by a company. Open **Windows Security → Virus & threat
+protection → Protection history**, find the entry for `ArduPlane.elf`,
+choose **Actions → Restore** (or **Allow**), then press **Install the
+simulator** again. The program is ArduPilot's own, published by the
+ArduPilot project at firmware.ardupilot.org, the same file Mission Planner
+uses.
 
 ### The simulator on a Mac {#simulator-mac}
 
