@@ -453,7 +453,8 @@ User's answers to questions asked:
   enough, Windows/Cygwin not). Fix: _listening reads the connection table
   (/proc/net/tcp on Linux, `netstat -an` elsewhere), never connects; the test
   tool retries the connect for 60 s. Verified on Linux (normal flight, fast,
-  7/7). Not yet re-tested on Windows by the user.
+  7/7). Merged (PR #14, 5122334), release gs-v2.3.1 published. Not yet
+  re-tested on Windows by the user.
 - **2.3.0 merged and released** (PR #12 squash-merged as 265f035, release gs-v2.3.0 published 21:33 UTC 15 Nov, 12 files; website version line via a follow-up PR). (User, 15 Nov: "make it mooore easy
   to use, its too much for a farmer or soldier; anything in a terminal must
   be explained thoroughly; realistic simulations inside the app"; the Android
