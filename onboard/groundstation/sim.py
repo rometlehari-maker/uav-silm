@@ -24,6 +24,11 @@ arduplane binary; ~/ardupilot/build/sitl/bin/arduplane is found by itself.
 
 from __future__ import annotations
 
+import os
+# pymavlink's default dialect "all" is generated from XML at run time, which the
+# packaged app does not carry; the ArduPilot dialect is bundled.
+os.environ.setdefault("MAVLINK_DIALECT", "ardupilotmega")
+os.environ.setdefault("MAVLINK20", "1")
 import importlib.util
 import json
 import os
@@ -145,6 +150,17 @@ class SimRunner:
         self.rows: list[dict] = []
 
     # ------------------------------------------------------------ the binary
+    def missing_files(self) -> list[str]:
+        """Downloaded files that are no longer there (an antivirus may have
+        removed the unsigned program): empty when nothing was installed or
+        everything is in place."""
+        dl = DOWNLOADS.get(host_key())
+        if not dl or not os.path.isdir(self.sitl_dir):
+            return []
+        names = [n for _, n in dl[0] if n != "git-version.txt"]
+        present = [n for n in names if os.path.isfile(os.path.join(self.sitl_dir, n))]
+        return [] if not present else [n for n in names if n not in present]
+
     def binary(self) -> str | None:
         """The simulator program to run, or None."""
         env = os.environ.get("SILM_SITL_BIN")
@@ -153,7 +169,7 @@ class SimRunner:
         dl = DOWNLOADS.get(host_key())
         if dl:
             p = os.path.join(self.sitl_dir, dl[1])
-            if os.path.isfile(p):
+            if os.path.isfile(p) and not self.missing_files():
                 return p
         dev = os.path.join(self.ardupilot_dir, "build", "sitl", "bin", "arduplane")
         if os.path.isfile(dev) and sys.platform != "win32":
@@ -178,13 +194,21 @@ class SimRunner:
         key = host_key()
         can = key in DOWNLOADS
         why = None
-        if not b:
+        gone = self.missing_files()
+        if not b and gone:
+            why = (f"Part of the simulator is missing from {self.sitl_dir} ({', '.join(gone)}). "
+                   "An antivirus program (on Windows usually Defender) may have removed it: the "
+                   "simulator is an unsigned program from the ArduPilot project. Press \"Install the "
+                   "simulator\" again; if it disappears again, open Windows Security -> Virus & threat "
+                   "protection -> Protection history, restore the file and allow it.")
+        elif not b:
             why = ("The simulator is not on this computer yet. Press \"Install the simulator\": "
                    "it downloads ArduPilot's own simulator (no building, nothing to type)." if can else
                    "There is no ready-made simulator for this computer "
                    f"({key.replace('-', ', ')}). The guide \"The simulator on a Mac\" explains the "
                    "one-time build, or run the Ground Station on a Windows or Linux computer.")
         out = {"available": bool(b), "installed": bool(b), "can_install": can and not b, "why": why,
+               "missing": gone,
                "platform": key, "binary": b, "version": self.version() if b else "",
                "run_dir": self.run_dir, "sitl_dir": self.sitl_dir, "scenarios": SCENARIOS,
                "install": self.install_status()}
@@ -206,26 +230,14 @@ class SimRunner:
         files, exe = DOWNLOADS[host_key()]
         tmp = self.sitl_dir + ".part"
         try:
-            shutil.rmtree(tmp, ignore_errors=True)
-            os.makedirs(tmp, exist_ok=True)
+            os.makedirs(tmp, exist_ok=True)                 # a partial download resumes
             ctx = _ssl_context()
             total_files = len(files)
             for i, (path, name) in enumerate(files):
                 j["file"] = name
                 j["log"].append(f"downloading {name}")
-                req = urllib.request.Request(SERVER + "/" + path, headers={"User-Agent": "SILM-GroundStation"})
-                with urllib.request.urlopen(req, timeout=60, context=ctx) as r, \
-                        open(os.path.join(tmp, name), "wb") as fh:
-                    size = int(r.headers.get("Content-Length") or 0)
-                    got = 0
-                    while True:
-                        chunk = r.read(256 * 1024)
-                        if not chunk:
-                            break
-                        fh.write(chunk)
-                        got += len(chunk)
-                        part = got / size if size else 0.0
-                        j["progress"] = (i + part) / total_files
+                self._download(SERVER + "/" + path, os.path.join(tmp, name), ctx,
+                               lambda part, i=i: j.__setitem__("progress", (i + part) / total_files))
             exe_path = os.path.join(tmp, exe)
             if os.path.getsize(exe_path) < 1_000_000:
                 raise RuntimeError("the downloaded simulator is too small to be right")
@@ -246,11 +258,43 @@ class SimRunner:
             j["progress"] = 1.0
             j["state"] = "done"
         except Exception as exc:  # noqa: BLE001
-            shutil.rmtree(tmp, ignore_errors=True)
             j["log"].append(f"ERROR: {exc}")
             j["state"] = "error"
             j["message"] = (f"Could not download the simulator ({exc}). Check the internet "
-                            "connection and try again.")
+                            "connection and press Install again: it continues where it stopped.")
+
+    def _download(self, url: str, dest: str, ctx, progress, tries: int = 5) -> None:
+        """Fetch url to dest, resuming a partial file and retrying when the
+        connection stalls (the firmware server is sometimes slow)."""
+        last = None
+        for attempt in range(tries):
+            have = os.path.getsize(dest) if os.path.isfile(dest) else 0
+            headers = {"User-Agent": "SILM-GroundStation"}
+            if have:
+                headers["Range"] = f"bytes={have}-"
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                    if have and r.status != 206:         # the server did not resume: start over
+                        have = 0
+                    total = have + int(r.headers.get("Content-Length") or 0)
+                    with open(dest, "ab" if have else "wb") as fh:
+                        got = have
+                        while True:
+                            chunk = r.read(256 * 1024)
+                            if not chunk:
+                                break
+                            fh.write(chunk)
+                            got += len(chunk)
+                            progress(got / total if total else 0.0)
+                    if total and got < total:
+                        raise OSError(f"only {got} of {total} bytes arrived")
+                return
+            except (OSError, ValueError) as exc:         # timeouts, resets, bad length
+                last = exc
+                self.inst["log"].append(f"  {os.path.basename(dest)}: {exc}; trying again")
+                time.sleep(2 * (attempt + 1))
+        raise RuntimeError(f"{os.path.basename(dest)} could not be downloaded ({last})")
 
     def install_status(self) -> dict:
         j = self.inst
@@ -322,8 +366,16 @@ class SimRunner:
             kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         else:
             kw["start_new_session"] = True
-        with open(os.path.join(self.run_dir, "simulator.log"), "wb") as logf:
-            self._sitl = subprocess.Popen(cmd, cwd=self.run_dir, stdout=logf, stderr=subprocess.STDOUT, **kw)
+        gone = self.missing_files()
+        if gone or not os.path.isfile(b):
+            raise RuntimeError(f"the simulator's files are missing ({', '.join(gone) or b}): an antivirus "
+                               "may have removed them. Press \"Install the simulator\" again.")
+        try:
+            with open(os.path.join(self.run_dir, "simulator.log"), "wb") as logf:
+                self._sitl = subprocess.Popen(cmd, cwd=self.run_dir, stdout=logf, stderr=subprocess.STDOUT, **kw)
+        except OSError as exc:
+            raise RuntimeError(f"could not start {b}: {exc}. If an antivirus blocks it, allow it "
+                               "(Windows Security -> Protection history) and try again.") from exc
         t0 = time.time()
         while time.time() - t0 < 60:
             if _listening(PORT):
@@ -371,7 +423,10 @@ class SimRunner:
             self._log(f"ERROR: {exc}")
             return 1
         except Exception as exc:  # noqa: BLE001
+            import traceback
             self._log(f"ERROR: {exc!r}")
+            for line in traceback.format_exc().rstrip().splitlines()[-12:]:
+                self._log("    " + line)          # where exactly: for a bug report
             return 1
 
     def _run(self, a):
@@ -399,11 +454,22 @@ class SimRunner:
             if j["state"] == "running":
                 j["state"] = "passed" if code == 0 else "failed"
         except Exception as exc:  # noqa: BLE001
+            import traceback
             self._log(f"ERROR: {exc}")
+            for line in traceback.format_exc().rstrip().splitlines()[-8:]:
+                self._log("    " + line)
             j["state"] = "error"
         finally:
             j["step"] = "done"
             self._stop_sitl()
+            try:                                  # the simulator's own last words help too
+                tail = open(os.path.join(self.run_dir, "simulator.log"), errors="replace").read()[-800:]
+                if tail.strip() and j["state"] in ("error", "failed"):
+                    self._log("--- simulator output (end) ---")
+                    for line in tail.strip().splitlines()[-10:]:
+                        self._log("    " + line)
+            except OSError:
+                pass
 
     def stop(self) -> dict:
         if self.job and self.job["state"] == "running":

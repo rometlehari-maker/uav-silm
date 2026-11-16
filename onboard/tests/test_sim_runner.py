@@ -114,3 +114,50 @@ def test_listening_check_never_connects(monkeypatch):
     finally:
         srv.close()
     assert sim._listening(port) is False
+
+
+def test_missing_files_are_reported_and_install_offered_again(tmp_path, monkeypatch):
+    monkeypatch.setattr(sim, "host_key", lambda: "windows-x86_64")
+    monkeypatch.delenv("SILM_SITL_BIN", raising=False)
+    sitl = tmp_path / "sitl"
+    sitl.mkdir()
+    r = sim.SimRunner(ardupilot_dir=str(tmp_path / "no"), sitl_dir=str(sitl))
+    assert r.missing_files() == [] and not r.available()["available"]
+    for _, n in sim.DOWNLOADS["windows-x86_64"][0]:
+        (sitl / n).write_bytes(b"x")
+    assert r.available()["available"] and r.missing_files() == []
+    (sitl / "ArduPlane.elf").unlink()                 # what an antivirus does
+    a = r.available()
+    assert a["missing"] == ["ArduPlane.elf"] and not a["available"] and a["can_install"]
+    assert "antivirus" in a["why"] and "Install the simulator" in a["why"]
+
+
+def test_download_resumes_a_partial_file(tmp_path, monkeypatch):
+    import io
+    body = bytes(range(256)) * 40                    # 10240 bytes
+    calls = []
+
+    class Resp(io.BytesIO):
+        def __init__(self, data, status, total, start):
+            super().__init__(data)
+            self.status = status
+            self.headers = {"Content-Length": str(total - start)}   # what the server promised
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_urlopen(req, timeout=0, context=None):
+        rng = req.headers.get("Range")
+        calls.append(rng)
+        if rng is None:
+            return Resp(body[:4000], 200, len(body), 0)       # the first try is cut short
+        start = int(rng.split("=")[1].rstrip("-"))
+        return Resp(body[start:], 206, len(body), start)
+
+    monkeypatch.setattr(sim.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(sim.time, "sleep", lambda s: None)
+    r = sim.SimRunner(sitl_dir=str(tmp_path / "sitl"))
+    r.inst = {"log": []}
+    dest = tmp_path / "f.bin"
+    progress = []
+    r._download("https://example/f", str(dest), None, progress.append)
+    assert dest.read_bytes() == body and calls == [None, "bytes=4000-"] and progress[-1] == 1.0

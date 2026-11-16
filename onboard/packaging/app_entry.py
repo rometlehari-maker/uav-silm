@@ -3,6 +3,12 @@
 `--ardupilot-uploader ...` runs ArduPilot's firmware uploader instead: the app
 starts itself that way to update the flight controller in its own process.
 """
+
+import os
+# pymavlink's default dialect "all" is generated from XML at run time, which the
+# packaged app does not carry; the ArduPilot dialect is bundled.
+os.environ.setdefault("MAVLINK_DIALECT", "ardupilotmega")
+os.environ.setdefault("MAVLINK20", "1")
 import sys
 
 if __name__ == "__main__":

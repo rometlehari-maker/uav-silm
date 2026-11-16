@@ -513,7 +513,7 @@ function simRenderAvail(s) {
   } else if (inst.state === "running") {
     el.innerHTML = `<div class="sim-install"><span class="wz-spin"></span><span>Downloading the simulator (${esc(inst.file || "")})…</span><div class="sim-bar"><i style="width:${Math.round((inst.progress || 0) * 100)}%"></i></div></div>`;
   } else if (s.can_install) {
-    el.innerHTML = `<p class="help">${esc(s.why || "")}</p>${inst.state === "error" ? `<p class="result err">${esc(inst.message || "")}</p>` : ""}
+    el.innerHTML = `<p class="${s.missing && s.missing.length ? "result err" : "help"}">${esc(s.why || "")}</p>${inst.state === "error" ? `<p class="result err">${esc(inst.message || "")}</p>` : ""}
       <button class="btn primary big" id="sim-install">⬇ Install the simulator (one click, ${s.platform.startsWith("windows") ? "25" : "7"} MB)</button>
       <p class="help">It is ArduPilot's own simulator program, downloaded from the ArduPilot project (firmware.ardupilot.org), kept in your SILM folder. Internet is needed only for this.</p>`;
     $("sim-install").addEventListener("click", async () => { const r = await api("/api/sim/install", {}); if (!r.ok) toast(r.message, 6000); simInstallPoll(); });

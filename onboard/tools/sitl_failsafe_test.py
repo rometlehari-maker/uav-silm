@@ -60,6 +60,11 @@ including first-time setup and repeat runs: onboard/SITL_HOWTO.md. Short form:
 
 from __future__ import annotations
 
+import os
+# pymavlink's default dialect "all" is generated from XML at run time, which the
+# packaged app does not carry; the ArduPilot dialect is bundled.
+os.environ.setdefault("MAVLINK_DIALECT", "ardupilotmega")
+os.environ.setdefault("MAVLINK20", "1")
 import argparse
 import csv
 import json

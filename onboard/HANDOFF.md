@@ -446,6 +446,27 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
+- **2.3.2 (user's Windows test #2):** "FileNotFoundError(2) ... redownload
+  read times out". Read as: the downloaded ArduPlane.elf vanished (Windows
+  Defender removes unsigned programs after download) + the re-download
+  stalled (60 s read timeout, no resume). Fix: sim.missing_files() (any
+  downloaded file gone -> available False, why explains antivirus +
+  Protection history -> Restore/Allow, Install offered again; _start_sitl
+  checks before Popen and wraps OSError); _download() resumes with a Range
+  header (server supports 206), retries 5x with backoff, 120 s timeout,
+  the .part folder is kept between tries; guide "The simulator" has the
+  antivirus paragraph. The user then said Windows had NOT removed anything.
+  REAL CAUSE, reproduced by building the frozen Linux app here
+  (packaging/build_app.py, then --browser --port 8798 and /api/sim/start):
+  pymavlink's default dialect is "all", which it GENERATES from XML
+  (message_definitions/) at the first MAVLink-2 packet -> the packaged app
+  has no XML -> FileNotFoundError inside wait_heartbeat. Fix: MAVLINK_DIALECT
+  =ardupilotmega + MAVLINK20=1 set in packaging/app_entry.py, groundstation/
+  sim.py and the test tool (the bundled dialect); desktop selftest now sends
+  MAVLink 2 in its loopback. sim.py logs the traceback + simulator output
+  tail on failure (that is how to read the next report). Frozen Linux app
+  run after the fix: GPS jam, fast, PASSED 7/7 (built packaging/out is
+  gitignored).
 - **2.3.1 (fix from the user's Windows test):** "ConnectionRefusedError
   10061" right after the simulator started. Cause: sim._listening() probed
   the port by CONNECTING; SITL accepts one TCP connection on 5760, so the
