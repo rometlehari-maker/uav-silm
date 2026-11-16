@@ -95,3 +95,22 @@ def test_defaults_file_has_the_plane_model_and_scripting_on():
     kv = dict(ln.split()[:2] for ln in text.splitlines() if ln.strip() and not ln.startswith("#"))
     assert kv["SCR_ENABLE"] == "1" and kv["INS_ACCOFFS_X"] == "0.001" and kv["RC1_MIN"] == "1000"
     assert "GPL" in text and "SIM_GPS" not in kv
+
+
+def test_listening_check_never_connects(monkeypatch):
+    """The simulator accepts one connection: a probe that connects would take
+    it (Windows then refuses the real one). The check reads the system's
+    connection table instead."""
+    import socket
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+    srv.settimeout(0.5)
+    try:
+        assert sim._listening(port) is True
+        with pytest.raises(socket.timeout):
+            srv.accept()                       # nothing connected to us
+    finally:
+        srv.close()
+    assert sim._listening(port) is False

@@ -89,10 +89,32 @@ def host_key() -> str:
 
 
 def _listening(port: int) -> bool:
-    import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0.3)
-        return s.connect_ex(("127.0.0.1", port)) == 0
+    """Is something listening on 127.0.0.1:port? Looked up in the system's
+    connection table, never by connecting: the simulator accepts ONE
+    connection on its port, and a probe would take it (on Windows it then
+    refuses the real one)."""
+    if sys.platform.startswith("linux"):
+        hexport = f":{port:04X}"
+        for f in ("/proc/net/tcp", "/proc/net/tcp6"):
+            try:
+                with open(f) as fh:
+                    for line in fh:
+                        parts = line.split()
+                        if len(parts) > 3 and parts[1].endswith(hexport) and parts[3] == "0A":
+                            return True
+            except OSError:
+                pass
+        return False
+    try:
+        cmd = ["netstat", "-an", "-p", "tcp"] if sys.platform == "win32" else ["netstat", "-an"]
+        kw = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)} if sys.platform == "win32" else {}
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=10, **kw).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    for line in out.splitlines():
+        if ("LISTEN" in line.upper()) and (f":{port} " in line + " " or f".{port} " in line + " "):
+            return True
+    return False
 
 
 def _ssl_context():
