@@ -455,8 +455,18 @@ User's answers to questions asked:
   checks before Popen and wraps OSError); _download() resumes with a Range
   header (server supports 206), retries 5x with backoff, 120 s timeout,
   the .part folder is kept between tries; guide "The simulator" has the
-  antivirus paragraph. Verified: real download through the new code on
-  Linux. Still unverified on Windows (the user's PC).
+  antivirus paragraph. The user then said Windows had NOT removed anything.
+  REAL CAUSE, reproduced by building the frozen Linux app here
+  (packaging/build_app.py, then --browser --port 8798 and /api/sim/start):
+  pymavlink's default dialect is "all", which it GENERATES from XML
+  (message_definitions/) at the first MAVLink-2 packet -> the packaged app
+  has no XML -> FileNotFoundError inside wait_heartbeat. Fix: MAVLINK_DIALECT
+  =ardupilotmega + MAVLINK20=1 set in packaging/app_entry.py, groundstation/
+  sim.py and the test tool (the bundled dialect); desktop selftest now sends
+  MAVLink 2 in its loopback. sim.py logs the traceback + simulator output
+  tail on failure (that is how to read the next report). Frozen Linux app
+  run after the fix: GPS jam, fast, PASSED 7/7 (built packaging/out is
+  gitignored).
 - **2.3.1 (fix from the user's Windows test):** "ConnectionRefusedError
   10061" right after the simulator started. Cause: sim._listening() probed
   the port by CONNECTING; SITL accepts one TCP connection on 5760, so the

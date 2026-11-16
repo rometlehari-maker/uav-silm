@@ -24,6 +24,11 @@ arduplane binary; ~/ardupilot/build/sitl/bin/arduplane is found by itself.
 
 from __future__ import annotations
 
+import os
+# pymavlink's default dialect "all" is generated from XML at run time, which the
+# packaged app does not carry; the ArduPilot dialect is bundled.
+os.environ.setdefault("MAVLINK_DIALECT", "ardupilotmega")
+os.environ.setdefault("MAVLINK20", "1")
 import importlib.util
 import json
 import os
@@ -418,7 +423,10 @@ class SimRunner:
             self._log(f"ERROR: {exc}")
             return 1
         except Exception as exc:  # noqa: BLE001
+            import traceback
             self._log(f"ERROR: {exc!r}")
+            for line in traceback.format_exc().rstrip().splitlines()[-12:]:
+                self._log("    " + line)          # where exactly: for a bug report
             return 1
 
     def _run(self, a):
@@ -446,11 +454,22 @@ class SimRunner:
             if j["state"] == "running":
                 j["state"] = "passed" if code == 0 else "failed"
         except Exception as exc:  # noqa: BLE001
+            import traceback
             self._log(f"ERROR: {exc}")
+            for line in traceback.format_exc().rstrip().splitlines()[-8:]:
+                self._log("    " + line)
             j["state"] = "error"
         finally:
             j["step"] = "done"
             self._stop_sitl()
+            try:                                  # the simulator's own last words help too
+                tail = open(os.path.join(self.run_dir, "simulator.log"), errors="replace").read()[-800:]
+                if tail.strip() and j["state"] in ("error", "failed"):
+                    self._log("--- simulator output (end) ---")
+                    for line in tail.strip().splitlines()[-10:]:
+                        self._log("    " + line)
+            except OSError:
+                pass
 
     def stop(self) -> dict:
         if self.job and self.job["state"] == "running":

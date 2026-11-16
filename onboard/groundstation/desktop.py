@@ -67,8 +67,13 @@ def _mavlink_loopback() -> None:
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
     s.close()
+    # MAVLink 2 packets, as a flight controller or the simulator sends: the
+    # receiver then switches dialect, which must be the bundled one (not the
+    # "all" dialect pymavlink would generate from XML files the app lacks)
+    assert os.environ.get("MAVLINK_DIALECT") == "ardupilotmega", "MAVLINK_DIALECT"
     rx = mavutil.mavlink_connection(f"udpin:127.0.0.1:{port}")
     tx = mavutil.mavlink_connection(f"udpout:127.0.0.1:{port}", source_system=1)
+    tx.mav.WIRE_PROTOCOL_VERSION = "2.0"
     try:
         msg = None
         for _ in range(10):
