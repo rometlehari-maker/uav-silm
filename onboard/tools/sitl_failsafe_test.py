@@ -41,7 +41,10 @@ Run on your PC (not on the aircraft):
   the real worst case, and it shows how far off the touchdown can be).
 
   SITL's plane takes off from a runway, not from a throw, so the tool sets
-  TKOFF_THR_MINACC=0 in the simulator only. Everything else is your file.
+  TKOFF_THR_MINACC=0 in the simulator only, simulates your 4S 7000 mAh
+  battery (SITL's default 3S pack would trip BATT_LOW_VOLT), and removes SITL's simulated
+  RC receiver (SIM_RC_FAIL=1), like the real aircraft. Everything else is
+  your file. Without MAVProxy, connect to SITL's own port: --connect tcp:127.0.0.1:5760
 """
 
 from __future__ import annotations
@@ -273,7 +276,12 @@ def run(args) -> int:
     # throw-detection threshold is switched off in the simulator only.
     params = read_param_file(args.params)
     params += [("SIM_WIND_SPD", args.wind), ("SIM_WIND_DIR", args.wind_dir),
-               ("SIM_GPS1_ENABLE", 1), ("SIM_GPS1_JAM", 0), ("TKOFF_THR_MINACC", 0)]
+               ("SIM_GPS1_ENABLE", 1), ("SIM_GPS1_JAM", 0), ("TKOFF_THR_MINACC", 0),
+               # SITL's default battery is a 12.6 V 3S pack, below BATT_LOW_VOLT=14.0:
+               # it would trigger the battery failsafe at once. Simulate the 4S 7000 mAh.
+               ("SIM_BATT_VOLTAGE", 16.8), ("SIM_BATT_CAP_AH", 7.0)]
+    if not args.with_rc:
+        params += [("SIM_RC_FAIL", 1)]        # no RC pulses at all: like the real aircraft
     bad = [n for n, v in params if not s.set_param(n, v)]
     if bad:
         print(f"WARNING: could not set {bad}")
@@ -451,6 +459,8 @@ def main() -> int:
     ap.add_argument("--alt", type=float, default=100)
     ap.add_argument("--wind", type=float, default=5.0, help="simulated wind m/s")
     ap.add_argument("--wind-dir", type=float, default=250.0, help="wind from, degrees")
+    ap.add_argument("--with-rc", action="store_true",
+                    help="keep SITL's simulated RC receiver (default: none, SIM_RC_FAIL=1)")
     ap.add_argument("--timeout-s", type=float, default=1500)
     ap.add_argument("--out", default="sitl_results")
     return run(ap.parse_args())
