@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SILM Monedula, the next airframe | UAV SILM</title>
-<meta name="description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<meta name="description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing, CFD-checked stability and swappable nose payloads.">
 <meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
 <meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -21,10 +21,10 @@
 <meta property="og:site_name" content="UAV SILM">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="SILM Monedula, the next airframe | UAV SILM">
-<meta property="og:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<meta property="og:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing, CFD-checked stability and swappable nose payloads.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SILM Monedula, the next airframe | UAV SILM">
-<meta name="twitter:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing and a 1 kg payload hardpoint.">
+<meta name="twitter:description" content="SILM Monedula is the planned successor to SILM Buteo: a parametric, print-ready airframe with a 1.5 m wing, CFD-checked stability and swappable nose payloads.">
 <link rel="icon" type="image/jpeg" href="images/logo_small.jpg">
 <link rel="apple-touch-icon" href="images/logo_small.jpg">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -80,14 +80,14 @@
       <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Next plan</span></div>
       <div class="kicker rv">Planned next airframe, not built yet</div>
       <h2 class="rv">SILM Monedula</h2>
-      <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor outside the tail, and a belly hardpoint for heavier payloads. Monedula is the Latin name of the jackdaw.</p>
+      <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor outside the tail, PETG connectors and TPU hinges, and a swappable payload nose. Monedula is the Latin name of the jackdaw.</p>
 
       <figure class="rv" style="margin-top:34px"><img class="zoom" src="images/monedula.jpg" alt="SILM Monedula CAD render: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" data-cap="SILM Monedula, CAD model. Orange: ailerons and ruddervators. Light blue: battery and electronics hatches." width="1800" height="1000" loading="lazy" decoding="async"><figcaption>CAD model of Monedula. Every part is a separate, print-ready file for a 220 mm print bed.</figcaption></figure>
 
       <div class="statgrid rv">
         <div><div class="v">1.5 m</div><div class="l">wingspan, up from 1.4 m</div></div>
-        <div><div class="v">≈1.70 kg</div><div class="l">empty, calculated from the model</div></div>
-        <div><div class="v">1 kg</div><div class="l">payload hardpoint at the balance point (bungee launch when loaded)</div></div>
+        <div><div class="v">≈1.78 kg</div><div class="l">all-up, calculated from the model</div></div>
+        <div><div class="v">14 %</div><div class="l">static margin, checked with OpenFOAM CFD</div></div>
         <div><div class="v">79 mm</div><div class="l">fuselage width, down from about 98 mm</div></div>
       </div>
 
@@ -99,17 +99,17 @@
           <tr><td>Wing</td><td>1.4 m, 3° dihedral, 7 mm carbon tube</td><td>1.5 m, flat, 10 mm carbon tube with 6 mm rods outboard; bolts on with two screws</td></tr>
           <tr><td>Motor</td><td>Inside the tail cone</td><td>Outside on a PETG end plug, in free air for cooling</td></tr>
           <tr><td>Tail</td><td>V-tail close to the propeller</td><td>V-tail moved forward and 8 % larger, 70 mm clear of the propeller</td></tr>
-          <tr><td>Payload</td><td>Camera in the nose</td><td>Swappable nose module on four heat-set inserts, plus a 1 kg hardpoint under the balance point</td></tr>
+          <tr><td>Payload</td><td>Camera in the nose</td><td>Swappable nose module on four heat-set inserts</td></tr>
           <tr><td>Design method</td><td>Hand-modelled in SolidWorks</td><td>Generated from parametric Python code, so a dimension change rebuilds and rechecks every part</td></tr>
         </tbody>
       </table>
-      <p class="note rv">Calculated with a quick aerodynamic method: stall about 9.8 m/s empty, static margin about 14 %. These are design estimates only; Monedula has not had a full CFD run yet.</p>
+      <p class="note rv">A first OpenFOAM run showed the early layout was unstable in pitch; the fuselage was lengthened by 68 mm to fix it, and a second CFD run confirmed a 14 % static margin. Cruise about 15 m/s at L/D about 17, stall about 10 m/s. These are design estimates, not flight data.</p>
 
       <h3 class="rv" style="margin-top:56px">Steps before it flies</h3>
       <div class="eval rv">
         <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Open every part in SolidWorks and confirm the parts fit together as modelled.</p></div></div>
         <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print one fuselage joint, the nose and a wing root, fit the real camera and spar, and load-test the joint.</p></div></div>
-        <div class="item"><span class="mk">3</span><div><h4>Run CFD</h4><p>Run OpenFOAM on the new shape to replace the quick estimates for drag, stability and endurance.</p></div></div>
+        <div class="item"><span class="mk">3</span><div><h4>Refine the CFD</h4><p>First OpenFOAM runs are done; next, finer meshes with the real control-surface gaps and the camera, and a transition model for drag.</p></div></div>
         <div class="item"><span class="mk">4</span><div><h4>Build and weigh</h4><p>Print the full airframe, weigh every part and correct the balance before the first flight.</p></div></div>
       </div>
     </div>
