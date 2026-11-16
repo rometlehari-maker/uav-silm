@@ -446,7 +446,7 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
-- **2.3.2 (user's Windows test #2):** "FileNotFoundError(2) ... redownload
+- **2.3.2 merged and released** (PR #16 squash-merged as 68625c6; release gs-v2.3.2). Was (user's Windows test #2): "FileNotFoundError(2) ... redownload
   read times out". Read as: the downloaded ArduPlane.elf vanished (Windows
   Defender removes unsigned programs after download) + the re-download
   stalled (60 s read timeout, no resume). Fix: sim.missing_files() (any
