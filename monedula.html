@@ -78,39 +78,59 @@
   <section class="s" id="monedula">
     <div class="wrap">
       <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Next plan</span></div>
-      <div class="kicker rv">Planned next airframe, not built yet</div>
+      <div class="kicker rv">Next airframe · V11, designed and CFD-checked, not built yet</div>
       <h2 class="rv">SILM Monedula</h2>
       <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor outside the tail, PETG connectors and TPU hinges, and a swappable payload nose. Monedula is the Latin name of the jackdaw.</p>
 
-      <figure class="rv" style="margin-top:34px"><img class="zoom" src="images/monedula.jpg" alt="SILM Monedula CAD render: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" data-cap="SILM Monedula, CAD model. Orange: ailerons and ruddervators. Light blue: battery and electronics hatches." width="1800" height="1000" loading="lazy" decoding="async"><figcaption>CAD model of Monedula. Every part is a separate, print-ready file for a 220 mm print bed.</figcaption></figure>
+      <figure class="rv" style="margin-top:34px"><img class="zoom" src="images/monedula.jpg" alt="SILM Monedula V11 CAD render: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" data-cap="SILM Monedula V11, CAD model. Orange: ailerons and ruddervators. Light blue: hatches. Red: PETG connectors. Black: TPU sleds." width="1800" height="1000" loading="lazy" decoding="async"><figcaption>Monedula V11. All 69 parts are separate, print-ready STEP files for a 220 mm print bed, with the print material in each file name.</figcaption></figure>
 
       <div class="statgrid rv">
         <div><div class="v">1.5 m</div><div class="l">wingspan, up from 1.4 m</div></div>
-        <div><div class="v">≈1.78 kg</div><div class="l">all-up, calculated from the model</div></div>
-        <div><div class="v">14 %</div><div class="l">static margin, checked with OpenFOAM CFD</div></div>
-        <div><div class="v">79 mm</div><div class="l">fuselage width, down from about 98 mm</div></div>
+        <div><div class="v">≈1.79 kg</div><div class="l">all-up with the Siyi A2 mini, from the model</div></div>
+        <div><div class="v">14 %</div><div class="l">static margin (OpenFOAM: 13.7 %)</div></div>
+        <div><div class="v">≈€870</div><div class="l">parts, electronics included</div></div>
       </div>
 
       <h3 class="rv" style="margin-top:56px">What changes from SILM Buteo</h3>
       <table class="tbl rv">
         <thead><tr><th>Area</th><th>SILM Buteo</th><th>Monedula</th></tr></thead>
         <tbody>
-          <tr><td>Fuselage</td><td>About 98 mm round, components spread out</td><td>79 x 81 mm, electronics on two removable racks behind the battery</td></tr>
+          <tr><td>Fuselage</td><td>About 98 mm round, components spread out</td><td>79 x 81 mm, 918 mm long in six printed sections; electronics on two removable racks behind the battery</td></tr>
           <tr><td>Wing</td><td>1.4 m, 3° dihedral, 7 mm carbon tube</td><td>1.5 m, flat, 10 mm carbon tube with 6 mm rods outboard; bolts on with two screws</td></tr>
           <tr><td>Motor</td><td>Inside the tail cone</td><td>Outside on a PETG end plug, in free air for cooling</td></tr>
-          <tr><td>Tail</td><td>V-tail close to the propeller</td><td>V-tail moved forward and 8 % larger, 70 mm clear of the propeller</td></tr>
+          <tr><td>Tail</td><td>V-tail close to the propeller</td><td>Larger 38° V-tail on a longer tail arm, 70 mm clear of the propeller</td></tr>
+          <tr><td>Joints</td><td>Printed overlapping spigots</td><td>PETG couplers between all sections, PETG wing root ribs and sockets, PETG spar carrier</td></tr>
+          <tr><td>Control surfaces</td><td>Printed horns</td><td>TPU flex hinges and PETG horns; SG90s in PETG frames</td></tr>
+          <tr><td>Landing</td><td>Belly</td><td>Two screw-on TPU sleds, replaceable after a hard landing</td></tr>
           <tr><td>Payload</td><td>Camera in the nose</td><td>Swappable nose module on four heat-set inserts</td></tr>
           <tr><td>Design method</td><td>Hand-modelled in SolidWorks</td><td>Generated from parametric Python code, so a dimension change rebuilds and rechecks every part</td></tr>
         </tbody>
       </table>
-      <p class="note rv">A first OpenFOAM run showed the early layout was unstable in pitch; the fuselage was lengthened by 68 mm to fix it, and a second CFD run confirmed a 14 % static margin. Cruise about 15 m/s at L/D about 17, stall about 10 m/s. These are design estimates, not flight data.</p>
+      <h3 class="rv" style="margin-top:56px">Key figures, V11</h3>
+      <div class="tblwrap rv"><table class="tbl">
+        <thead><tr><th>Figure</th><th>Value</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Wingspan, area, aspect ratio</td><td>1.50 m, 0.270 m², 8.3</td><td>CAD</td></tr>
+          <tr><td>Root / tip chord, mean chord</td><td>240 / 120 mm, 187 mm</td><td>CAD</td></tr>
+          <tr><td>Airfoils</td><td>MH32 wing, NACA 0012 V-tail at 38°</td><td>design</td></tr>
+          <tr><td>Length</td><td>918 mm plus motor and folding prop</td><td>CAD</td></tr>
+          <tr><td>All-up mass</td><td>1.79 kg modelled; 1.86–1.95 kg expected on the scale</td><td>mass model</td></tr>
+          <tr><td>Balance point</td><td>361.5 mm from the nose tip</td><td>mass model</td></tr>
+          <tr><td>Static margin</td><td>13.7 % (neutral point 387 mm)</td><td>OpenFOAM</td></tr>
+          <tr><td>Cruise</td><td>about 15 m/s, lift coefficient 0.46, L/D about 17</td><td>OpenFOAM</td></tr>
+          <tr><td>Stall</td><td>about 10 m/s</td><td>estimate</td></tr>
+          <tr><td>Printed parts</td><td>69: 28 LW-PLA, 21 PETG, 20 TPU</td><td>CAD</td></tr>
+          <tr><td>Parts cost</td><td>about €870, of which the airframe about €110</td><td>price check, Nov 2026</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note rv">How we got here: the first OpenFOAM run on Monedula (16 November) showed the earlier layout was unstable in pitch, with a static margin of −3.4 %. Our design tool had predicted +14 % because it ignores the wing's downwash on the tail. We lengthened the fuselage by 68 mm, enlarged the V-tail and ran the CFD again: 13.7 %. All figures are design estimates, not flight data.</p>
 
       <h3 class="rv" style="margin-top:56px">Steps before it flies</h3>
       <div class="eval rv">
-        <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Open every part in SolidWorks and confirm the parts fit together as modelled.</p></div></div>
-        <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print one fuselage joint, the nose and a wing root, fit the real camera and spar, and load-test the joint.</p></div></div>
+        <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Every part pair has been checked for clashes in code; next, open the parts in SolidWorks and follow the assembly guide on screen.</p></div></div>
+        <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print one coupler joint, a wing root rib with its socket and a hinged aileron piece; load-test the joint and the root, and flex a TPU hinge a few thousand times.</p></div></div>
         <div class="item"><span class="mk">3</span><div><h4>Refine the CFD</h4><p>First OpenFOAM runs are done; next, finer meshes with the real control-surface gaps and the camera, and a transition model for drag.</p></div></div>
-        <div class="item"><span class="mk">4</span><div><h4>Build and weigh</h4><p>Print the full airframe, weigh every part and correct the balance before the first flight.</p></div></div>
+        <div class="item"><span class="mk">4</span><div><h4>Build and weigh</h4><p>Print the full airframe, weigh every part, and set the balance to 361.5 mm with the battery before the first flight.</p></div></div>
       </div>
     </div>
   </section>
@@ -157,7 +177,7 @@
       </div>
     </div>
     <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 15 November 2026</span></div>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 17 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">
