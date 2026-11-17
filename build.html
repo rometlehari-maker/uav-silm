@@ -85,12 +85,13 @@
     <div class="wrap">
       <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Build and testing</span></div>
       <h2 class="rv">Build and testing</h2>
-      <p class="lead rv">The test equipment and electronics we have built so far, and the flight log we will fill in as testing starts.</p>
+      <p class="lead rv">The test equipment and electronics we have built so far, the build package for SILM Monedula, and the flight log we will fill in as testing starts.</p>
 
       <div class="tabs rv" data-tabs>
         <div class="tablist" role="tablist" aria-label="Build and testing">
           <button class="tab" role="tab">Thrust test rig</button>
           <button class="tab" role="tab">Electronics</button>
+          <button class="tab" role="tab">Monedula build package</button>
           <button class="tab" role="tab">Flight log</button>
           <span class="tab-ind"></span>
         </div>
@@ -128,6 +129,29 @@
             <div class="hovercard"><div class="card-k">Control and link</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>No radio receiver: missions are uploaded over USB from the laptop planner. Four servos for ailerons and ruddervators are powered from the controller's servo rail.</p></div></div></div>
           </div>
           <p class="note">The physical circuit is due on 30 November. The 4G and WireGuard failsafe (SIM7600E-H module and a Raspberry Pi) is planned as a later addition to the core flight system. Where each part sits in the fuselage is shown in <a href="inside.html">Inside the airframe</a>.</p>
+        </div>
+
+        <div class="panel" role="tabpanel">
+          <p>Everything needed to print and assemble SILM Monedula V11 is ready: 69 STEP files labelled with their print material, an illustrated assembly guide and a full materials list. Nothing has been printed yet.</p>
+          <div class="statgrid" style="margin-top:22px">
+            <div><div class="v">28</div><div class="l">LW-PLA parts: skins, wing and tail panels, surfaces, hatches, racks</div></div>
+            <div><div class="v">21</div><div class="l">PETG parts: couplers, root ribs, sockets, spar carrier, servo frames, horns, motor mount</div></div>
+            <div><div class="v">20</div><div class="l">TPU parts: two belly sleds and 18 flex hinges</div></div>
+            <div><div class="v">≈€870</div><div class="l">parts in total, airframe about €110</div></div>
+          </div>
+          <figure class="rv" style="margin-top:22px"><img class="zoom" src="images/monedula_fuselage.jpg" alt="Exploded Monedula fuselage with PETG couplers" data-cap="Fuselage in six sections; each red ring is a PETG coupler. The one between F1b and F2 also carries both wing sockets." width="1800" height="700" loading="lazy" decoding="async"><figcaption>Fuselage in six sections; each red ring is a PETG coupler. The one between F1b and F2 also carries both wing sockets.</figcaption></figure>
+          <div class="fig2">
+            <div><figure class="rv" style="margin-top:22px"><img class="zoom" src="images/monedula_wingroot.jpg" alt="Monedula wing root connection" data-cap="Wing root: PETG root rib with tongue, carbon tube through the spar carrier, socket on the centre coupler. One M3 screw per wing." width="1400" height="850" loading="lazy" decoding="async"><figcaption>Wing root: PETG root rib with tongue, carbon tube through the spar carrier, socket on the centre coupler. One M3 screw per wing.</figcaption></figure></div>
+            <div><figure class="rv" style="margin-top:22px"><img class="zoom" src="images/monedula_hinges.jpg" alt="TPU flex hinges in an aileron" data-cap="TPU flex hinges: 0.8 mm strips in 1 mm slots, 10 mm into the wing and the aileron." width="1400" height="850" loading="lazy" decoding="async"><figcaption>TPU flex hinges: 0.8 mm strips in 1 mm slots, 10 mm into the wing and the aileron.</figcaption></figure></div>
+          </div>
+          <h3 style="margin-top:34px">Assembly order</h3>
+          <div class="eval">
+            <div class="item"><span class="mk">1</span><div><h4>Fuselage</h4><p>Heat-set inserts first; then the couplers, centre coupler and spar carrier, cured with a wing tongue in each socket so they line up.</p></div></div>
+            <div class="item"><span class="mk">2</span><div><h4>Bay and electronics</h4><p>Flight controller, power board and ESC on the lower rack; Raspberry Pi and 4G modem on the upper rack; GPS in F3 before it is closed.</p></div></div>
+            <div class="item"><span class="mk">3</span><div><h4>Wings</h4><p>Panels on the carbon rods, PETG root rib bonded with the tube in place, servo in its PETG frame, TPU hinges and PETG horns.</p></div></div>
+            <div class="item"><span class="mk">4</span><div><h4>Tail and motor</h4><p>Tail servos on the PETG bulkhead, pushrods through the guides, V-tail on its stubs, motor on the PETG end mount.</p></div></div>
+            <div class="item"><span class="mk">5</span><div><h4>Sleds, hatches and balance</h4><p>TPU sleds screwed on, hatch lips and magnets fitted, then the balance set to 361.5 mm with the battery.</p></div></div>
+          </div>
         </div>
 
         <div class="panel" role="tabpanel">
@@ -200,7 +224,7 @@
       </div>
     </div>
     <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 15 November 2026</span></div>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 17 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">
