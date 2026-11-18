@@ -80,9 +80,22 @@
       <div class="divider"><img src="images/logo_small.jpg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Next plan</span></div>
       <div class="kicker rv">Next airframe · V11b, designed in FreeCAD and CFD-checked, not built yet</div>
       <h2 class="rv">SILM Monedula</h2>
-      <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor in the tail end on a removable PETG coin, PETG connectors and TPU hinges, and a swappable payload nose. Monedula is the Latin name of the jackdaw.</p>
+      <p class="lead rv">Monedula is our plan for the successor to SILM Buteo. It keeps the same electronics, camera and software, and reworks the airframe around everything we learnt from Buteo: a slimmer fuselage, a longer wing on a stronger spar, the motor inside the tail, PETG connectors and TPU hinges, and a swappable payload nose. Monedula is the Latin name of the jackdaw.</p>
 
-      <figure class="rv" style="margin-top:34px"><img class="zoom" src="images/monedula.jpg" alt="SILM Monedula V11b FreeCAD model render: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" data-cap="SILM Monedula V11b, modelled in FreeCAD. Orange: ailerons and ruddervators. Light blue: hatches. Red: PETG connectors. Black: TPU sleds." width="1800" height="1000" loading="lazy" decoding="async"><figcaption>Monedula V11b, modelled in FreeCAD. All 69 parts are separate, print-ready STEP files for a 220 mm print bed, with the print material in each file name.</figcaption></figure>
+      <figure class="rv" style="margin-top:34px">
+        <div class="v3d v3d-hero" data-v3d="monedula" role="group" aria-label="Interactive 3D model of SILM Monedula. Drag to rotate, scroll to zoom; use Take it apart to see the parts.">
+          <img class="v3d-fallback" src="images/monedula.jpg" alt="SILM Monedula V11b FreeCAD model: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" width="1800" height="1000" loading="lazy" decoding="async">
+          <div class="v3d-stage"></div>
+          <div class="v3d-tip" aria-hidden="true"></div>
+          <div class="v3d-bar">
+            <button class="vbtn" type="button" data-act="explode" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Take it apart</span></button>
+            <button class="vbtn" type="button" data-act="reset">Reset view</button>
+          </div>
+          <div class="v3d-hint"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg>Drag to rotate, point at a part</div>
+          <button class="v3d-activate" type="button" data-act="activate" hidden><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>Tap to rotate the model</button>
+          <button class="vbtn v3d-done" type="button" data-act="release" hidden>Done</button>
+        </div>
+        <figcaption>Monedula V11b, modelled in FreeCAD: all 69 printed parts. Orange: control surfaces. Red: PETG. Black: TPU.</figcaption></figure>
 
       <div class="statgrid rv">
         <div><div class="v">1.5 m</div><div class="l">wingspan, up from 1.4 m</div></div>
@@ -95,15 +108,15 @@
       <table class="tbl rv">
         <thead><tr><th>Area</th><th>SILM Buteo</th><th>Monedula</th></tr></thead>
         <tbody>
-          <tr><td>Fuselage</td><td>About 98 mm round, components spread out</td><td>79 x 81 mm, 919 mm long in six printed sections, smooth curvature-continuous skin; electronics on two removable racks behind the battery</td></tr>
+          <tr><td>Fuselage</td><td>About 98 mm round, components spread out</td><td>79 x 81 mm, 919 mm long in six printed sections; electronics on two removable racks behind the battery</td></tr>
           <tr><td>Wing</td><td>1.4 m, 3° dihedral, 7 mm carbon tube</td><td>1.5 m, flat, 10 mm carbon tube with 6 mm rods outboard; bolts on with two screws</td></tr>
-          <tr><td>Motor</td><td>Inside the tail cone</td><td>Inside the straight tail end on a PETG coin held by three screws; motor and coin come out together. Vents and intakes cool it</td></tr>
-          <tr><td>Tail</td><td>V-tail close to the propeller</td><td>Larger 38° V-tail on a longer tail arm, two carbon rods per panel and solid tips</td></tr>
+          <tr><td>Motor</td><td>Inside the tail cone</td><td>Inside the tail end on a removable PETG plate</td></tr>
+          <tr><td>Tail</td><td>V-tail close to the propeller</td><td>Larger 38° V-tail on a longer tail arm</td></tr>
           <tr><td>Joints</td><td>Printed overlapping spigots</td><td>PETG couplers between all sections, PETG wing root ribs and sockets, PETG spar carrier</td></tr>
-          <tr><td>Control surfaces</td><td>Printed horns</td><td>TPU flex hinges inside the skin and PETG horns; SG90s in PETG frames</td></tr>
+          <tr><td>Control surfaces</td><td>Printed horns</td><td>TPU flex hinges and PETG horns; SG90s in PETG frames</td></tr>
           <tr><td>Landing</td><td>Belly</td><td>Two screw-on TPU sleds, replaceable after a hard landing</td></tr>
           <tr><td>Payload</td><td>Camera in the nose</td><td>Swappable nose module on four heat-set inserts</td></tr>
-          <tr><td>Design method</td><td>Hand-modelled in SolidWorks</td><td>Modelled in FreeCAD; every part checked for clashes, fit clearances and assembly paths</td></tr>
+          <tr><td>Design method</td><td>Hand-modelled in SolidWorks</td><td>Modelled in FreeCAD</td></tr>
         </tbody>
       </table>
       <h3 class="rv" style="margin-top:56px">Key figures, V11b</h3>
@@ -115,20 +128,20 @@
           <tr><td>Airfoils</td><td>MH32 wing, NACA 0012 V-tail at 38°</td><td>design</td></tr>
           <tr><td>Length</td><td>919 mm plus the folding prop</td><td>CAD</td></tr>
           <tr><td>All-up mass</td><td>1.79 kg modelled; 1.86–1.95 kg expected on the scale</td><td>mass model</td></tr>
-          <tr><td>Balance point</td><td>361.5 mm from the nose tip, set with the battery</td><td>mass model</td></tr>
+          <tr><td>Balance point</td><td>361.5 mm from the nose tip</td><td>mass model</td></tr>
           <tr><td>Static margin</td><td>13.7 % (neutral point 387 mm)</td><td>OpenFOAM</td></tr>
           <tr><td>Cruise</td><td>about 15 m/s, lift coefficient 0.46, L/D about 17</td><td>OpenFOAM</td></tr>
           <tr><td>Stall</td><td>about 10 m/s</td><td>estimate</td></tr>
-          <tr><td>Printed parts</td><td>69: 28 LW-PLA, 21 PETG, 20 TPU, plus a fit-test coupon</td><td>CAD</td></tr>
+          <tr><td>Printed parts</td><td>69: 28 LW-PLA, 21 PETG, 20 TPU</td><td>CAD</td></tr>
           <tr><td>Parts cost</td><td>about €870, of which the airframe about €110</td><td>price check, Nov 2026</td></tr>
         </tbody>
       </table></div>
-      <p class="note rv">How we got here: the first OpenFOAM run on Monedula (16 November) showed the earlier layout was unstable in pitch, with a static margin of −3.4 %. Our design tool had predicted +14 % because it ignores the wing's downwash on the tail. We lengthened the fuselage by 68 mm, enlarged the V-tail and ran the CFD again: 13.7 %. V11b (17–18 November) smoothed the fuselage skin, joined the V-tail fully to the body, moved the hinges inside the skin, stiffened the tail tips, put the motor inside the tail and set fit clearances for LW-PLA and PETG. All figures are design estimates, not flight data.</p>
+      <p class="note rv">How we got here: the first OpenFOAM run on Monedula (16 November) showed the earlier layout was unstable in pitch, with a static margin of −3.4 %. Our design tool had predicted +14 % because it ignores the wing's downwash on the tail. We lengthened the fuselage by 68 mm, enlarged the V-tail and ran the CFD again: 13.7 %. All figures are design estimates, not flight data.</p>
 
       <h3 class="rv" style="margin-top:56px">Steps before it flies</h3>
       <div class="eval rv">
-        <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Every part pair has been checked for clashes and fit; next, follow the assembly guide on screen in FreeCAD.</p></div></div>
-        <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print the fit coupon, one coupler joint, a wing root rib with its socket and a hinged aileron piece; load-test the joint and the root, and flex a TPU hinge a few thousand times.</p></div></div>
+        <div class="item"><span class="mk">1</span><div><h4>Check the CAD</h4><p>Every part pair has been checked for clashes; next, follow the assembly guide on screen in FreeCAD.</p></div></div>
+        <div class="item"><span class="mk">2</span><div><h4>Print test pieces</h4><p>Print one coupler joint, a wing root rib with its socket and a hinged aileron piece; load-test the joint and the root, and flex a TPU hinge a few thousand times.</p></div></div>
         <div class="item"><span class="mk">3</span><div><h4>Refine the CFD</h4><p>First OpenFOAM runs are done; next, finer meshes with the real control-surface gaps and the camera, and a transition model for drag.</p></div></div>
         <div class="item"><span class="mk">4</span><div><h4>Build and weigh</h4><p>Print the full airframe, weigh every part, and set the balance to 361.5 mm with the battery before the first flight.</p></div></div>
       </div>
@@ -195,5 +208,6 @@
 <button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
 <script src="assets/site.js"></script>
+<script type="module" src="assets/monedula3d.js"></script>
 </body>
 </html>
