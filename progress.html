@@ -144,7 +144,7 @@
 
       <div class="statgrid rv" style="margin:30px 0 0">
         <div><div class="v">8 / 8</div><div class="l">primary components received</div></div>
-        <div><div class="v">V11</div><div class="l">SILM Monedula airframe, 69 print-ready parts, CFD-checked</div></div>
+        <div><div class="v">V11b</div><div class="l">SILM Monedula airframe in FreeCAD, 69 print-ready parts, CFD-checked</div></div>
         <div><div class="v">14 Nov</div><div class="l">first motor thrust test</div></div>
         <div><div class="v" id="countdown">35 days</div><div class="l">to the presentation</div></div>
       </div>
@@ -185,19 +185,21 @@
             <div class="row fresh"><span class="d">9 Nov</span><span class="t">Mass and balance redone for V9: about 1.70 kg all-up, CG 341.7 mm, static margin about 21%. The onboard computer is now a Raspberry Pi 4.</span><span class="o">Analysis</span></div>
             <div class="row fresh"><span class="d">10 Nov</span><span class="t">Full SolidWorks assembly built from the V9 parts, with the second wing mirrored, ready for fit checks.</span><span class="o">CAD</span></div>
             <div class="row fresh"><span class="d">15 Nov</span><span class="t">Website reorganised into separate pages. The current airframe is now called SILM Buteo, and SILM Monedula is the next airframe.</span><span class="o">Website</span></div>
-            <div class="row fresh"><span class="d">15 Nov</span><span class="t">SILM Monedula started as a parametric design in Python (CadQuery): every part is generated from the design data, so a change rebuilds and rechecks the whole airframe. 1.5 m wing, 79 × 81 mm fuselage, motor outside the tail.</span><span class="o">CAD</span></div>
+            <div class="row fresh"><span class="d">15 Nov</span><span class="t">SILM Monedula started as a parametric model in FreeCAD, so a change rebuilds and rechecks the whole airframe. 1.5 m wing, 79 × 81 mm fuselage.</span><span class="o">CAD</span></div>
             <div class="row fresh"><span class="d">16 Nov</span><span class="t">First OpenFOAM run on Monedula. The first mesh used the print files (gaps, seams) and gave L/D 11.6; we discarded it and meshed a clean outer surface with boundary-layer cells instead: L/D 18.</span><span class="o">Analysis</span></div>
             <div class="row fresh"><span class="d">16 Nov</span><span class="t">The same CFD showed the layout was unstable in pitch: static margin −3.4 % instead of the +14 % our design tool predicted. The tool ignores the wing's downwash on the tail; a vortex-lattice check agreed with the CFD.</span><span class="o">Analysis</span></div>
             <div class="row fresh"><span class="d">17 Nov</span><span class="t">Monedula V11: fuselage lengthened by 68 mm and the V-tail enlarged. A second CFD run confirmed a 13.7 % static margin, chosen over 18 % to limit trim drag.</span><span class="o">Design, analysis</span></div>
             <div class="row fresh"><span class="d">17 Nov</span><span class="t">V11 connectors: PETG couplers between all six fuselage sections, Flightory-style PETG wing root ribs and sockets, PETG spar carrier, TPU flex hinges, PETG horns and servo frames, screw-on TPU sleds. The central payload bay was removed; payloads go on the nose.</span><span class="o">CAD</span></div>
             <div class="row fresh"><span class="d">17 Nov</span><span class="t">All 69 parts checked for clashes and fit; STEP files labelled with their print material. Assembly guide and a full materials list written: about €870 in parts and 1.79 kg modelled.</span><span class="o">Documentation</span></div>
+            <div class="row fresh"><span class="d">17 Nov</span><span class="t">Monedula V11b: smoothed fuselage skin (six creases removed), V-tail joined to the body to the trailing edge, ruddervator hinges moved inside the skin, stiffer tail tips with a second carbon rod, fit clearances for LW-PLA and PETG and a fit-test coupon.</span><span class="o">CAD</span></div>
+            <div class="row fresh"><span class="d">18 Nov</span><span class="t">Motor moved inside the tail end on a PETG coin held by three screws, so motor and coin come out together; belly channel for the motor leads, vents and intakes for cooling. CFD case re-meshed on the new shape.</span><span class="o">CAD, analysis</span></div>
           </div>
         </div>
 
         <div class="panel" role="tabpanel">
           <div class="eval good">
             <div class="item"><span class="mk">✓</span><div><h4>CFD caught a real problem before printing</h4><p>Running OpenFOAM on Monedula showed it would have been unstable in pitch. We found the cause, changed the design and confirmed the fix with a second run, all before printing anything.</p></div></div>
-          <div class="item"><span class="mk">✓</span><div><h4>The design is now generated, not hand-drawn</h4><p>Monedula is built from code. Lengthening the fuselage moved the wing, bay, tail and every joint together, and the clash checks ran again automatically on all 69 parts.</p></div></div>
+          <div class="item"><span class="mk">✓</span><div><h4>The design is now fully parametric</h4><p>Monedula is a parametric FreeCAD model. Lengthening the fuselage moved the wing, bay, tail and every joint together, and the clash checks ran again automatically on all 69 parts.</p></div></div>
           <div class="item"><span class="mk">✓</span><div><h4>Problems were found on paper</h4><p>The balance and fit checks found an unstable CG and three component clashes before any part was printed, while they were still cheap to fix.</p></div></div>
             <div class="item"><span class="mk">✓</span><div><h4>Main components arrived on schedule</h4><p>We planned procurement for 6 to 19 October and had all eight primary components in hand on 20 October, so the electronics work is no longer waiting on deliveries.</p></div></div>
             <div class="item"><span class="mk">✓</span><div><h4>The aerodynamic design is complete</h4><p>XFLR5 and OpenFOAM agree on lift and stability, and with the wing moved aft the aircraft has a static margin of about 20%. Aerodynamics is no longer holding up the build.</p></div></div>
@@ -302,7 +304,7 @@
           <h3>Design and analysis</h3>
           <div class="hc-hint">Hover or tap for detail</div>
           <div class="hc-wrap"><div class="hc-panel"><ul><li>Airfoil selection and XFLR5 analysis of the full aircraft</li><li>OpenFOAM airframe CFD, then a second run with the wing moved 20 mm aft (3 Nov)</li><li>CG from the 3D model and internal layout fit check (3 Nov)</li><li>Full-aircraft CAD assembly V4; part models continue</li>
-<li>SILM Monedula V11: parametric airframe, CFD-checked 14 % static margin, 69 print-ready parts (17 Nov)</li></ul></div></div>
+<li>SILM Monedula V11: parametric FreeCAD airframe, CFD-checked 14 % static margin, 69 print-ready parts (17 Nov)</li><li>SILM Monedula V11b: smoother skin, hinges inside the skin, stronger tail tips, motor inside the tail on a removable coin, fit clearances (18 Nov)</li></ul></div></div>
         </div></div>
         <div class="step now rv"><div class="num">02</div><div class="step-body hovercard">
           <div class="meta"><span class="tag late">Partly done</span><span class="date"><s>6 to 19 Oct</s><b>primary 20 Oct; secondary 4 Nov</b></span></div>
