@@ -446,7 +446,7 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
-- **2.3.3 (user, 18 Nov: "many runs end in the plane doing only takeoff
+- **2.3.3 merged and released** (PR #20 squash-merged as 4c60b20; release gs-v2.3.3). (User, 18 Nov: "many runs end in the plane doing only takeoff
   and landing, completely skipping waypoints").** Two causes, both in the
   simulator scenarios, not the aircraft's settings:
   1. The GPS fault started when the plane was 700 m from home (trigger_m,
