@@ -227,9 +227,9 @@ a Windows or Linux computer.)
 
 | Choice | What it tests |
 |---|---|
-| **GPS jammed halfway** | The test before the first flight: the GPS signal is scrambled for 90 s mid-survey. It must turn back, land on the strip and switch itself off |
+| **GPS jammed halfway** | The test before the first flight: the GPS signal is scrambled for 90 s from the middle of the survey (halfway through its waypoints). It must turn back, land on the strip and switch itself off |
 | **GPS lost completely halfway** | The GPS stops answering for 90 s. Same demands |
-| **Strong, gusty wind (10 m/s) with GPS jammed** | The hardest case: shows how far the landing drifts when it has to feel its way home |
+| **Strong, gusty wind (10 m/s) with GPS jammed** | The hardest case. Expect it to come home and land safely but long (usually 150-250 m past the planned point): the app then says how much clear ground you'd need |
 | **A normal flight (nothing goes wrong)** | The whole mission as planned: route, flight time, landing |
 
 **How fast:** *Real time* takes as long as the real flight would (5-8 minutes);

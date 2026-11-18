@@ -446,6 +446,30 @@ User's answers to questions asked:
   tests, app build, pages deploy green; release gs-v2.2.2 published 07:37.
   Note: another session also edits index.html styling on main (red accent,
   light blue) - rebase before touching the site.
+- **2.3.3 (user, 18 Nov: "many runs end in the plane doing only takeoff
+  and landing, completely skipping waypoints").** Two causes, both in the
+  simulator scenarios, not the aircraft's settings:
+  1. The GPS fault started when the plane was 700 m from home (trigger_m,
+     a leftover from the tool's built-in test mission): on real missions
+     that is on the way OUT, before the survey (past runs: fault at item 4,
+     41 s after launch). The plane then correctly turned back and landed.
+     Now the app passes trigger_seq="half": the fault starts when the plane
+     heads for the middle survey waypoint (sitl_failsafe_test.survey_middle,
+     --trigger-seq half|N). Verified: item 7 of 3..10, item 8 on a bigger
+     survey; jam/disable 7/7.
+  2. "gusty" had SIM_WIND_TURB 6: +-60 m height swings, "Max Alt fence
+     breached" at 120 m during the survey -> landing. Now 3 (a rough day):
+     95-103 m, no breach, fault halfway, lands safely but 207 m long in
+     10 m/s (honest blind-landing result) -> the scenario text says so and
+     the app explains a long-but-safe landing ("keep N m of clear ground").
+  Investigated and REJECTED: a LOITER_TO_ALT / outer-waypoint step in the
+  landing sequence (the turb-6 run reached the touchdown point 107 m up,
+  flared there and flew 19 km away). With realistic conditions the existing
+  straight approach handled a 120 m entry beside the strip (69 m long);
+  every alternative made the 10 m/s blind landing worse (loiter40 187 m,
+  loiter60 150 m, outer300 189 m, outer500 241 m vs 144 m). Landing kept as
+  it is. Open idea if wanted: a Lua go-around if NAV_LAND passes the
+  touchdown point > ~30 m high (never seen in realistic runs).
 - **2.3.2 merged and released** (PR #16 squash-merged as 68625c6; release gs-v2.3.2). Was (user's Windows test #2): "FileNotFoundError(2) ... redownload
   read times out". Read as: the downloaded ArduPlane.elf vanished (Windows
   Defender removes unsigned programs after download) + the re-download

@@ -161,3 +161,22 @@ def test_download_resumes_a_partial_file(tmp_path, monkeypatch):
     progress = []
     r._download("https://example/f", str(dest), None, progress.append)
     assert dest.read_bytes() == body and calls == [None, "bytes=4000-"] and progress[-1] == 1.0
+
+
+def test_gps_fault_starts_halfway_through_the_survey():
+    """Not 700 m from home (that was before the survey on most real missions:
+    the aircraft took off, was jammed on the way out and landed)."""
+    from silm_recon import mavmission as mm
+    tool = sim._load_test_tool()
+    wpl = ("QGC WPL 110\n"
+           "0\t1\t0\t16\t0\t0\t0\t0\t58.38\t26.72\t0\t1\n"
+           "1\t0\t3\t22\t15\t0\t0\t0\t58.38\t26.72\t50\t1\n"
+           "2\t0\t3\t178\t0\t19\t-1\t0\t0\t0\t0\t1\n"
+           + "".join(f"{i}\t0\t3\t16\t0\t0\t0\t0\t58.38{i}\t26.73\t100\t1\n" for i in range(3, 11))
+           + "11\t0\t3\t189\t0\t0\t0\t0\t0\t0\t0\t1\n"
+           "12\t0\t3\t16\t0\t0\t0\t0\t58.381\t26.721\t40\t1\n"
+           "13\t0\t3\t21\t0\t0\t0\t0\t58.38\t26.72\t0\t1\n")
+    items = mm.from_wpl(wpl)
+    land_start = next(i for i, it in enumerate(items) if it.command == mm.DO_LAND_START)
+    assert tool.survey_middle(items, land_start) == 7          # survey items 3..10
+    assert tool.survey_middle(items[:3], 3) is None

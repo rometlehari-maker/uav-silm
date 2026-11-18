@@ -547,6 +547,12 @@ async function simPoll() {
         r.passed ? `Landed ${r.touchdown_error_m} m from the planned point.` : "The red lines on the left say what went wrong. Fix the mission or the settings and fly it again.");
       // only a GPS-loss test counts as "flown in the simulator" for the launch checklist
       if (s.state === "passed" && r.fault !== "none") markDone("sim");
+      const failed = Object.entries(r.checks || {}).filter(([, v]) => !v).map(([k]) => k);
+      if (failed.length === 1 && failed[0] === "landed_near_touchdown") {
+        simSetStatus("err", "Came home and landed safely, but too far along", `${r.touchdown_error_m} m past the planned point, more than the 150 m of clear ground the strip needs.`);
+        $("sim-checks").insertAdjacentHTML("beforeend", `<p class="help">Everything else worked: it turned back, flew home without GPS and switched itself off. ` +
+          `In this much wind a landing without GPS lands long. On such days keep at least ${Math.ceil((r.touchdown_error_m + 50) / 50) * 50} m of clear, flat ground past the landing point, or don't fly.</p>`);
+      }
       if (s.state === "passed" && r.fault === "none")
         $("sim-checks").insertAdjacentHTML("beforeend", '<p class="help">A normal flight passed. The launch checklist still needs the GPS-jammed (or GPS-lost) test.</p>');
     }

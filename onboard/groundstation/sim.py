@@ -70,10 +70,13 @@ SCENARIOS = {
                     "The aircraft must notice, turn back, land on the strip and switch itself off."},
     "disable": {"title": "GPS lost completely", "fault": "disable", "fault_s": 90, "turbulence": 0.0,
                 "what": "The GPS stops answering for 90 s. Same demands as the jamming test."},
-    "gusty": {"title": "Strong, gusty wind with GPS jammed", "fault": "jam", "fault_s": 90, "turbulence": 6.0,
+    # turbulence = SIM_WIND_TURB (m/s): 3 is a rough day for a small plane;
+    # 6 swung it +-60 m in height, beyond anything it could be flown in
+    "gusty": {"title": "Strong, gusty wind with GPS jammed", "fault": "jam", "fault_s": 90, "turbulence": 3.0,
               "wind": 10.0,
-              "what": "10 m/s wind with gusts and the GPS jammed: the hardest case. Shows how far the "
-                      "landing can drift when the aircraft has to feel its way home."},
+              "what": "10 m/s wind with gusts and the GPS jammed halfway: the hardest case. Expect it to come "
+                      "home and land safely but long: without GPS it cannot measure the wind near the ground, and "
+                      "in this much wind it usually touches down 150-250 m past the planned point."},
     "none": {"title": "A normal flight (nothing goes wrong)", "fault": "none", "fault_s": 0, "turbulence": 0.0,
              "what": "The whole mission as planned: route, flight time and the landing. The GPS-jammed "
                      "test is still needed before the first real flight."},
@@ -414,7 +417,7 @@ class SimRunner:
         import argparse
         args = argparse.Namespace(connect=f"tcp:127.0.0.1:{PORT}", params=a["pf"], fault=a["fault"],
                                   fault_s=a["fault_s"], mission=a["mf"], trigger_m=700.0, out_m=1200.0,
-                                  trigger_s=a["trigger_s"], bearing=45.0, fence_m=1500.0,
+                                  trigger_s=None, trigger_seq="half", bearing=45.0, fence_m=1500.0,
                                   land_radius_m=150.0, alt=100.0, wind=a["wind"], wind_dir=a["wind_dir"],
                                   timeout_s=1500.0, out=a["out"], turbulence=a.get("turbulence", 0.0))
         try:
@@ -503,5 +506,5 @@ def commands_for(project_name: str, launch, wind, wind_dir) -> str:
             f"arduplane --model plane --home {lat:.6f},{lon:.6f},0,0 --defaults silm_sitl.parm --wipe\n"
             f"# 2. in a second terminal, from the onboard folder:\n"
             f"python3 tools/sitl_failsafe_test.py --connect tcp:127.0.0.1:5760 --params "
-            f"ground_station.param --mission ground_station.waypoints --trigger-s 150 "
+            f"ground_station.param --mission ground_station.waypoints --trigger-seq half "
             f"--fault jam --wind {wind:g} --wind-dir {wind_dir:g} --out sim_{project_name}\n")
