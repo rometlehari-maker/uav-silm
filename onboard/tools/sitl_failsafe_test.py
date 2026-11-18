@@ -413,6 +413,16 @@ def build_mission(args, home):
     return items, (land.lat, land.lon), start
 
 
+def survey_middle(items, land_start: int) -> int | None:
+    """The mission item halfway through the survey: the survey's waypoints are
+    the NAV_WAYPOINTs before the landing sequence (DO_LAND_START)."""
+    from silm_recon import mavmission as mm
+    wps = [i for i, it in enumerate(items[:land_start]) if i > 0 and it.command == mm.NAV_WAYPOINT]
+    if not wps:
+        return None
+    return wps[len(wps) // 2]
+
+
 def run(args) -> int:
     from silm_recon import mavmission as mm
     s = Sitl(args.connect)
@@ -448,6 +458,14 @@ def run(args) -> int:
     hl, hn = home
 
     items, land, land_start = build_mission(args, home)
+    trigger_seq = None
+    if getattr(args, "trigger_seq", None) == "half":
+        trigger_seq = survey_middle(items, land_start)
+    elif getattr(args, "trigger_seq", None):
+        trigger_seq = int(args.trigger_seq)
+    if trigger_seq is not None and args.fault != "none":
+        say(f"the GPS goes bad when the aircraft heads for mission item {trigger_seq} "
+            f"(halfway through the survey)")
     if dist_m(hl, hn, items[1].lat or hl, items[1].lon or hn) > 200:
         say("WARNING: the mission's takeoff is far from where SITL started - start SITL with "
               "--custom-location=<lat>,<lon>,<alt>,0 at the mission's launch point")
@@ -510,7 +528,9 @@ def run(args) -> int:
         if args.fault == "none":
             pass                                   # nothing goes wrong: just fly it
         elif fault_t is None and not landing and ep[2] > 0.5 * args.alt and (
-                d_home >= args.trigger_m or (args.trigger_s and now >= args.trigger_s)):
+                (trigger_seq is not None and seq is not None and seq >= trigger_seq) or
+                (trigger_seq is None and (d_home >= args.trigger_m or
+                                          (args.trigger_s and now >= args.trigger_s)))):
             fault_t = now
             phase = "gps_fault"
             if args.fault == "jam":
@@ -638,6 +658,9 @@ def main() -> int:
                     help="fly this .waypoints file (from the laptop planner) instead of the built-in survey")
     ap.add_argument("--trigger-m", type=float, default=700, help="fault when this far from home")
     ap.add_argument("--out-m", type=float, default=1200, help="mission's outbound distance")
+    ap.add_argument("--trigger-seq", default=None,
+                    help="fault when the mission reaches this item; 'half' = halfway through the "
+                         "survey (overrides --trigger-m/--trigger-s)")
     ap.add_argument("--trigger-s", type=float, default=None,
                     help="or fault this many seconds after start (for your own --mission)")
     ap.add_argument("--bearing", type=float, default=45)

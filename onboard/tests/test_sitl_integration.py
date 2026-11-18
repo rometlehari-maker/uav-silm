@@ -113,7 +113,7 @@ def test_fresh_flight_controller_set_up_by_the_ground_station_then_flies(sitl, t
     w = project["wind"]
     cmd = [sys.executable, "-u", os.path.join(ONBOARD, "tools", "sitl_failsafe_test.py"),
            "--connect", PORT, "--params", str(pfile), "--mission", str(mission),
-           "--fault", "jam", "--fault-s", "90", "--trigger-s", "150",
+           "--fault", "jam", "--fault-s", "90", "--trigger-seq", "half",
            "--wind", str(w["speed_mps"]), "--wind-dir", str(w["from_deg"]), "--out", str(res_dir)]
     run = subprocess.run(cmd, cwd=ONBOARD, capture_output=True, text=True, timeout=1500)
     log = run.stdout + run.stderr
