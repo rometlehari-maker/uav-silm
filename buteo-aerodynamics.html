@@ -29,7 +29,7 @@
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="modulepreload" href="assets/silm3d.js">
-<link rel="stylesheet" href="assets/site.css?v=20261122b">
+<link rel="stylesheet" href="assets/site.css?v=20261122c">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,24 +71,19 @@
   </ol>
 </div>
 
+<nav class="rail" aria-hidden="true" data-nav>
+  <a href="#cfd" tabindex="-1"><span>CFD</span><i></i></a>
+</nav>
 <main id="main">
 <div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Buteo</span>
     <nav aria-label="SILM Buteo"><a href="buteo.html">Overview</a><a href="buteo-aerodynamics.html" class="on" aria-current="page">Aerodynamics</a><a href="buteo-layout.html">Layout</a></nav><a class="st-x" href="monedula.html">SILM Monedula <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
-
 
   <section class="s" id="cfd">
     <div class="wrap">
       <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Aerodynamics</span></div>
       <h2 class="rv">OpenFOAM CFD of the full aircraft</h2>
-      <p class="lead rv">We ran a 3D RANS simulation of the complete V4 airframe at 20 m/s, first with the original wing position and then with the wing moved 20 mm aft. Lift and stability agree closely with XFLR5, and drag is higher, as expected once the fuselage and fully turbulent flow are included. Moving the wing left lift and drag unchanged and moved the neutral point 18.2 mm aft.</p>
-
-      <div class="statgrid rv" style="margin:30px 0 0">
-        <div><div class="v">0.523</div><div class="l">CL at 3° (XFLR5: 0.513)</div></div>
-        <div><div class="v">14.2</div><div class="l">L/D at 3°, full aircraft</div></div>
-        <div><div class="v">381.8 mm</div><div class="l">neutral point, wing moved aft</div></div>
-        <div><div class="v">20%</div><div class="l">static margin at the 343 mm CG</div></div>
-      </div>
-
+      <p class="lead rv">A 3D RANS simulation of the complete airframe at 20 m/s. Lift and stability agree closely with XFLR5, drag is higher once the fuselage and fully turbulent flow are included, and moving the wing 20 mm aft made the aircraft comfortably stable.</p>
+      <div class="statgrid rv" style="margin:30px 0"><div><div class="v">14.2</div><div class="l">lift-to-drag at 3°, full aircraft</div></div><div><div class="v">20%</div><div class="l">static margin, CFD</div></div><div><div class="v">381.8 mm</div><div class="l">neutral point</div></div><div><div class="v">≈20 m/s</div><div class="l">trim speed, ruddervators neutral</div></div></div>
       <div class="v3d v3d-flow rv" data-v3d="flow" role="group" aria-label="Interactive 3D view of the CFD results: surface pressure on the aircraft and moving streamlines">
         <img class="v3d-fallback" src="images/cfd_cp_iso.jpg" alt="UAV SILM OpenFOAM CFD: surface pressure coefficient on the full aircraft at 3 degrees angle of attack" width="1291" height="730" loading="lazy" decoding="async">
         <div class="v3d-stage"></div>
@@ -112,16 +107,9 @@
       </div>
       <p class="note">OpenFOAM results for the wing-aft geometry at 20 m/s. The particles move at about 1/16 of real speed and follow the computed streamlines. The aircraft pitches to the chosen angle of attack so the oncoming air stays horizontal. Blue on the surface is suction, red is stagnation.</p>
 
+
       <div class="tabs rv" data-tabs>
-        <div class="tablist" role="tablist" aria-label="CFD results">
-          <button class="tab" role="tab">Wing moved aft</button>
-          <button class="tab" role="tab">First results</button>
-          <button class="tab" role="tab">Pressure</button>
-          <button class="tab" role="tab">Flow</button>
-          <button class="tab" role="tab">Tip vortex</button>
-          <button class="tab" role="tab">Method and limits</button>
-          <span class="tab-ind"></span>
-        </div>
+        <div class="tablist" role="tablist" aria-label="CFD results"><button class="tab" role="tab">Stability fix</button><button class="tab" role="tab">Results</button><button class="tab" role="tab">Pressure</button><button class="tab" role="tab">Flow</button><button class="tab" role="tab">Method and limits</button><span class="tab-ind"></span></div>
         <div class="panel" role="tabpanel">
           <p>After the balance check we moved the wing 20 mm aft in CAD and ran the same CFD again at 0° and 3°.</p>
           <div class="tblwrap" style="margin-top:14px"><table class="tbl">
@@ -167,9 +155,7 @@
             <figure><img class="zoom" src="images/cfd_centre.jpg" alt="Velocity on the aircraft centreline around the fuselage, 3 degrees" data-cap="Centreline velocity around the fuselage at 3°. The low-speed pocket at the tail end is most likely the hollow tail section, which is open to the airflow in the CAD model." width="1400" height="612" loading="lazy" decoding="async"><figcaption>Centreline velocity around the fuselage at 3°.</figcaption></figure>
           </div>
           <figure style="margin-top:18px"><img class="zoom" src="images/cfd_stream.jpg" alt="Streamlines over the UAV SILM wing and fuselage, coloured by velocity, 3 degrees" data-cap="Streamlines at 3°, coloured by speed: they accelerate (red) over the wing's upper surface and pass cleanly over the tail." width="1348" height="838" loading="lazy" decoding="async"><figcaption>Streamlines at 3°, coloured by speed.</figcaption></figure>
-        </div>
-        <div class="panel" role="tabpanel">
-          <div class="fig2" style="margin-top:0">
+          <div class="fig2" style="margin-top:22px">
             <figure><img class="zoom" src="images/cfd_tip.jpg" alt="Wing-tip vortex streamlines on UAV SILM at 6 degrees" data-cap="Streamlines released under the wing tip at 6° roll up around the tip into a helical vortex." width="1248" height="678" loading="lazy" decoding="async"><figcaption>At 6°, air from under the tip rolls up into a helical vortex.</figcaption></figure>
             <figure><img class="zoom" src="images/cfd_wake.jpg" alt="Streamwise vorticity in the wake plane behind UAV SILM at 3 degrees" data-cap="Wake plane 1 m behind the nose at 3°, looking forward: the two tip vortices (outer spots), the wing wake sheet (horizontal band) and a smaller vortex pair from the V-tail roots." width="1400" height="788" loading="lazy" decoding="async"><figcaption>Wake plane at 3°: tip vortices, wing wake and V-tail root vortices.</figcaption></figure>
           </div>
@@ -202,8 +188,6 @@
       <div class="next"><a href="buteo-layout.html">Next: <b>Layout</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
   </section>
-
-
   <section class="s" style="border-bottom:none">
     <div class="wrap">
       <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
@@ -261,7 +245,7 @@
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
 <button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
-<script src="assets/site.js?v=20261122b"></script>
+<script src="assets/site.js?v=20261122c"></script>
 <script type="module" src="assets/silm3d.js"></script>
 </body>
 </html>
