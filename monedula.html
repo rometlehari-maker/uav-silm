@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SILM Monedula, the next airframe | UAV SILM</title>
-<meta name="description" content="SILM Monedula: a hand-launched, 3D-printed observation UAV with about 100 minutes target endurance, a gimbal camera and an encrypted 4G link, for about €870 in parts. In development.">
-<meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
+<title>SILM Monedula | UAV SILM</title>
+<meta name="description" content="SILM Monedula, the second UAV SILM airframe: a 1.5 m hand-launched, 3D-printed observation UAV with a gimbal camera, encrypted 4G link and about 100 minutes target endurance.">
 <meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#3a494d">
@@ -20,16 +19,15 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UAV SILM">
 <meta property="og:locale" content="en_GB">
-<meta property="og:title" content="SILM Monedula, the next airframe | UAV SILM">
-<meta property="og:description" content="SILM Monedula: a hand-launched, 3D-printed observation UAV with about 100 minutes target endurance, a gimbal camera and an encrypted 4G link, for about €870 in parts. In development.">
+<meta property="og:title" content="SILM Monedula | UAV SILM">
+<meta property="og:description" content="SILM Monedula, the second UAV SILM airframe: a 1.5 m hand-launched, 3D-printed observation UAV with a gimbal camera, encrypted 4G link and about 100 minutes target endurance.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SILM Monedula, the next airframe | UAV SILM">
-<meta name="twitter:description" content="SILM Monedula: a hand-launched, 3D-printed observation UAV with about 100 minutes target endurance, a gimbal camera and an encrypted 4G link, for about €870 in parts. In development.">
+<meta name="twitter:title" content="SILM Monedula | UAV SILM">
+<meta name="twitter:description" content="SILM Monedula, the second UAV SILM airframe: a 1.5 m hand-launched, 3D-printed observation UAV with a gimbal camera, encrypted 4G link and about 100 minutes target endurance.">
 <link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
-
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -40,13 +38,11 @@
   <div class="topbar">
     <a class="brand" href="./"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
     <nav class="crumbs" aria-label="Pages">
-      <a href="./">Overview</a>
-      <a href="design.html">Buteo</a>
-      <a href="inside.html">Layout</a>
+      <a href="./">Home</a>
+      <a href="buteo.html">Buteo</a>
+      <a href="monedula.html" class="on" aria-current="page">Monedula</a>
       <a href="onboard.html">Autonomy</a>
-      <a href="cfd.html">Aerodynamics</a>
       <a href="downloads.html">Software</a>
-      <a href="monedula.html" class="nx on" aria-current="page">Monedula</a>
       <span class="sep" aria-hidden="true"></span>
       <a href="about.html" class="proj">Student project</a>
     </nav>
@@ -60,82 +56,90 @@
     <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
   </div>
   <ol>
-    <li><a class="mi" href="./"><b>Overview</b><span>SILM Buteo at a glance</span></a></li>
-    <li><a class="mi" href="design.html"><b>Buteo</b><span>Geometry, calculated performance and modules</span></a></li>
-    <li><a class="mi" href="inside.html"><b>Layout</b><span>Interactive 3D layout and balance calculator</span></a></li>
-    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
-    <li><a class="mi" href="cfd.html"><b>Aerodynamics</b><span>OpenFOAM airflow and pressure, in 3D</span></a></li>
-    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground station, settings and model, free to use</span></a></li>
-    <li><a class="mi on" href="monedula.html"><b>Monedula</b><span>SILM Monedula, the next airframe</span></a></li>
-    <li class="mgrp">Student project</li>
-    <li><a class="mi sm" href="about.html"><b>About</b><span>The school project, subjects and team</span></a></li>
-    <li><a class="mi sm" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
-    <li><a class="mi sm" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+    <li><a class="mi" href="./"><b>Home</b><span>Both aircraft at a glance</span></a></li>
+    <li><a class="mi" href="buteo.html"><b>Buteo</b><span>Airframe 1: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="buteo-aerodynamics.html"><b>Aerodynamics</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi sm" href="buteo-layout.html"><b>Layout</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi on" href="monedula.html"><b>Monedula</b><span>Airframe 2: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="monedula-aerodynamics.html"><b>Aerodynamics</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi sm" href="monedula-layout.html"><b>Layout</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight and GPS-loss failsafe</span></a></li>
+    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground Station, free to use</span></a></li>
+    <li class="mgrp">Separate section</li>
+    <li><a class="mi" href="about.html"><b>Student project</b><span>The school project, team, build and progress</span></a></li>
   </ol>
 </div>
 
 <main id="main">
+<div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Monedula</span>
+    <nav aria-label="SILM Monedula"><a href="monedula.html" class="on" aria-current="page">Overview</a><a href="monedula-aerodynamics.html">Aerodynamics</a><a href="monedula-layout.html">Layout</a></nav><a class="st-x" href="buteo.html">SILM Buteo <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
 
-  <section class="s" id="monedula">
+  <section class="banner mbanner" aria-label="SILM Monedula">
+    <div class="grid" aria-hidden="true"></div>
     <div class="wrap">
-      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Monedula</span></div>
-      <div class="kicker rv">Fixed-wing observation UAV · in development</div>
-      <h2 class="rv">SILM Monedula</h2>
-      <p class="lead rv">A hand-launched observation drone you print, fly and repair yourself. Long endurance, a stabilised camera and an encrypted 4G link, for about €870 in parts.</p>
-
-      <figure class="rv" style="margin-top:34px">
-        <div class="v3d v3d-hero" data-v3d="monedula" role="group" aria-label="Interactive 3D model of SILM Monedula. Drag to rotate, scroll to zoom; use Take it apart to see the parts.">
-          <img class="v3d-fallback" src="images/monedula.jpg" alt="SILM Monedula V11b FreeCAD model: slim fuselage, 1.5 m straight wing with orange ailerons and a V-tail" width="1800" height="1000" loading="lazy" decoding="async">
-          <div class="v3d-stage"></div>
-          <div class="v3d-tip" aria-hidden="true"></div>
-          <div class="v3d-bar">
-            <button class="vbtn" type="button" data-act="explode" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Take it apart</span></button>
-            <button class="vbtn" type="button" data-act="reset">Reset view</button>
-          </div>
-          <div class="v3d-hint"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg>Drag to rotate, point at a part</div>
-          <button class="v3d-activate" type="button" data-act="activate" hidden><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>Tap to rotate the model</button>
-          <button class="vbtn v3d-done" type="button" data-act="release" hidden>Done</button>
-        </div>
-        <figcaption>Drag to rotate, or take it apart to see all 69 printed parts. Modelled in FreeCAD.</figcaption></figure>
-
+      <div class="mhead">
+        <div class="kicker">Airframe 2 · V11c · designed and CFD-checked, not yet built</div>
+        <h1>SILM <span class="r">Monedula</span></h1>
+        <p class="lede">A hand-launched observation drone you print, fly and repair yourself. Long endurance, a stabilised camera and an encrypted 4G link, for about €870 in parts. Monedula is the Latin name of the jackdaw.</p>
+      </div>
+      <figure class="mshot rv"><img src="images/monedula_hero.webp" alt="SILM Monedula studio render, three-quarter front view" width="1107" height="384" decoding="async"></figure>
       <div class="statgrid rv">
-        <div><div class="v">≈100 min</div><div class="l">target endurance</div></div>
         <div><div class="v">1.5 m</div><div class="l">wingspan</div></div>
         <div><div class="v">≈1.8 kg</div><div class="l">ready to fly</div></div>
+        <div><div class="v">~100 min</div><div class="l">target endurance</div></div>
         <div><div class="v">≈€870</div><div class="l">parts, electronics included</div></div>
       </div>
-      <h3 class="rv" style="margin-top:56px">Why Monedula</h3>
-      <div class="cards c3 rv">
-        <div><div class="card-k">01</div><div class="card-t">Stays up</div><div class="card-s">An efficient 1.5 m wing (lift-to-drag about 17 in CFD) and one 7000 mAh battery, aiming at about 100 minutes per flight.</div></div>
-        <div><div class="card-k">02</div><div class="card-t">Sees clearly</div><div class="card-s">Siyi A2 mini camera on a stabilising gimbal in the nose.</div></div>
-        <div><div class="card-k">03</div><div class="card-t">Flies itself</div><div class="card-s">ArduPilot runs the mission from launch to an automatic landing into the wind.</div></div>
-        <div><div class="card-k">04</div><div class="card-t">Secure link</div><div class="card-s">Telemetry over 4G inside an encrypted WireGuard tunnel.</div></div>
-        <div><div class="card-k">05</div><div class="card-t">Fix it in the field</div><div class="card-s">Every part prints on a 220 mm printer. Break one, print another overnight; the landing skids screw off.</div></div>
-        <div><div class="card-k">06</div><div class="card-t">No runway</div><div class="card-s">Throw it by hand, land on the belly. Wings come off with two screws.</div></div>
-      </div>
-      <h3 class="rv" style="margin-top:56px">Specifications</h3>
-      <div class="tblwrap rv"><table class="tbl">
-        <tbody>
-          <tr><td>Wingspan / length</td><td>1.50 m / 0.92 m</td></tr>
-          <tr><td>Take-off mass</td><td>about 1.8 kg</td></tr>
-          <tr><td>Cruise / stall speed</td><td>about 15 m/s (54 km/h) / about 10 m/s</td></tr>
-          <tr><td>Endurance</td><td>about 100 min target</td></tr>
-          <tr><td>Camera</td><td>Siyi A2 mini, gimbal-stabilised</td></tr>
-          <tr><td>Autopilot</td><td>ArduPilot on a Matek H743</td></tr>
-          <tr><td>Link</td><td>4G LTE with WireGuard encryption</td></tr>
-          <tr><td>Power</td><td>4S 7000 mAh, T-Motor AT2321 pusher</td></tr>
-          <tr><td>Launch / landing</td><td>Hand launch / belly on replaceable skids</td></tr>
-          <tr><td>Airframe</td><td>3D-printed LW-PLA, PETG and TPU on a carbon spar</td></tr>
-        </tbody>
-      </table></div>
-      <p class="note rv">Monedula is designed and CFD-checked but not built yet. All figures are design estimates, not flight data.</p>
     </div>
   </section>
 
+  <section class="s" id="why">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Monedula</span></div>
+      <h2 class="rv">Why Monedula</h2>
+      <div class="cards c3 rv">
+        <div><div class="card-k">01</div><div class="card-t">Stays up</div><div class="card-s">An efficient 1.5 m wing (lift-to-drag about 17 in CFD) and one 7000 mAh battery, aiming at about 100 minutes per flight.</div></div>
+        <div><div class="card-k">02</div><div class="card-t">Sees clearly</div><div class="card-s">Siyi A2 mini camera on a stabilised pitch gimbal under a clear dome in the nose.</div></div>
+        <div><div class="card-k">03</div><div class="card-t">Flies itself</div><div class="card-s">ArduPilot runs the mission from launch to an automatic landing into the wind.</div></div>
+        <div><div class="card-k">04</div><div class="card-t">Secure link</div><div class="card-s">Telemetry over 4G inside an encrypted WireGuard tunnel, plus an ELRS receiver for control in the field.</div></div>
+        <div><div class="card-k">05</div><div class="card-t">Fix it in the field</div><div class="card-s">Every part prints on a 220 mm printer. Break one, print another overnight; the landing skids screw off.</div></div>
+        <div><div class="card-k">06</div><div class="card-t">No runway</div><div class="card-s">Throw it by hand, land on the belly. The wings slide off with both hatches closed.</div></div>
+      </div>
+      <div class="gallery mgal rv">
+        <figure class="wide"><img class="zoom" src="images/monedula_camera.jpg" alt="Close-up of the Siyi A2 mini gimbal camera under its clear dome in the nose" width="1080" height="1350" loading="lazy" decoding="async"><figcaption class="cap-over">The camera under its clear dome</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_side.webp" alt="SILM Monedula side view" width="1305" height="456" loading="lazy" decoding="async"><figcaption class="cap-over">Side</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_top.webp" alt="SILM Monedula top view" width="779" height="1160" loading="lazy" decoding="async"><figcaption class="cap-over">Top</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_rear.webp" alt="SILM Monedula from behind, showing the pusher propeller" width="1086" height="544" loading="lazy" decoding="async"><figcaption class="cap-over">Pusher propeller</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_exploded.webp" alt="SILM Monedula exploded into its printed parts" width="1099" height="759" loading="lazy" decoding="async"><figcaption class="cap-over">70 printed parts</figcaption></figure>
+      </div>
+      <p class="note rv">Studio renders of the V11c CAD. The propeller is a stand-in.</p>
+    </div>
+  </section>
 
+  <section class="s" id="specs">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Specifications</span></div>
+      <h2 class="rv">Specifications</h2>
+      <div class="tblwrap rv"><table class="tbl">
+        <tbody>
+          <tr><td>Wingspan / length</td><td class="num">1.50 m / 0.92 m</td></tr>
+          <tr><td>Take-off mass</td><td>about 1.8 kg</td></tr>
+          <tr><td>Cruise / stall speed</td><td>about 15 m/s (54 km/h) / about 10 m/s</td></tr>
+          <tr><td>Endurance</td><td>about 100 min target</td></tr>
+          <tr><td>Camera</td><td>Siyi A2 mini, 160° wide, tilts −90° to +25°</td></tr>
+          <tr><td>Autopilot</td><td>ArduPilot on a Matek H743, Raspberry Pi 4 for recognition</td></tr>
+          <tr><td>Link</td><td>4G LTE with WireGuard encryption; ELRS 2.4 GHz receiver for field control</td></tr>
+          <tr><td>Power</td><td>4S 7000 mAh, T-Motor AT2321 pusher inside the tail</td></tr>
+          <tr><td>Launch / landing</td><td>Hand launch / belly on replaceable skids</td></tr>
+          <tr><td>Airframe</td><td>70 printed parts in LW-PLA, PETG and TPU on a 10 mm carbon tube</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note rv">Monedula is designed and CFD-checked but not built yet. All figures are design estimates, not flight data.</p>
+      <div class="next"><a href="monedula-aerodynamics.html">Next: <b>Aerodynamics</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
   <section class="s" style="border-bottom:none">
     <div class="wrap">
-      <p class="fineprint rv">SILM Buteo is in development and has not flown yet. Figures are design estimates from CFD and calculation, not flight-test data. <a href="about.html">About the student project</a></p>
+      <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
     </div>
   </section>
 </main>
@@ -150,17 +154,16 @@
     <div class="fgrid">
       <div class="fcol">
         <div class="ftag">Aircraft</div>
-        <a href="./">SILM Buteo</a>
-        <a href="design.html">Buteo</a>
-        <a href="inside.html">Layout</a>
+        <a href="./">Home</a>
+        <a href="buteo.html">SILM Buteo</a>
+        <a href="monedula.html">SILM Monedula</a>
         <a href="onboard.html">Autonomy</a>
-        <a href="cfd.html">Aerodynamics</a>
         <a href="downloads.html">Software</a>
-        <a href="monedula.html">SILM Monedula (next)</a>
         <div class="ftag" style="margin-top:18px">Student project</div>
         <a href="about.html">About</a>
-        <a href="progress.html">Progress</a>
         <a href="build.html">Build and tests</a>
+        <a href="progress.html">Progress</a>
+        <a href="progress.html#log">Design log</a>
       </div>
       <div class="fcol">
         <div class="ftag">Team</div>
@@ -173,8 +176,8 @@
         <a href="#">Instagram (placeholder)</a>
       </div>
     </div>
-    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 17 November 2026</span></div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startivad, 3D-prinditud fikseeritud tiivaga mehitamata õhusõidukid (droonid) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 22 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">
@@ -192,6 +195,5 @@
 <button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
 <script src="assets/site.js"></script>
-<script type="module" src="assets/monedula3d.js"></script>
 </body>
 </html>
