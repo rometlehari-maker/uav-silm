@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SILM Buteo | UAV SILM</title>
-<meta name="description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, geometry, calculated performance and modules.">
+<meta name="description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, features, specifications and calculated performance.">
 <meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#3a494d">
@@ -20,16 +20,16 @@
 <meta property="og:site_name" content="UAV SILM">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="SILM Buteo | UAV SILM">
-<meta property="og:description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, geometry, calculated performance and modules.">
+<meta property="og:description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, features, specifications and calculated performance.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SILM Buteo | UAV SILM">
-<meta name="twitter:description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, geometry, calculated performance and modules.">
+<meta name="twitter:description" content="SILM Buteo, the first UAV SILM airframe: a 1.4 m hand-launched, 3D-printed fixed-wing ISR UAV. Interactive 3D model, features, specifications and calculated performance.">
 <link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="modulepreload" href="assets/silm3d.js">
-<link rel="stylesheet" href="assets/site.css?v=20261122b">
+<link rel="stylesheet" href="assets/site.css?v=20261122c">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,6 +71,10 @@
   </ol>
 </div>
 
+<nav class="rail" aria-hidden="true" data-nav>
+  <a href="#why" tabindex="-1"><span>Why</span><i></i></a>
+  <a href="#design" tabindex="-1"><span>Design</span><i></i></a>
+</nav>
 <main id="main">
 <div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Buteo</span>
     <nav aria-label="SILM Buteo"><a href="buteo.html" class="on" aria-current="page">Overview</a><a href="buteo-aerodynamics.html">Aerodynamics</a><a href="buteo-layout.html">Layout</a></nav><a class="st-x" href="monedula.html">SILM Monedula <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
@@ -98,55 +102,26 @@
       </div>
       <div class="hero-cap"><span>SILM Buteo, V6 CAD model: the wing 20 mm further aft and two top hatches, one for the battery and one for the avionics.</span><span>All figures are design estimates until the aircraft flies.</span></div>
 
-      <div class="statgrid rv">
-        <div><div class="v">1.4 m</div><div class="l">wingspan</div></div>
-        <div><div class="v">≈1.70 kg</div><div class="l">all-up mass, from the V9 3D model and weighed parts</div></div>
-        <div><div class="v">~100 min</div><div class="l">target endurance</div></div>
-        <div><div class="v">&lt;$500</div><div class="l">target unit cost</div></div>
-      </div>
+
+      <div class="statgrid rv"><div><div class="v">1.4 m</div><div class="l">wingspan</div></div><div><div class="v">≈1.70 kg</div><div class="l">all-up mass, calculated</div></div><div><div class="v">~100 min</div><div class="l">target endurance</div></div><div><div class="v">&lt;$500</div><div class="l">target unit cost</div></div></div>
     </div>
   </section>
 
+  <section class="s" id="why">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Buteo</span></div>
+      <h2 class="rv">Why Buteo</h2>
+      <div class="cards c3 rv"><div><div class="card-k">01</div><div class="card-t">Stays up</div><div class="card-s">A 1.4 m MH32 wing (lift-to-drag about 14 for the full aircraft in CFD) and one 7000 mAh battery, aiming at about 100 minutes per flight.</div></div><div><div class="card-k">02</div><div class="card-t">Flies itself</div><div class="card-s">ArduPilot flies the planned route from a hand launch to an automatic landing. There is no radio-control link at all.</div></div><div><div class="card-k">03</div><div class="card-t">Secure link</div><div class="card-s">A 4G channel inside an encrypted WireGuard tunnel is planned for watching telemetry during a flight.</div></div><div><div class="card-k">04</div><div class="card-t">Fix it in the field</div><div class="card-s">Printed in LW-PLA and PETG. Break a part, print another in a few hours; the nose cone screws off.</div></div><div><div class="card-k">05</div><div class="card-t">No runway</div><div class="card-s">Throw it by hand, land on the belly. Two top hatches give access to the battery and the avionics.</div></div></div>
+      <div class="gallery mgal rv"><figure class="wide"><img class="zoom" src="images/perspective.jpg" alt="SILM Buteo perspective CAD render from above" width="1002" height="1403" loading="lazy" decoding="async"><figcaption class="cap-over">CAD render</figcaption></figure><figure><img class="zoom" src="images/buteo_side.webp" alt="SILM Buteo side view" width="1184" height="386" loading="lazy" decoding="async"><figcaption class="cap-over">Side</figcaption></figure><figure><img class="zoom" src="images/buteo_top.webp" alt="SILM Buteo top view" width="707" height="1177" loading="lazy" decoding="async"><figcaption class="cap-over">Top</figcaption></figure><figure><img class="zoom" src="images/buteo_rear.webp" alt="SILM Buteo from behind, showing the pusher propeller" width="1108" height="512" loading="lazy" decoding="async"><figcaption class="cap-over">Pusher propeller</figcaption></figure><figure><img class="zoom" src="images/buteo_low.webp" alt="SILM Buteo from below" width="1080" height="1193" loading="lazy" decoding="async"><figcaption class="cap-over">From below</figcaption></figure></div>
+      <p class="note rv">Studio renders of the V6 CAD. The propeller is a stand-in.</p>
+    </div>
+  </section>
 
   <section class="s" id="design">
     <div class="wrap">
       <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Design</span></div>
-      <div class="split">
-        <div>
-          <h2 class="rv">Swap the parts, not the airframe</h2>
-          <p class="lead rv">We designed the airframe around modular components, so the same base platform can be reconfigured for different missions. Use <b>Take it apart</b> on the model at the top of the page to see the modules separate.</p>
-          <div class="cards c2 rv" style="grid-template-columns:1fr">
-            <div class="hovercard">
-              <div class="card-k">A</div>
-              <div class="card-t">Modular design</div>
-              <div class="card-s">Swappable wings and nose cone</div>
-              <div class="hc-hint">Hover or tap for detail</div>
-              <div class="hc-wrap"><div class="hc-panel"><ul>
-                <li>Cheaper, higher aspect-ratio wings can be fitted for lower-paced missions or to deliver explosive payloads.</li>
-                <li>A screw-on nose cone carries either an explosive or an ISR payload.</li>
-                <li>The centre of gravity is adjusted by choosing which modules are fitted.</li>
-              </ul></div></div>
-            </div>
-            <div class="hovercard">
-              <div class="card-k">B</div>
-              <div class="card-t">Versatile</div>
-              <div class="card-s">One airframe, several roles</div>
-              <div class="hc-hint">Hover or tap for detail</div>
-              <div class="hc-wrap"><div class="hc-panel"><ul>
-                <li>3D-printable airframe.</li>
-                <li>Affordable: target unit cost under $500.</li>
-                <li>Suited to military use, and to agricultural, urban or forestry topographic survey work.</li>
-                <li>Lightweight and launchable by hand.</li>
-              </ul></div></div>
-            </div>
-          </div>
-        </div>
-        <figure class="rv"><img class="zoom" src="images/perspective.jpg" alt="UAV SILM perspective CAD render with modular nose cone, high wing and V-tail" data-cap="Perspective render of the airframe." width="1002" height="1403" loading="lazy" decoding="async"><figcaption>Perspective render of the airframe.</figcaption></figure>
-      </div>
-
-      <h2 class="rv" style="margin-top:84px">What the design is calculated to do</h2>
-      <p class="lead rv">Every number here comes from our XFLR5 vortex-lattice analysis, OpenFOAM CFD and hand calculation on the current geometry, not from flight tests. Treat them as design targets.</p>
-
+      <h2 class="rv">What the design is calculated to do</h2>
+      <p class="lead rv">Every number here comes from our analysis and hand calculation on the current geometry, not from flight tests. Treat them as design targets.</p>
       <div class="cards c3 rv">
         <div class="hovercard">
           <svg class="ic" viewBox="0 0 24 24"><path d="M2 12h4l2-7 4 14 2-7h4l2-4 2 4h2"/></svg>
@@ -168,17 +143,9 @@
         </div>
       </div>
 
+
       <div class="tabs rv" data-tabs>
-        <div class="tablist" role="tablist" aria-label="Capability profile">
-          <button class="tab" role="tab">Airframe</button>
-          <button class="tab" role="tab">Flight envelope</button>
-          <button class="tab" role="tab">Stability and control</button>
-          <button class="tab" role="tab">Propulsion</button>
-          <button class="tab" role="tab">Autonomy and link</button>
-          <button class="tab" role="tab">Modularity</button>
-          <button class="tab" role="tab">Analysis</button>
-          <span class="tab-ind"></span>
-        </div>
+        <div class="tablist" role="tablist" aria-label="Capability profile"><button class="tab" role="tab">Airframe</button><button class="tab" role="tab">Flight envelope</button><button class="tab" role="tab">Stability and control</button><button class="tab" role="tab">Propulsion</button><button class="tab" role="tab">Autonomy and link</button><button class="tab" role="tab">Modularity</button><button class="tab" role="tab">Analysis</button><span class="tab-ind"></span></div>
         <div class="panel" role="tabpanel">
           <div class="spec">
             <div class="row"><span>Wingspan</span><span>1.40 m</span></div>
@@ -199,7 +166,7 @@
             <div class="row"><span>V-tail airfoil</span><span>NACA 0012</span></div>
             <div class="row new"><span>Wing loading</span><span>about 6.5 kg/m²</span></div>
           </div>
-          <span class="hedge">Main wing airfoil: MH32, chosen over SD7037 and RG15 in our XFLR5 comparison. On 3 November we moved the wing 20 mm aft (from 274 mm) to correct the balance; see Inside the airframe.</span>
+          <span class="hedge">Main wing airfoil: MH32, chosen over SD7037 and RG15 in our XFLR5 comparison. On 3 November we moved the wing 20 mm aft (from 274 mm) to correct the balance; see <a href="buteo-layout.html">Layout</a>.</span>
         </div>
         <div class="panel" role="tabpanel">
           <div class="spec">
@@ -243,6 +210,7 @@
         </div>
         <div class="panel" role="tabpanel">
           <p>The nose cone screws on and off, so the same airframe can carry an ISR sensor payload or be reconfigured without redesigning the fuselage. Swapping the wing set for a cheaper, higher aspect-ratio pair trades cruise performance for lower-cost, lower-tempo missions. Because modules attach at fixed stations, moving the centre of gravity is mostly a matter of choosing which modules are fitted.</p>
+          <p>Cheaper, higher aspect-ratio wings can be fitted for lower-paced missions, and the screw-on nose cone carries the payload.</p>
         </div>
         <div class="panel" role="tabpanel">
           <div class="fig2" style="margin-top:0">
@@ -254,12 +222,9 @@
           </div>
         </div>
       </div>
-
       <div class="next"><a href="buteo-aerodynamics.html">Next: <b>Aerodynamics</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
   </section>
-
-
   <section class="s" style="border-bottom:none">
     <div class="wrap">
       <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
@@ -317,7 +282,7 @@
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
 <button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
-<script src="assets/site.js?v=20261122b"></script>
+<script src="assets/site.js?v=20261122c"></script>
 <script type="module" src="assets/silm3d.js"></script>
 </body>
 </html>

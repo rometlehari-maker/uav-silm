@@ -622,3 +622,16 @@
     table.tbl.stack td:nth-child(3){ grid-column:1 / -1; color:var(--text); font-size:14px; }
     table.tbl.stack td:nth-child(4){ grid-column:1 / -1; font-size:14px; }
   }
+  .cutaway{ margin-top:30px; }
+  .cutaway img{ border-radius:10px; background:radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--cyan) 10%, var(--panel)), var(--bg)); padding:10px; }
+  .cutaway .lg{ display:inline-flex; align-items:center; gap:6px; margin-right:14px; color:var(--dim); }
+  .cutaway .lg i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  @media (max-width:700px){
+    table.tbl.stack5 thead{ display:none; }
+    table.tbl.stack5 tr{ display:grid; grid-template-columns:1fr auto; column-gap:12px; padding:12px 0; border-bottom:1px solid var(--line-soft); }
+    table.tbl.stack5 td{ border:none; padding:2px 0; }
+    table.tbl.stack5 td:nth-child(3){ grid-column:1 / -1; text-align:left; }
+    table.tbl.stack5 td:nth-child(4), table.tbl.stack5 td:nth-child(5){ grid-column:1 / -1; font-size:14px; }
+  }
+  .cards.c3 > :nth-child(5):last-child{ grid-column:span 2; }
+  @media (max-width:560px){ .cards.c3 > :nth-child(5):last-child{ grid-column:auto; } }

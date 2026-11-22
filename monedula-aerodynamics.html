@@ -28,7 +28,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/site.css?v=20261122b">
+<link rel="stylesheet" href="assets/site.css?v=20261122c">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -70,6 +70,9 @@
   </ol>
 </div>
 
+<nav class="rail" aria-hidden="true" data-nav>
+  <a href="#cfd" tabindex="-1"><span>CFD</span><i></i></a>
+</nav>
 <main id="main">
 <div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Monedula</span>
     <nav aria-label="SILM Monedula"><a href="monedula.html">Overview</a><a href="monedula-aerodynamics.html" class="on" aria-current="page">Aerodynamics</a><a href="monedula-layout.html">Layout</a></nav><a class="st-x" href="buteo.html">SILM Buteo <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
@@ -77,40 +80,62 @@
   <section class="s" id="cfd">
     <div class="wrap">
       <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Aerodynamics</span></div>
-      <h2 class="rv">Pressure and flow at cruise</h2>
-      <p class="lead rv">A 3D OpenFOAM simulation of the whole aircraft at 13.5 m/s. It confirms the efficient wing and a stable balance after the V11 redesign.</p>
-      <div class="statgrid rv">
-        <div><div class="v">≈17</div><div class="l">lift-to-drag at 2°, full aircraft</div></div>
-        <div><div class="v">13.7%</div><div class="l">static margin, CFD</div></div>
-        <div><div class="v">≈15 m/s</div><div class="l">trim speed, CL 0.46</div></div>
-        <div><div class="v">≈10 m/s</div><div class="l">stall speed</div></div>
+      <h2 class="rv">OpenFOAM CFD of the full aircraft</h2>
+      <p class="lead rv">A 3D RANS simulation of the complete airframe at 13.5 m/s. The wing is efficient, and stretching the fuselage in V11 turned an unstable first design into a comfortably stable one.</p>
+      <div class="statgrid rv" style="margin:30px 0"><div><div class="v">16.9</div><div class="l">lift-to-drag at 2°, full aircraft</div></div><div><div class="v">13.7%</div><div class="l">static margin, CFD</div></div><div><div class="v">≈387 mm</div><div class="l">neutral point</div></div><div><div class="v">≈15 m/s</div><div class="l">trim speed</div></div></div>
+      <figure class="rv"><img class="zoom" src="images/monedula_cfd_iso.jpg" alt="SILM Monedula surface pressure coefficient from OpenFOAM at 2 degrees" width="1164" height="813" decoding="async"></figure>
+      <p class="note">OpenFOAM results for the V11 geometry at 13.5 m/s and 2°. Blue on the surface is suction, red is stagnation: suction covers the whole upper wing and weakens toward the tips.</p>
+
+      <div class="tabs rv" data-tabs>
+        <div class="tablist" role="tablist" aria-label="CFD results"><button class="tab" role="tab">Stability fix</button><button class="tab" role="tab">Results</button><button class="tab" role="tab">Pressure</button><button class="tab" role="tab">Flow</button><button class="tab" role="tab">Method and limits</button><span class="tab-ind"></span></div>
+        <div class="panel" role="tabpanel">
+          <p>The first CFD run, on V10b, found the aircraft statically unstable. Our design tool had ignored the wing's downwash on the tail. V11 stretches the fuselage 68 mm, which moves the wing, tail and motor aft, and enlarges the V-tail by 7%.</p>
+          <div class="tblwrap" style="margin-top:14px"><table class="tbl">
+            <thead><tr><th></th><th class="num">V10b</th><th class="num">V11</th></tr></thead>
+            <tbody>
+              <tr><td>CL / CD at 2°</td><td class="num">0.474 / 0.0263</td><td class="num">0.448 / 0.0265</td></tr>
+              <tr><td>L/D at 2°</td><td class="num">18.0</td><td class="num">16.9</td></tr>
+              <tr><td>Neutral point</td><td class="num">about 317 mm</td><td class="num">about 387 mm</td></tr>
+              <tr><td>Static margin</td><td class="num">−3.4% (CG 323.5 mm)</td><td class="num">13.7% (CG 361.5 mm)</td></tr>
+              <tr><td>Fuselage</td><td class="num">850 mm</td><td class="num">918 mm</td></tr>
+            </tbody>
+          </table></div>
+          <p style="margin-top:18px">Moving only the wing would have put the carbon spar through the Raspberry Pi, and a bigger tail on its own reached only 4.6%. Stretching the fuselage behind the battery keeps the nose, camera and battery where they are and moves everything behind them aft. <a href="progress.html#log">Full story in the design log.</a></p>
+        </div>
+        <div class="panel" role="tabpanel">
+          <p>V11 at 13.5 m/s. Pitching moments are about the centre of gravity at x = 361.5 mm.</p>
+          <div class="tblwrap" style="margin-top:14px"><table class="tbl">
+            <thead><tr><th>Angle of attack</th><th class="num">CL</th><th class="num">CD</th><th class="num">L/D</th><th class="num">Cm</th></tr></thead>
+            <tbody>
+              <tr><td>2°</td><td class="num">0.448</td><td class="num">0.0265</td><td class="num">16.9</td><td class="num">+0.002</td></tr>
+              <tr><td>6°</td><td class="num">0.742</td><td class="num">0.0527</td><td class="num">14.1</td><td class="num">−0.038</td></tr>
+            </tbody>
+          </table></div>
+          <div class="cards c3" style="margin-top:22px">
+            <div class="hovercard"><div class="card-k">Lift</div><div class="card-t">Below the design tool</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>About 17% less lift than our design tool at the same angle, so the aircraft trims at a slightly higher angle for the same speed.</p></div></div></div>
+            <div class="hovercard"><div class="card-k">Stability</div><div class="card-t">Stable after the fix</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>The pitching moment falls as the angle rises, so the aircraft returns to trim after a disturbance. A vortex-lattice model calibrated on this CFD gives 14.0%.</p></div></div></div>
+            <div class="hovercard"><div class="card-k">Drag</div><div class="card-t">Likely overstated</div><div class="hc-hint">Hover or tap</div><div class="hc-wrap"><div class="hc-panel"><p>The model treats the whole boundary layer as turbulent, which overstates skin friction. The real value is probably a little lower; flight tests will tell.</p></div></div></div>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <div class="fig2" style="margin-top:0">
+            <figure><img class="zoom" src="images/monedula_cfd_top.jpg" alt="Top view of surface pressure on SILM Monedula at 2 degrees" width="1021" height="885" loading="lazy" decoding="async"><figcaption>Top view at 2°: suction across the whole upper wing, weakening toward the tips.</figcaption></figure>
+            <figure><img class="zoom" src="images/monedula_cfd_bottom.jpg" alt="Underside surface pressure on SILM Monedula at 2 degrees" width="1600" height="900" loading="lazy" decoding="async"><figcaption>Underside at 2°: mild positive pressure under the wing, stagnation on the nose.</figcaption></figure>
+          </div>
+        </div>
+        <div class="panel" role="tabpanel">
+          <figure><img class="zoom" src="images/monedula_cfd_slice.jpg" alt="Flow speed around the wing section 300 mm from the centreline" width="1600" height="700" loading="lazy" decoding="async"><figcaption>Flow speed around the wing section 300 mm from the centreline at 2°, as a share of the free-stream speed. Air speeds up over the upper surface and the flow stays attached to the trailing edge.</figcaption></figure>
+        </div>
+        <div class="panel" role="tabpanel">
+<div class="spec"><div class="row"><span>Software</span><span>OpenFOAM v1912</span></div><div class="row"><span>Solver</span><span>simpleFoam, steady RANS</span></div><div class="row"><span>Turbulence model</span><span>k-omega SST</span></div><div class="row"><span>Mesh</span><span>0.97 M cells, snappyHexMesh</span></div><div class="row"><span>Boundary layers</span><span>3 prism layers</span></div><div class="row"><span>Domain</span><span>half model, symmetry plane</span></div><div class="row"><span>Airspeed / air</span><span>13.5 m/s, sea level</span></div><div class="row"><span>Reference area / MAC</span><span>0.270 m² / 0.187 m</span></div><div class="row"><span>Moment reference</span><span>x = 0.3615 m</span></div><div class="row"><span>Cases</span><span>V10b 0°, 2°, 6°; V11 2°, 6°</span></div><div class="row"><span>Neutral point from</span><span>slope of Cm against CL</span></div></div>
+          <ul class="plain" style="margin-top:20px">
+            <li>Forces are integrated from surface pressure and wall shear in our own script.</li>
+            <li>The model assumes turbulent flow everywhere, which overstates skin-friction drag.</li>
+            <li>The surface is clean: no hinge gaps, hatch seams, gimbal or propeller.</li>
+            <li>A first pass meshed straight from the print files, with gaps and no boundary-layer cells, gave L/D 11.6 and was discarded.</li>
+          </ul>
+        </div>
       </div>
-      <figure class="rv"><img class="zoom" src="images/monedula_cfd_iso.jpg" alt="SILM Monedula surface pressure coefficient from OpenFOAM at 2 degrees" width="1164" height="813" loading="lazy" decoding="async"><figcaption>Surface pressure at 2°. Blue is suction, red is stagnation. Suction covers the whole upper wing and weakens toward the tips.</figcaption></figure>
-      <div class="gallery rv">
-        <figure><img class="zoom" src="images/monedula_cfd_top.jpg" alt="Top view of surface pressure" width="1021" height="885" loading="lazy" decoding="async"><figcaption class="cap-over">Top, 2°</figcaption></figure>
-        <figure><img class="zoom" src="images/monedula_cfd_bottom.jpg" alt="Underside surface pressure" width="1600" height="900" loading="lazy" decoding="async"><figcaption class="cap-over">Underside, 2°</figcaption></figure>
-        <figure><img class="zoom" src="images/monedula_cfd_slice.jpg" alt="Flow speed around the wing section 300 mm from the centreline" width="1600" height="700" loading="lazy" decoding="async"><figcaption class="cap-over">Flow speed, wing section at 300 mm</figcaption></figure>
-      </div>
-
-      <h3 class="rv" style="margin-top:52px">Results</h3>
-      <div class="tblwrap rv"><table class="tbl"><thead><tr><th>Angle of attack</th><th class="num">CL</th><th class="num">CD</th><th class="num">L/D</th><th class="num">Cm</th></tr></thead><tbody>
-        <tr><td>2°</td><td class="num">0.448</td><td class="num">0.0265</td><td class="num">16.9</td><td class="num">+0.002</td></tr>
-        <tr><td>6°</td><td class="num">0.742</td><td class="num">0.0527</td><td class="num">14.1</td><td class="num">−0.038</td></tr>
-      </tbody></table></div>
-      <p class="note rv">Pitching moment falls as the angle rises, so the aircraft returns to trim after a disturbance. Drag is likely overstated: the model treats the whole boundary layer as turbulent.</p>
-
-      <h3 class="rv" style="margin-top:44px">Stability, fixed in V11</h3>
-      <p class="rv" style="max-width:68ch">The first CFD run, on V10b, found the aircraft statically unstable (static margin −3.4%). Our design tool had ignored the wing's downwash on the tail. V11 stretches the fuselage 68 mm, which moves the wing, tail and motor aft, and enlarges the V-tail slightly. CFD now gives 13.7%. <a href="progress.html#log">The full story is in the design log.</a></p>
-
-      <h3 class="rv" style="margin-top:44px">Method</h3>
-      <div class="tblwrap rv"><table class="tbl"><tbody>
-        <tr><td>Software / solver</td><td>OpenFOAM v1912, simpleFoam, steady RANS</td></tr>
-        <tr><td>Turbulence</td><td>k-omega SST, fully turbulent</td></tr>
-        <tr><td>Mesh</td><td class="num">0.97 M cells, half model with a symmetry plane, 3 boundary-layer cells</td></tr>
-        <tr><td>Air speed</td><td>13.5 m/s, sea level</td></tr>
-        <tr><td>Reference area / MAC</td><td class="num">0.270 m² / 187 mm</td></tr>
-        <tr><td>Geometry</td><td>Outer surface without gaps, hatch seams, gimbal or propeller</td></tr>
-      </tbody></table></div>
       <div class="next"><a href="monedula-layout.html">Next: <b>Layout</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
   </section>
@@ -171,6 +196,6 @@
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
 <button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
-<script src="assets/site.js?v=20261122b"></script>
+<script src="assets/site.js?v=20261122c"></script>
 </body>
 </html>
