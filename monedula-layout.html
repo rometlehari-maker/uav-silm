@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SILM Monedula layout | UAV SILM</title>
+<meta name="description" content="Where every part of SILM Monedula sits: interactive 3D model, fuselage sections, component positions, balance and materials.">
+<meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#3a494d">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://www.uavsilm.eu/monedula-layout.html">
+<meta property="og:url" content="https://www.uavsilm.eu/monedula-layout.html">
+<meta property="og:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="UAV SILM fixed-wing UAV, top view render with logo">
+<meta name="twitter:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UAV SILM">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="SILM Monedula layout | UAV SILM">
+<meta property="og:description" content="Where every part of SILM Monedula sits: interactive 3D model, fuselage sections, component positions, balance and materials.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SILM Monedula layout | UAV SILM">
+<meta name="twitter:description" content="Where every part of SILM Monedula sits: interactive 3D model, fuselage sections, component positions, balance and materials.">
+<link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="scrollbar" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="topbar">
+    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
+    <nav class="crumbs" aria-label="Pages">
+      <a href="./">Home</a>
+      <a href="buteo.html">Buteo</a>
+      <a href="monedula.html" class="on" aria-current="page">Monedula</a>
+      <a href="onboard.html">Autonomy</a>
+      <a href="downloads.html">Software</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="about.html" class="proj">Student project</a>
+    </nav>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true">Monedula</span></button>
+  </div>
+</header>
+
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Pages" inert>
+  <div class="menu-head">
+    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="" width="34" height="34"><span>UAV SILM</span></a>
+    <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
+  </div>
+  <ol>
+    <li><a class="mi" href="./"><b>Home</b><span>Both aircraft at a glance</span></a></li>
+    <li><a class="mi" href="buteo.html"><b>Buteo</b><span>Airframe 1: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="buteo-aerodynamics.html"><b>Aerodynamics</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi sm" href="buteo-layout.html"><b>Layout</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi on" href="monedula.html"><b>Monedula</b><span>Airframe 2: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="monedula-aerodynamics.html"><b>Aerodynamics</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi sm" href="monedula-layout.html"><b>Layout</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight and GPS-loss failsafe</span></a></li>
+    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground Station, free to use</span></a></li>
+    <li class="mgrp">Separate section</li>
+    <li><a class="mi" href="about.html"><b>Student project</b><span>The school project, team, build and progress</span></a></li>
+  </ol>
+</div>
+
+<main id="main">
+<div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Monedula</span>
+    <nav aria-label="SILM Monedula"><a href="monedula.html">Overview</a><a href="monedula-aerodynamics.html">Aerodynamics</a><a href="monedula-layout.html" class="on" aria-current="page">Layout</a></nav><a class="st-x" href="buteo.html">SILM Buteo <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
+
+  <section class="s" id="layout">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Layout</span></div>
+      <h2 class="rv">Where every part sits</h2>
+      <p class="lead rv">Take it apart to see the printed parts. Positions are millimetres along the fuselage from the nose tip.</p>
+      <figure class="rv" style="margin-top:30px">
+        <div class="v3d v3d-hero" data-v3d="monedula" role="group" aria-label="Interactive 3D model of SILM Monedula. Drag to rotate, scroll to zoom; use Take it apart to see the parts.">
+          <img class="v3d-fallback" src="images/monedula_window.webp" alt="SILM Monedula V11c: slim fuselage, 1.5 m straight wing, V-tail and gimbal camera" width="1101" height="409" loading="lazy" decoding="async">
+          <div class="v3d-stage"></div>
+          <div class="v3d-tip" aria-hidden="true"></div>
+          <div class="v3d-bar">
+            <button class="vbtn" type="button" data-act="explode" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Take it apart</span></button>
+            <button class="vbtn" type="button" data-act="reset">Reset view</button>
+          </div>
+          <div class="v3d-hint"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg>Drag to rotate, point at a part</div>
+          <button class="v3d-activate" type="button" data-act="activate" hidden><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>Tap to rotate the model</button>
+          <button class="vbtn v3d-done" type="button" data-act="release" hidden>Done</button>
+        </div>
+        <figcaption>V11c CAD model, all 70 printed parts plus the Siyi A2 mini camera.</figcaption></figure>
+      <div class="statgrid rv">
+        <div><div class="v">≈1.79 kg</div><div class="l">all-up mass, calculated</div></div>
+        <div><div class="v">≈363 mm</div><div class="l">centre of gravity</div></div>
+        <div><div class="v">≈13%</div><div class="l">static margin</div></div>
+        <div><div class="v">70</div><div class="l">printed parts</div></div>
+      </div>
+
+      <h3 class="rv" style="margin-top:48px">Six sections, each fits a 220 mm printer</h3>
+      <div class="fusebar rv" aria-label="Fuselage sections"><div style="flex:108"><b>Nose</b><span class="num">0–108</span><i>camera</i></div><div style="flex:162"><b>F1</b><span class="num">108–270</span><i>battery</i></div><div style="flex:64"><b>F1b</b><span class="num">270–334</span><i>wing root</i></div><div style="flex:204"><b>F2</b><span class="num">334–538</span><i>avionics</i></div><div style="flex:200"><b>F3</b><span class="num">538–738</span><i>GPS, receiver</i></div><div style="flex:180"><b>Tail</b><span class="num">738–918</span><i>motor</i></div></div>
+      <p class="note rv">PETG couplers join the sections, 10 mm into each. Two top hatches: A for the battery, B for the avionics.</p>
+
+      <h3 class="rv" style="margin-top:48px">Components</h3>
+      <div class="tblwrap rv"><table class="tbl stack"><thead><tr><th>Component</th><th class="num">x, mm</th><th>Where</th><th>Why there</th></tr></thead><tbody><tr><td>Camera, Siyi A2 mini</td><td class="num">51 to 104</td><td>Nose bay, under the ceiling plate</td><td>As far forward as it goes, with a clear view down and ahead. Hangs below the nose under its clear dome.</td></tr><tr><td>Battery, 4S 7000 mAh</td><td class="num">120 to 260</td><td>Under hatch A</td><td>The heaviest item and the main balance adjuster. Drops in flat and slides 10 mm forward; the hatch opens with the wings on.</td></tr><tr><td>Power board, flight controller, ESC</td><td class="num">322 to 500</td><td>Lower rack</td><td>Matek H743 near the centre of gravity, where its motion sensors work best. Short leads from the battery.</td></tr><tr><td>Raspberry Pi 4 and 4G HAT</td><td class="num">370 to 528</td><td>Upper rack, under hatch B</td><td>Next to each other for a short connection. Hatch B is the maintenance lid and opens with the wings off.</td></tr><tr><td>Wing</td><td class="num">tube at 359</td><td>Sockets at the F1b–F2 joint</td><td>Slides on over a 10 mm carbon tube, held by one M3 screw each side. Aileron servos sit in the wing.</td></tr><tr><td>4G antennas</td><td class="num">498</td><td>Both sides</td><td>Away from the GPS and the carbon tube.</td></tr><tr><td>GPS and compass</td><td class="num">582 to 614</td><td>Shelf behind the wing</td><td>Behind the carbon tube so the sky is clear, away from the ESC and motor.</td></tr><tr><td>ELRS receiver, RadioMaster RP3</td><td class="num">679 to 702</td><td>Printed into F3's left wall</td><td>Two antennas in grooves 90° apart, away from carbon, the Pi, the 4G antennas and the motor leads.</td></tr><tr><td>Motor, T-Motor AT2321</td><td class="num">tail end</td><td>Inside the tail, on a PETG mount</td><td>Pusher, so the nose and camera view stay clear. Comes out aft with its mount; cooling intakes in the tail.</td></tr><tr><td>Landing skids</td><td class="num">125 to 262, 400 to 532</td><td>Belly</td><td>TPU, screwed on, replaceable.</td></tr></tbody></table></div>
+
+      <h3 class="rv" style="margin-top:48px">Materials</h3>
+      <div class="cards c3 rv">
+        <div><div class="card-k">LW-PLA</div><div class="card-t">Skin, wing, tail</div><div class="card-s">Foaming PLA, light enough for 1.5 m of printed wing.</div></div>
+        <div><div class="card-k">PETG</div><div class="card-t">Where it carries load</div><div class="card-s">Couplers, wing root ribs, spar carriers, servo frames, the motor mount.</div></div>
+        <div><div class="card-k">TPU</div><div class="card-t">Where it bends</div><div class="card-s">Control-surface hinges and the landing skids.</div></div>
+      </div>
+      <div class="next"><a href="onboard.html">Next: <b>Autonomy</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+  <section class="s" style="border-bottom:none">
+    <div class="wrap">
+      <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img class="wm" src="images/logo_mark.svg" alt="" width="720" height="720" loading="lazy" decoding="async">
+  <div class="wrap">
+    <div class="flogos">
+      <div class="fl"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="96" height="96" loading="lazy" decoding="async"> UAV SILM</div>
+      <img class="crest" src="images/crest.png" alt="Gustav Adolfi Gümnaasium crest" width="200" height="172" loading="lazy" decoding="async">
+    </div>
+    <div class="fgrid">
+      <div class="fcol">
+        <div class="ftag">Aircraft</div>
+        <a href="./">Home</a>
+        <a href="buteo.html">SILM Buteo</a>
+        <a href="monedula.html">SILM Monedula</a>
+        <a href="onboard.html">Autonomy</a>
+        <a href="downloads.html">Software</a>
+        <div class="ftag" style="margin-top:18px">Student project</div>
+        <a href="about.html">About</a>
+        <a href="build.html">Build and tests</a>
+        <a href="progress.html">Progress</a>
+        <a href="progress.html#log">Design log</a>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Team</div>
+        <p>UAV SILM is developed by Romet Salvador Lehari (Romet Lehari), project management and flight dynamics; Ludvig Janisk, 3D modelling and research; and Karl-Robin Koppel, electronics. Gustav Adolfi Gümnaasium, Tallinn, Estonia.</p>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Contact</div>
+        <a href="#">team@uavsilm.example (placeholder)</a>
+        <a href="#">github.com/uav-silm (placeholder)</a>
+        <a href="#">Instagram (placeholder)</a>
+      </div>
+    </div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startivad, 3D-prinditud fikseeritud tiivaga mehitamata õhusõidukid (droonid) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 22 November 2026</span></div>
+    <div class="privacy hb">
+      <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
+      <div class="acc-wrap"><div class="acc-body">
+        <p>This site is a personal, non-commercial student project.</p>
+        <p>Basic technical data (such as IP address and browser type) is processed by the hosting provider (GitHub) for the security and operation of the site.</p>
+        <p>We collect no additional personal data unless you contact us directly.</p>
+        <p>We use no tracking or analytics cookies, and the site loads no external fonts or scripts. The 3D viewers run entirely in your browser from files on this site and send nothing anywhere.</p>
+        <p>You can contact us to ask for any data we hold about you to be deleted.</p>
+      </div></div>
+    </div>
+  </div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
+<button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+
+<script src="assets/site.js"></script>
+<script type="module" src="assets/monedula3d.js"></script>
+</body>
+</html>

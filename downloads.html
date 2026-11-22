@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Software | UAV SILM</title>
-<meta name="description" content="Free downloads from UAV SILM: ground station software, flight-controller settings and the recognition model.">
-<meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
+<meta name="description" content="Download the UAV SILM Ground Station: plan, set up and review fixed-wing ArduPilot survey flights. Free to use under the MIT licence.">
 <meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#3a494d">
@@ -21,15 +20,14 @@
 <meta property="og:site_name" content="UAV SILM">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="Software | UAV SILM">
-<meta property="og:description" content="Free downloads from UAV SILM: ground station software, flight-controller settings and the recognition model.">
+<meta property="og:description" content="Download the UAV SILM Ground Station: plan, set up and review fixed-wing ArduPilot survey flights. Free to use under the MIT licence.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Software | UAV SILM">
-<meta name="twitter:description" content="Free downloads from UAV SILM: ground station software, flight-controller settings and the recognition model.">
+<meta name="twitter:description" content="Download the UAV SILM Ground Station: plan, set up and review fixed-wing ArduPilot survey flights. Free to use under the MIT licence.">
 <link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
-
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -40,13 +38,11 @@
   <div class="topbar">
     <a class="brand" href="./"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
     <nav class="crumbs" aria-label="Pages">
-      <a href="./">Overview</a>
-      <a href="design.html">Buteo</a>
-      <a href="inside.html">Layout</a>
+      <a href="./">Home</a>
+      <a href="buteo.html">Buteo</a>
+      <a href="monedula.html">Monedula</a>
       <a href="onboard.html">Autonomy</a>
-      <a href="cfd.html">Aerodynamics</a>
       <a href="downloads.html" class="on" aria-current="page">Software</a>
-      <a href="monedula.html" class="nx">Monedula</a>
       <span class="sep" aria-hidden="true"></span>
       <a href="about.html" class="proj">Student project</a>
     </nav>
@@ -60,17 +56,17 @@
     <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
   </div>
   <ol>
-    <li><a class="mi" href="./"><b>Overview</b><span>SILM Buteo at a glance</span></a></li>
-    <li><a class="mi" href="design.html"><b>Buteo</b><span>Geometry, calculated performance and modules</span></a></li>
-    <li><a class="mi" href="inside.html"><b>Layout</b><span>Interactive 3D layout and balance calculator</span></a></li>
-    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
-    <li><a class="mi" href="cfd.html"><b>Aerodynamics</b><span>OpenFOAM airflow and pressure, in 3D</span></a></li>
-    <li><a class="mi on" href="downloads.html"><b>Software</b><span>Ground station, settings and model, free to use</span></a></li>
-    <li><a class="mi" href="monedula.html"><b>Monedula</b><span>SILM Monedula, the next airframe</span></a></li>
-    <li class="mgrp">Student project</li>
-    <li><a class="mi sm" href="about.html"><b>About</b><span>The school project, subjects and team</span></a></li>
-    <li><a class="mi sm" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
-    <li><a class="mi sm" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+    <li><a class="mi" href="./"><b>Home</b><span>Both aircraft at a glance</span></a></li>
+    <li><a class="mi" href="buteo.html"><b>Buteo</b><span>Airframe 1: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="buteo-aerodynamics.html"><b>Aerodynamics</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi sm" href="buteo-layout.html"><b>Layout</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi" href="monedula.html"><b>Monedula</b><span>Airframe 2: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="monedula-aerodynamics.html"><b>Aerodynamics</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi sm" href="monedula-layout.html"><b>Layout</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight and GPS-loss failsafe</span></a></li>
+    <li><a class="mi on" href="downloads.html"><b>Software</b><span>Ground Station, free to use</span></a></li>
+    <li class="mgrp">Separate section</li>
+    <li><a class="mi" href="about.html"><b>Student project</b><span>The school project, team, build and progress</span></a></li>
   </ol>
 </div>
 
@@ -78,9 +74,26 @@
 
   <section class="s" id="downloads">
     <div class="wrap">
-      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Downloads</span></div>
-      <h2 class="rv">Download the software</h2>
-      <p class="lead rv">Everything we use to plan a survey, set up the aircraft, fly it in the simulator and look at the pictures afterwards. Our own code is free to use, change and share under the MIT licence; the parts made by others keep their licences and are credited below.</p>
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Software</span></div>
+      <h2 class="rv">The Ground Station</h2>
+      <p class="lead rv">Plan a survey, set up the aircraft, fly it in the simulator and look at the pictures afterwards. Free to use under the MIT licence.</p>
+      <div class="app-dl rv">
+        <div class="app-dl-head">
+          <img src="images/logo_icon.svg" alt="" width="56" height="56">
+          <div><div class="card-k">The app · start here</div><div class="app-dl-t">UAV SILM Ground Station</div>
+            <p>Plan, send, launch and look at the pictures, with a guided setup for a new aircraft. Install it like any program; nothing else needed.</p></div>
+        </div>
+        <div class="app-dl-btns">
+          <a class="btn primary" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-Setup.exe">Windows installer<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-macos.zip">macOS (Apple silicon)<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-linux.tar.gz">Linux<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+        </div>
+        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The source and the model on their own are attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>.</p>
+      </div>
+      <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
+      <p class="note rv">Version 2.3.3, built 2026-11-18 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/4c60b20ba63e476b54b01bd791da7652440f0030/onboard"><code>4c60b20ba6</code></a>. Checksums of every file: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>.</p>
+      <!-- downloads:end -->
+      <details class="more rv"><summary>Will it work on my aircraft?</summary>
       <div class="cards c2 fit rv">
         <div>
           <div class="card-k">Will it work on my aircraft? Yes, with</div>
@@ -103,22 +116,7 @@
           <p class="fit-note">Even on the right aircraft: answer every question about <i>your</i> plane in the Ground Station, fly the mission in its simulator first, check the control directions on the bench, and get your flight authorisation.</p>
         </div>
       </div>
-      <div class="app-dl rv">
-        <div class="app-dl-head">
-          <img src="images/logo_icon.svg" alt="" width="56" height="56">
-          <div><div class="card-k">The app · start here</div><div class="app-dl-t">UAV SILM Ground Station</div>
-            <p>Plan, send, launch and look at the pictures, with a guided setup for a new aircraft. Install it like any program; nothing else needed.</p></div>
-        </div>
-        <div class="app-dl-btns">
-          <a class="btn primary" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-Setup.exe">Windows installer<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-macos.zip">macOS (Apple silicon)<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-          <a class="btn ghost" href="https://github.com/rometlehari-maker/uav-silm/releases/latest/download/UAV-SILM-Ground-Station-linux.tar.gz">Linux<svg class="ic-arr" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
-        </div>
-        <p class="note">Windows may say the publisher is unknown, because the app is not code-signed: choose <b>More info</b>, then <b>Run anyway</b>. On macOS, open it the first time with right-click, <b>Open</b>. Checksums: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>. The source and the model on their own are attached to <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">each release</a>.</p>
-      </div>
-      <!-- downloads:begin (written by onboard/tools/build_downloads.py) -->
-      <p class="note rv">Version 2.3.3, built 2026-11-18 from commit <a href="https://github.com/rometlehari-maker/uav-silm/tree/4c60b20ba63e476b54b01bd791da7652440f0030/onboard"><code>4c60b20ba6</code></a>. Checksums of every file: <a href="https://github.com/rometlehari-maker/uav-silm/releases/latest">SHA256SUMS.txt on the release page</a>.</p>
-      <!-- downloads:end -->
+      </details>
       <div class="tabs rv" data-tabs>
         <div class="tablist" role="tablist" aria-label="Using the downloads">
           <button class="tab" role="tab">Start here</button>
@@ -163,10 +161,9 @@
       </div>
     </div>
   </section>
-
   <section class="s" style="border-bottom:none">
     <div class="wrap">
-      <p class="fineprint rv">SILM Buteo is in development and has not flown yet. Figures are design estimates from CFD and calculation, not flight-test data. <a href="about.html">About the student project</a></p>
+      <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
     </div>
   </section>
 </main>
@@ -181,17 +178,16 @@
     <div class="fgrid">
       <div class="fcol">
         <div class="ftag">Aircraft</div>
-        <a href="./">SILM Buteo</a>
-        <a href="design.html">Buteo</a>
-        <a href="inside.html">Layout</a>
+        <a href="./">Home</a>
+        <a href="buteo.html">SILM Buteo</a>
+        <a href="monedula.html">SILM Monedula</a>
         <a href="onboard.html">Autonomy</a>
-        <a href="cfd.html">Aerodynamics</a>
         <a href="downloads.html">Software</a>
-        <a href="monedula.html">SILM Monedula (next)</a>
         <div class="ftag" style="margin-top:18px">Student project</div>
         <a href="about.html">About</a>
-        <a href="progress.html">Progress</a>
         <a href="build.html">Build and tests</a>
+        <a href="progress.html">Progress</a>
+        <a href="progress.html#log">Design log</a>
       </div>
       <div class="fcol">
         <div class="ftag">Team</div>
@@ -204,8 +200,8 @@
         <a href="#">Instagram (placeholder)</a>
       </div>
     </div>
-    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 15 November 2026</span></div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startivad, 3D-prinditud fikseeritud tiivaga mehitamata õhusõidukid (droonid) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 22 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">

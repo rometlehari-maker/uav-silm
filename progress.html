@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Progress | UAV SILM</title>
-<meta name="description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
-<meta name="keywords" content="UAV SILM, SILM UAV, SILM drone, UAV Silm, unmanned aerial vehicle SILM, Strategic Intelligence and Land Monitoring, Romet Lehari, Romet Salvador Lehari, Romet Salvador, Romet S. Lehari, Ludvig Janisk, Karl-Robin Koppel, fixed-wing UAV, ISR UAV, reconnaissance drone, student drone project, 3D printed UAV, hand launched UAV, LW-PLA UAV, UAV 3D model, centre of gravity, XFLR5, OpenFOAM, ArduPilot, Estonia UAV, Estonian drone, Tallinn, Gustav Adolfi Gümnaasium, GAG, STEAM project, droon, mehitamata õhusõiduk, õpilasprojekt, STEAM-projekt">
+<title>Progress | UAV SILM student project</title>
+<meta name="description" content="UAV SILM progress: lessons, interim report, design log and timeline.">
 <meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#3a494d">
@@ -20,72 +19,62 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UAV SILM">
 <meta property="og:locale" content="en_GB">
-<meta property="og:title" content="Progress | UAV SILM">
-<meta property="og:description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
+<meta property="og:title" content="Progress | UAV SILM student project">
+<meta property="og:description" content="UAV SILM progress: lessons, interim report, design log and timeline.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Progress | UAV SILM">
-<meta name="twitter:description" content="What we learnt, the interim progress report and the timeline of the UAV SILM student project.">
+<meta name="twitter:title" content="Progress | UAV SILM student project">
+<meta name="twitter:description" content="UAV SILM progress: lessons, interim report, design log and timeline.">
 <link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
-
 <link rel="stylesheet" href="assets/site.css">
 </head>
-<body>
+<body class="proj">
 <a class="skip" href="#main">Skip to content</a>
 <div id="scrollbar" aria-hidden="true"></div>
 
 <header class="top">
   <div class="topbar">
-    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
-    <nav class="crumbs" aria-label="Pages">
-      <a href="./">Overview</a>
-      <a href="design.html">Buteo</a>
-      <a href="inside.html">Layout</a>
-      <a href="onboard.html">Autonomy</a>
-      <a href="cfd.html">Aerodynamics</a>
-      <a href="downloads.html">Software</a>
-      <a href="monedula.html" class="nx">Monedula</a>
+    <a class="brand" href="about.html"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span><em class="brand-tag">Student project</em></a>
+    <nav class="crumbs" aria-label="Student project">
+      <a href="about.html">About</a>
+      <a href="about.html#team">Team</a>
+      <a href="build.html">Build and tests</a>
+      <a href="progress.html" class="on" aria-current="page">Progress</a>
+      <a href="progress.html#log">Design log</a>
       <span class="sep" aria-hidden="true"></span>
-      <a href="about.html" class="proj on" aria-current="page">Student project</a>
+      <a href="./" class="back">The aircraft <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </nav>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true">Progress</span></button>
   </div>
 </header>
 
-<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Pages" inert>
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Student project pages" inert>
   <div class="menu-head">
-    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="" width="34" height="34"><span>UAV SILM</span></a>
+    <a class="brand" href="about.html"><img src="images/logo_icon.svg" alt="" width="34" height="34"><span>UAV SILM</span><em class="brand-tag">Student project</em></a>
     <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
   </div>
   <ol>
-    <li><a class="mi" href="./"><b>Overview</b><span>SILM Buteo at a glance</span></a></li>
-    <li><a class="mi" href="design.html"><b>Buteo</b><span>Geometry, calculated performance and modules</span></a></li>
-    <li><a class="mi" href="inside.html"><b>Layout</b><span>Interactive 3D layout and balance calculator</span></a></li>
-    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight, GPS-loss failsafe and recognition</span></a></li>
-    <li><a class="mi" href="cfd.html"><b>Aerodynamics</b><span>OpenFOAM airflow and pressure, in 3D</span></a></li>
-    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground station, settings and model, free to use</span></a></li>
-    <li><a class="mi" href="monedula.html"><b>Monedula</b><span>SILM Monedula, the next airframe</span></a></li>
-    <li class="mgrp">Student project</li>
-    <li><a class="mi sm" href="about.html"><b>About</b><span>The school project, subjects and team</span></a></li>
-    <li><a class="mi sm on" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
-    <li><a class="mi sm" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+    <li><a class="mi" href="about.html"><b>About</b><span>The school project and its subjects</span></a></li>
+    <li><a class="mi" href="about.html#team"><b>Team</b><span>Who does what</span></a></li>
+    <li><a class="mi" href="build.html"><b>Build and tests</b><span>Thrust rig, electronics and test plan</span></a></li>
+    <li><a class="mi on" href="progress.html"><b>Progress</b><span>Lessons, interim report and timeline</span></a></li>
+    <li><a class="mi" href="progress.html#log"><b>Design log</b><span>Every design change, with dates</span></a></li>
+    <li class="mgrp">Separate section</li>
+    <li><a class="mi" href="./"><b>The aircraft</b><span>SILM Buteo and SILM Monedula</span></a></li>
   </ol>
 </div>
 
 <nav class="rail" aria-hidden="true" data-nav>
   <a href="#learnt" tabindex="-1"><span>Lessons</span><i></i></a>
   <a href="#progress" tabindex="-1"><span>Report</span><i></i></a>
+  <a href="#log" tabindex="-1"><span>Design log</span><i></i></a>
   <a href="#timeline" tabindex="-1"><span>Timeline</span><i></i></a>
 </nav>
 <main id="main">
-<div class="subtabs"><div class="wrap"><span class="st-k">Student project</span>
-    <nav aria-label="Student project">
-      <a href="about.html">About</a>
-      <a href="progress.html" class="on" aria-current="page">Progress</a>
-      <a href="build.html">Build and tests</a>
-    </nav></div></div>
+<div class="pband"><div class="wrap"><div class="pband-k">UAV SILM · student STEAM project · Gustav Adolfi Gümnaasium, Tallinn</div><div class="pband-t">Student project</div><p>What we learnt, the interim report, the design log and the timeline.</p></div></div>
+
 
   <section class="s" id="learnt">
     <div class="wrap">
@@ -289,7 +278,16 @@
           </div>
         </div>
       </div>
-      <div class="next"><a href="build.html">Next: <b>Build and testing</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="next"><a href="#log">Next: <b>Design log</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+
+  <section class="s" id="log">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Design log</span></div>
+      <h2 class="rv">Design log</h2>
+      <p class="lead rv">Every design change, what triggered it and what it achieved. Newest at the bottom.</p>
+      <ol class="dlog rv"><li><div class="lg-d">3 Nov</div><div class="lg-m">Buteo</div><p>First CFD of the full aircraft. Lift matched XFLR5, but the neutral point came out further forward. We moved the wing 20 mm aft: static margin from 13% to 20%, trim speed close to the 20 m/s target, no weight added.</p></li><li><div class="lg-d">10 Nov</div><div class="lg-m">Buteo</div><p>V9 parts: joints, battery tray, servo caps, the 590 g battery, Raspberry Pi 4 and 7 mm wing tube. Calculated all-up mass 1.70 kg.</p></li><li><div class="lg-d">16 Nov</div><div class="lg-m">Monedula</div><p>First CFD of V10b. Lift-to-drag about 18 near 2°, but static margin −3.4%: statically unstable. Our design tool had predicted +14% because it ignores the wing's downwash on the tail; a vortex-lattice check agreed with the CFD.</p></li><li><div class="lg-d">17 Nov</div><div class="lg-m">Monedula</div><p>V11: fuselage stretched 68 mm behind the battery, so the wing, bay, tail and motor move aft; V-tail span +7%. CFD static margin 13.7%. Moving only the wing would have put the spar through the Raspberry Pi, and a bigger tail alone reached only 4.6%. The central payload bay was dropped; payloads go on the modular nose.</p></li><li><div class="lg-d">17–18 Nov</div><div class="lg-m">Monedula</div><p>V11b: smoothed fuselage creases, re-attached the V-tail root, put the ruddervator hinges on the twisted mean line, stiffened the tail tips and moved the motor inside the tail end on a PETG mount that slides out aft.</p></li><li><div class="lg-d">19 Nov</div><div class="lg-m">Monedula</div><p>V11c: an audit of every joint, screw, insert and insertion path in exact CAD geometry. Fixed aileron clearance (now ±30°), wings that would not slide on with a hatch closed, a battery that could not be inserted, two couplers that could not be fitted, and screws that bottomed out. Added the ELRS receiver inside the F3 wall.</p></li><li><div class="lg-d">19 Nov</div><div class="lg-m">Studies</div><p>Rejected: a Bayraktar-style tail boom (+9 g for −0.9% drag) and an all-PETG version for recycled bottles (about 2.3 kg, endurance about 73% of V11b).</p></li></ol>
     </div>
   </section>
 
@@ -346,6 +344,7 @@
       </div>
     </div>
   </section>
+
 </main>
 
 <footer>
@@ -358,17 +357,16 @@
     <div class="fgrid">
       <div class="fcol">
         <div class="ftag">Aircraft</div>
-        <a href="./">SILM Buteo</a>
-        <a href="design.html">Buteo</a>
-        <a href="inside.html">Layout</a>
+        <a href="./">Home</a>
+        <a href="buteo.html">SILM Buteo</a>
+        <a href="monedula.html">SILM Monedula</a>
         <a href="onboard.html">Autonomy</a>
-        <a href="cfd.html">Aerodynamics</a>
         <a href="downloads.html">Software</a>
-        <a href="monedula.html">SILM Monedula (next)</a>
         <div class="ftag" style="margin-top:18px">Student project</div>
         <a href="about.html">About</a>
-        <a href="progress.html">Progress</a>
         <a href="build.html">Build and tests</a>
+        <a href="progress.html">Progress</a>
+        <a href="progress.html#log">Design log</a>
       </div>
       <div class="fcol">
         <div class="ftag">Team</div>
@@ -381,8 +379,8 @@
         <a href="#">Instagram (placeholder)</a>
       </div>
     </div>
-    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startiv, 3D-prinditud fikseeritud tiivaga mehitamata õhusõiduk (droon) vaatluseks ja luureks.</span></p>
-    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 17 November 2026</span></div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startivad, 3D-prinditud fikseeritud tiivaga mehitamata õhusõidukid (droonid) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 22 November 2026</span></div>
     <div class="privacy hb">
       <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
       <div class="acc-wrap"><div class="acc-body">

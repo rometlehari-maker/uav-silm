@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SILM Monedula aerodynamics | UAV SILM</title>
+<meta name="description" content="OpenFOAM CFD of SILM Monedula: surface pressure, lift, drag, lift-to-drag ratio and static margin.">
+<meta name="author" content="Romet Salvador Lehari, Ludvig Janisk, Karl-Robin Koppel">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#3a494d">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://www.uavsilm.eu/monedula-aerodynamics.html">
+<meta property="og:url" content="https://www.uavsilm.eu/monedula-aerodynamics.html">
+<meta property="og:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="UAV SILM fixed-wing UAV, top view render with logo">
+<meta name="twitter:image" content="https://www.uavsilm.eu/images/og-uav-silm.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UAV SILM">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="SILM Monedula aerodynamics | UAV SILM">
+<meta property="og:description" content="OpenFOAM CFD of SILM Monedula: surface pressure, lift, drag, lift-to-drag ratio and static margin.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SILM Monedula aerodynamics | UAV SILM">
+<meta name="twitter:description" content="OpenFOAM CFD of SILM Monedula: surface pressure, lift, drag, lift-to-drag ratio and static margin.">
+<link rel="icon" type="image/svg+xml" href="images/logo_icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="preload" href="fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="scrollbar" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="topbar">
+    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="34" height="34"><span>UAV SILM</span></a>
+    <nav class="crumbs" aria-label="Pages">
+      <a href="./">Home</a>
+      <a href="buteo.html">Buteo</a>
+      <a href="monedula.html" class="on" aria-current="page">Monedula</a>
+      <a href="onboard.html">Autonomy</a>
+      <a href="downloads.html">Software</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="about.html" class="proj">Student project</a>
+    </nav>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><i aria-hidden="true"></i><span>Menu</span><span class="cur" aria-hidden="true">Monedula</span></button>
+  </div>
+</header>
+
+<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="Pages" inert>
+  <div class="menu-head">
+    <a class="brand" href="./"><img src="images/logo_icon.svg" alt="" width="34" height="34"><span>UAV SILM</span></a>
+    <button class="menu-btn" type="button" data-close style="display:inline-flex">Close</button>
+  </div>
+  <ol>
+    <li><a class="mi" href="./"><b>Home</b><span>Both aircraft at a glance</span></a></li>
+    <li><a class="mi" href="buteo.html"><b>Buteo</b><span>Airframe 1: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="buteo-aerodynamics.html"><b>Aerodynamics</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi sm" href="buteo-layout.html"><b>Layout</b><span>SILM Buteo</span></a></li>
+    <li><a class="mi on" href="monedula.html"><b>Monedula</b><span>Airframe 2: overview, aerodynamics, layout</span></a></li>
+    <li><a class="mi sm" href="monedula-aerodynamics.html"><b>Aerodynamics</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi sm" href="monedula-layout.html"><b>Layout</b><span>SILM Monedula</span></a></li>
+    <li><a class="mi" href="onboard.html"><b>Autonomy</b><span>Link-free flight and GPS-loss failsafe</span></a></li>
+    <li><a class="mi" href="downloads.html"><b>Software</b><span>Ground Station, free to use</span></a></li>
+    <li class="mgrp">Separate section</li>
+    <li><a class="mi" href="about.html"><b>Student project</b><span>The school project, team, build and progress</span></a></li>
+  </ol>
+</div>
+
+<main id="main">
+<div class="subtabs sticky"><div class="wrap"><span class="st-k">SILM Monedula</span>
+    <nav aria-label="SILM Monedula"><a href="monedula.html">Overview</a><a href="monedula-aerodynamics.html" class="on" aria-current="page">Aerodynamics</a><a href="monedula-layout.html">Layout</a></nav><a class="st-x" href="buteo.html">SILM Buteo <svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
+
+  <section class="s" id="cfd">
+    <div class="wrap">
+      <div class="divider"><img src="images/logo_icon.svg" alt="" width="96" height="96" loading="lazy" decoding="async"><div class="rule"></div><span class="sec">Aerodynamics</span></div>
+      <h2 class="rv">Pressure and flow at cruise</h2>
+      <p class="lead rv">A 3D OpenFOAM simulation of the whole aircraft at 13.5 m/s. It confirms the efficient wing and a stable balance after the V11 redesign.</p>
+      <div class="statgrid rv">
+        <div><div class="v">≈17</div><div class="l">lift-to-drag at 2°, full aircraft</div></div>
+        <div><div class="v">13.7%</div><div class="l">static margin, CFD</div></div>
+        <div><div class="v">≈15 m/s</div><div class="l">trim speed, CL 0.46</div></div>
+        <div><div class="v">≈10 m/s</div><div class="l">stall speed</div></div>
+      </div>
+      <figure class="rv"><img class="zoom" src="images/monedula_cfd_iso.jpg" alt="SILM Monedula surface pressure coefficient from OpenFOAM at 2 degrees" width="1164" height="813" loading="lazy" decoding="async"><figcaption>Surface pressure at 2°. Blue is suction, red is stagnation. Suction covers the whole upper wing and weakens toward the tips.</figcaption></figure>
+      <div class="gallery rv">
+        <figure><img class="zoom" src="images/monedula_cfd_top.jpg" alt="Top view of surface pressure" width="1021" height="885" loading="lazy" decoding="async"><figcaption class="cap-over">Top, 2°</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_cfd_bottom.jpg" alt="Underside surface pressure" width="1600" height="900" loading="lazy" decoding="async"><figcaption class="cap-over">Underside, 2°</figcaption></figure>
+        <figure><img class="zoom" src="images/monedula_cfd_slice.jpg" alt="Flow speed around the wing section 300 mm from the centreline" width="1600" height="700" loading="lazy" decoding="async"><figcaption class="cap-over">Flow speed, wing section at 300 mm</figcaption></figure>
+      </div>
+
+      <h3 class="rv" style="margin-top:52px">Results</h3>
+      <div class="tblwrap rv"><table class="tbl"><thead><tr><th>Angle of attack</th><th class="num">CL</th><th class="num">CD</th><th class="num">L/D</th><th class="num">Cm</th></tr></thead><tbody>
+        <tr><td>2°</td><td class="num">0.448</td><td class="num">0.0265</td><td class="num">16.9</td><td class="num">+0.002</td></tr>
+        <tr><td>6°</td><td class="num">0.742</td><td class="num">0.0527</td><td class="num">14.1</td><td class="num">−0.038</td></tr>
+      </tbody></table></div>
+      <p class="note rv">Pitching moment falls as the angle rises, so the aircraft returns to trim after a disturbance. Drag is likely overstated: the model treats the whole boundary layer as turbulent.</p>
+
+      <h3 class="rv" style="margin-top:44px">Stability, fixed in V11</h3>
+      <p class="rv" style="max-width:68ch">The first CFD run, on V10b, found the aircraft statically unstable (static margin −3.4%). Our design tool had ignored the wing's downwash on the tail. V11 stretches the fuselage 68 mm, which moves the wing, tail and motor aft, and enlarges the V-tail slightly. CFD now gives 13.7%. <a href="progress.html#log">The full story is in the design log.</a></p>
+
+      <h3 class="rv" style="margin-top:44px">Method</h3>
+      <div class="tblwrap rv"><table class="tbl"><tbody>
+        <tr><td>Software / solver</td><td>OpenFOAM v1912, simpleFoam, steady RANS</td></tr>
+        <tr><td>Turbulence</td><td>k-omega SST, fully turbulent</td></tr>
+        <tr><td>Mesh</td><td class="num">0.97 M cells, half model with a symmetry plane, 3 boundary-layer cells</td></tr>
+        <tr><td>Air speed</td><td>13.5 m/s, sea level</td></tr>
+        <tr><td>Reference area / MAC</td><td class="num">0.270 m² / 187 mm</td></tr>
+        <tr><td>Geometry</td><td>Outer surface without gaps, hatch seams, gimbal or propeller</td></tr>
+      </tbody></table></div>
+      <div class="next"><a href="monedula-layout.html">Next: <b>Layout</b><svg class="ic-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </section>
+  <section class="s" style="border-bottom:none">
+    <div class="wrap">
+      <p class="fineprint rv">Neither aircraft has flown yet. Figures are design estimates from CFD and calculation, not flight-test data.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img class="wm" src="images/logo_mark.svg" alt="" width="720" height="720" loading="lazy" decoding="async">
+  <div class="wrap">
+    <div class="flogos">
+      <div class="fl"><img src="images/logo_icon.svg" alt="UAV SILM logo" width="96" height="96" loading="lazy" decoding="async"> UAV SILM</div>
+      <img class="crest" src="images/crest.png" alt="Gustav Adolfi Gümnaasium crest" width="200" height="172" loading="lazy" decoding="async">
+    </div>
+    <div class="fgrid">
+      <div class="fcol">
+        <div class="ftag">Aircraft</div>
+        <a href="./">Home</a>
+        <a href="buteo.html">SILM Buteo</a>
+        <a href="monedula.html">SILM Monedula</a>
+        <a href="onboard.html">Autonomy</a>
+        <a href="downloads.html">Software</a>
+        <div class="ftag" style="margin-top:18px">Student project</div>
+        <a href="about.html">About</a>
+        <a href="build.html">Build and tests</a>
+        <a href="progress.html">Progress</a>
+        <a href="progress.html#log">Design log</a>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Team</div>
+        <p>UAV SILM is developed by Romet Salvador Lehari (Romet Lehari), project management and flight dynamics; Ludvig Janisk, 3D modelling and research; and Karl-Robin Koppel, electronics. Gustav Adolfi Gümnaasium, Tallinn, Estonia.</p>
+      </div>
+      <div class="fcol">
+        <div class="ftag">Contact</div>
+        <a href="#">team@uavsilm.example (placeholder)</a>
+        <a href="#">github.com/uav-silm (placeholder)</a>
+        <a href="#">Instagram (placeholder)</a>
+      </div>
+    </div>
+    <p class="fcol" lang="et" style="margin-top:26px; position:relative"><span style="font-size:13.5px; color:var(--faint)">Eesti keeles: UAV SILM on Gustav Adolfi Gümnaasiumi õpilaste Romet Salvador Lehari, Ludvig Janiski ja Karl-Robin Koppeli STEAM-projekt: käsitsi startivad, 3D-prinditud fikseeritud tiivaga mehitamata õhusõidukid (droonid) vaatluseks ja luureks.</span></p>
+    <div class="fbottom"><span>UAV SILM, student STEAM project in development</span><span>Last updated 22 November 2026</span></div>
+    <div class="privacy hb">
+      <button class="reveal-btn" type="button">Privacy policy <span class="chev">↓</span></button>
+      <div class="acc-wrap"><div class="acc-body">
+        <p>This site is a personal, non-commercial student project.</p>
+        <p>Basic technical data (such as IP address and browser type) is processed by the hosting provider (GitHub) for the security and operation of the site.</p>
+        <p>We collect no additional personal data unless you contact us directly.</p>
+        <p>We use no tracking or analytics cookies, and the site loads no external fonts or scripts. The 3D viewers run entirely in your browser from files on this site and send nothing anywhere.</p>
+        <p>You can contact us to ask for any data we hold about you to be deleted.</p>
+      </div></div>
+    </div>
+  </div>
+</footer>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer"><button type="button" aria-label="Close image">Close</button><img alt=""><p></p></div>
+<button class="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+
+<script src="assets/site.js"></script>
+</body>
+</html>
